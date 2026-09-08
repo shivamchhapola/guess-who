@@ -48,7 +48,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
       )}
 
       <motion.div
-        className="w-full h-full relative transform-style-3d cursor-pointer"
+        className="w-full h-full relative transform-style-3d"
         initial={false}
         animate={{ rotateY: isFlippingDown ? 180 : 0 }}
         transition={{ duration: 0.4, ease: [0.4, 0.0, 0.2, 1] }}
@@ -56,11 +56,10 @@ export const CardFlip: React.FC<CardFlipProps> = ({
       >
         {/* FRONT OF CARD (Standing Up / Revealed) */}
         <div
-          className={`absolute inset-0 w-full h-full rounded-2xl glass-card border flex flex-col justify-between p-2 backface-hidden transition-all duration-200 ${
-            isSecret
-              ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-500/10 shadow-lg shadow-amber-500/20'
-              : 'border-slate-700/60 hover:border-cyan-400/70 hover:shadow-xl hover:shadow-cyan-500/15'
-          }`}
+          className={`absolute inset-0 w-full h-full rounded-2xl glass-card border flex flex-col justify-between p-2 backface-hidden transition-all duration-200 ${isSecret
+            ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-500/10 shadow-lg shadow-amber-500/20'
+            : 'border-slate-700/60 hover:border-cyan-400/70 hover:shadow-xl hover:shadow-cyan-500/15'
+            }`}
         >
           {/* Card Portrait Photo */}
           <div className="relative w-full aspect-[4/3.8] rounded-xl bg-slate-950 overflow-hidden border border-white/10 flex items-center justify-center">
@@ -76,7 +75,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
 
           {/* Character Name */}
           <div className="w-full text-center py-0.5 px-0.5">
-            <h3 className="font-extrabold text-slate-100 text-xs truncate tracking-tight whitespace-nowrap">
+            <h3 className="font-extrabold text-slate-100 text-md truncate tracking-tight whitespace-nowrap">
               {card.name}
             </h3>
           </div>
@@ -91,7 +90,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
                   soundFx.playSelect();
                   if (onSelectSecret) onSelectSecret(card.id);
                 }}
-                className="w-full py-1 px-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-[11px] rounded-lg flex items-center justify-center gap-1 shadow-md transition-all hover:scale-[1.02] whitespace-nowrap"
+                className="w-full py-1 px-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-[12px] rounded-lg flex items-center justify-center gap-1 shadow-md transition-all hover:scale-[1.02] whitespace-nowrap"
               >
                 <Sparkles className="w-3 h-3 shrink-0 fill-current" />
                 <span>Select</span>
@@ -106,7 +105,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
                     soundFx.playCardFlip(true);
                     onToggleFlip(card.id);
                   }}
-                  className="flex-1 py-1 px-1 bg-slate-900/90 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 font-bold text-[10px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap overflow-hidden"
+                  className="flex-1 py-1 px-1 bg-slate-900/90 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 font-bold text-[12px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap overflow-hidden cursor-pointer"
                   title="Eliminate / Flip Down Card"
                 >
                   <EyeOff className="w-3 h-3 shrink-0 text-slate-400 group-hover:text-amber-400" />
@@ -122,7 +121,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
                       soundFx.playSelect();
                       onMakeGuess(card);
                     }}
-                    className="py-1 px-1.5 bg-pink-500/20 hover:bg-pink-500/40 text-pink-300 border border-pink-500/30 hover:border-pink-400 font-extrabold text-[10px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0"
+                    className="py-1 px-1.5 bg-pink-500/20 hover:bg-pink-500/40 text-pink-300 border border-pink-500/30 hover:border-pink-400 font-extrabold text-[12px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                     title="Make final guess on this character!"
                   >
                     <Target className="w-3 h-3 shrink-0 text-pink-400" />
@@ -148,7 +147,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
           </div>
 
           <div className="text-center px-1">
-            <span className="text-[11px] font-bold text-slate-400 line-through truncate block max-w-[110px] mx-auto whitespace-nowrap">
+            <span className="text-[12px] font-bold text-slate-400 line-through truncate block max-w-[110px] mx-auto whitespace-nowrap">
               {card.name}
             </span>
           </div>
@@ -161,7 +160,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
               soundFx.playCardFlip(false);
               onToggleFlip(card.id);
             }}
-            className="w-full py-1 bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 font-bold text-[10px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap"
+            className="w-full py-1 bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 font-bold text-[10px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap cursor-pointer"
             title="Unflip / Restore Card"
           >
             <RotateCcw className="w-3 h-3 shrink-0 text-cyan-400" />
