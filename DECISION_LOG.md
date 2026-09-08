@@ -33,3 +33,17 @@ This log records major architectural and technical decisions made during the dev
 * **Context**: Development will proceed iteratively with modern AI tools.
 * **Decision**: Create an `.agents/AGENTS.md` rules directory specifying coding style, architecture contracts, and quality standards for AI assistants.
 * **Consequences**: Maintains consistent code structure, prevents regression bugs, enables multi-step task completion.
+
+---
+
+## ADR-004: Supabase Stack (Auth, DB, Storage, Realtime) + Tailwind + Framer Motion
+
+* **Date**: 2026-09-08
+* **Status**: Accepted
+* **Context**: Need a scalable, unified serverless infrastructure compatible with Next.js App Router on Vercel.
+* **Decision**: 
+  - **Database & Auth**: Supabase PostgreSQL + Supabase Auth (for template creators). Guests play without login.
+  - **Storage**: Supabase Storage buckets for custom card set images.
+  - **Real-Time Multiplayer**: Supabase Realtime Channels (Broadcast + Presence) for game room state synchronization.
+  - **Styling**: Tailwind CSS + Framer Motion + Lucide Icons for 3D card flips and glassmorphism.
+* **Consequences**: Single cloud project needed on Supabase, zero backend maintenance, high reliability, free tier friendly.
