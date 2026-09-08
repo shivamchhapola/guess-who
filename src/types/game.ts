@@ -33,6 +33,8 @@ export interface QuestionLogItem {
   id: string;
   timestamp: string;
   sender: 'player' | 'opponent' | 'system';
+  senderName?: string;
+  senderId?: string;
   question: string;
   answer?: 'yes' | 'no';
 }

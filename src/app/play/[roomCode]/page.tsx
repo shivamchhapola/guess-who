@@ -1,10 +1,12 @@
 import { MultiplayerBoard } from '@/components/game/MultiplayerBoard';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+import { ALL_POPULAR_TEMPLATES, THE_OFFICE_TEMPLATE } from '@/data/popularTemplates';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { CardSetTemplate } from '@/types/game';
 
 interface RoomPageProps {
   params: Promise<{ roomCode: string }>;
+  searchParams: Promise<{ template?: string }>;
 }
 
 export async function generateMetadata({ params }: RoomPageProps) {
@@ -15,11 +17,26 @@ export async function generateMetadata({ params }: RoomPageProps) {
   };
 }
 
-export default async function OnlineRoomPage({ params }: RoomPageProps) {
+export default async function OnlineRoomPage({ params, searchParams }: RoomPageProps) {
   const { roomCode } = await params;
+  const { template: queryTemplateId } = await searchParams;
   const upperCode = roomCode.toUpperCase();
 
-  let activeTemplate: CardSetTemplate = CLASSIC_GUESS_WHO_TEMPLATE;
+  const allAvailableTemplates = [
+    THE_OFFICE_TEMPLATE,
+    ...ALL_POPULAR_TEMPLATES.filter((t) => t.id !== THE_OFFICE_TEMPLATE.id),
+    CLASSIC_GUESS_WHO_TEMPLATE,
+  ];
+
+  let activeTemplate: CardSetTemplate = THE_OFFICE_TEMPLATE;
+
+  if (queryTemplateId) {
+    const foundByQuery = allAvailableTemplates.find((t) => t.id === queryTemplateId);
+    if (foundByQuery) {
+      activeTemplate = foundByQuery;
+    }
+  }
+
   let requiredPassword: string | null = null;
 
   try {
@@ -50,6 +67,11 @@ export default async function OnlineRoomPage({ params }: RoomPageProps) {
             attributes: c.attributes || {},
           })),
         };
+      } else if (roomData.template_id) {
+        const found = allAvailableTemplates.find((t) => t.id === roomData.template_id);
+        if (found) {
+          activeTemplate = found;
+        }
       }
     }
   } catch (err) {
