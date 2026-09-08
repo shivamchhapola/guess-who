@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CardSetTemplate, CharacterCard, QuestionLogItem } from '@/types/game';
+import { CardSetTemplate, CharacterCard } from '@/types/game';
 import { CardFlip } from './CardFlip';
-import { QuestionAssistant } from './QuestionAssistant';
 import { GuessModal } from './GuessModal';
 import { VictoryModal } from './VictoryModal';
 import { soundFx } from '@/lib/audio';
-import { Eye, HelpCircle, RotateCcw, Volume2, VolumeX, Shield, ArrowLeft } from 'lucide-react';
+import { Eye, Volume2, VolumeX, RotateCcw, ArrowLeft, Mic, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -26,7 +25,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
   const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // Initialize random opponent secret on template load
   useEffect(() => {
     if (template.cards.length > 0) {
       const randomIndex = Math.floor(Math.random() * template.cards.length);
@@ -44,10 +42,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
     setFlippedCardIds((prev) =>
       prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
     );
-  };
-
-  const handleAutoFlipCards = (cardIdsToFlip: string[]) => {
-    setFlippedCardIds((prev) => Array.from(new Set([...prev, ...cardIdsToFlip])));
   };
 
   const handleResetFlips = () => {
@@ -75,7 +69,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
     setGameResult(null);
     setSelectedGuessCard(null);
 
-    // Pick new random opponent secret
     if (template.cards.length > 0) {
       const randomIndex = Math.floor(Math.random() * template.cards.length);
       setOpponentSecretId(template.cards[randomIndex].id);
@@ -85,32 +78,36 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
   const playerSecretCard = template.cards.find((c) => c.id === playerSecretId) || null;
   const opponentSecretCard = template.cards.find((c) => c.id === opponentSecretId) || null;
 
+  const standingCardsCount = template.cards.length - flippedCardIds.length;
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center">
-      {/* Top Header Controls Bar */}
-      <div className="w-full glass-panel p-4 rounded-2xl mb-6 flex items-center justify-between gap-4 border border-white/10">
+      {/* Top Header Navigation & Controls */}
+      <div className="w-full game-panel p-4 sm:p-5 rounded-3xl mb-6 flex flex-wrap items-center justify-between gap-4 border border-white/10">
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-2 rounded-xl glass-card text-slate-400 hover:text-white transition-colors"
+            className="p-2.5 rounded-2xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white transition-colors"
             title="Back to Home"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h2 className="font-extrabold text-slate-100 text-lg sm:text-xl truncate tracking-tight">
+            <h2 className="font-black text-white text-lg sm:text-2xl truncate tracking-tight">
               {template.title}
             </h2>
-            <p className="text-slate-400 text-xs hidden sm:block">Practice Game Board • {template.cards.length} Cards</p>
+            <p className="text-slate-400 text-xs font-semibold">
+              Practice Board • {template.cards.length} Cards
+            </p>
           </div>
         </div>
 
-        {/* Audio Mute Toggle & Secret Card Preview */}
+        {/* Audio Mute & Secret Card Indicator */}
         <div className="flex items-center gap-3">
           {playerSecretCard && (
-            <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-amber-500/30">
-              <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Your Secret:</span>
-              <div className="relative w-7 h-7 rounded-lg overflow-hidden border border-amber-400/50">
+            <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-950 border border-amber-400/40 shadow-lg">
+              <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Secret:</span>
+              <div className="relative w-8 h-8 rounded-xl overflow-hidden border border-amber-400">
                 <Image
                   src={playerSecretCard.imageUrl}
                   alt={playerSecretCard.name}
@@ -119,36 +116,36 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
                   unoptimized
                 />
               </div>
-              <span className="text-xs font-bold text-slate-200">{playerSecretCard.name}</span>
+              <span className="text-xs font-extrabold text-white">{playerSecretCard.name}</span>
             </div>
           )}
 
           <button
             type="button"
             onClick={() => setIsMuted(soundFx.toggleMute())}
-            className="p-2.5 rounded-xl glass-card text-slate-300 hover:text-white transition-colors"
-            title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
+            className="p-3 rounded-2xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white transition-colors"
+            title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
           >
-            {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5 text-cyan-400" />}
+            {isMuted ? <VolumeX className="w-5 h-5 text-rose-400" /> : <Volume2 className="w-5 h-5 text-amber-400" />}
           </button>
         </div>
       </div>
 
-      {/* Secret Card Pick Overlay (If Secret Not Selected Yet) */}
+      {/* Secret Card Pick Overlay */}
       {!isSecretSelected ? (
-        <div className="w-full glass-panel p-8 rounded-3xl mb-8 text-center flex flex-col items-center border border-amber-500/30 shadow-xl shadow-amber-500/5">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4">
+        <div className="w-full game-panel p-8 rounded-3xl mb-8 text-center flex flex-col items-center border border-amber-500/40 shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4">
             <Eye className="w-7 h-7" />
           </div>
-          <h3 className="text-2xl font-black text-slate-100 mb-2">
+          <h3 className="text-3xl font-black text-white mb-2">
             Select Your Secret Character Card
           </h3>
-          <p className="text-slate-400 text-sm max-w-md mb-6">
+          <p className="text-slate-300 text-sm max-w-md mb-8">
             Click on any card below to pick the secret character your opponent will try to guess!
           </p>
 
           {/* Cards Selection Grid */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 w-full">
             {template.cards.map((card) => (
               <CardFlip
                 key={card.id}
@@ -163,16 +160,32 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
         </div>
       ) : (
         <>
-          {/* Tactical Assistant Bar */}
-          <QuestionAssistant
-            cards={template.cards}
-            flippedCardIds={flippedCardIds}
-            onAutoFlipCards={handleAutoFlipCards}
-            onResetFlips={handleResetFlips}
-          />
+          {/* Game Board Action Bar */}
+          <div className="w-full game-panel p-4 rounded-2xl mb-6 flex flex-wrap items-center justify-between gap-4 border border-white/10">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-black bg-amber-400 text-slate-950 px-3 py-1 rounded-full uppercase tracking-wider">
+                {standingCardsCount} / {template.cards.length} Standing
+              </span>
+              <span className="text-xs font-semibold text-slate-300 hidden sm:inline flex items-center gap-1">
+                <Mic className="w-3.5 h-3.5 text-amber-400 inline" /> Ask questions freely on Discord call or voice!
+              </span>
+            </div>
 
-          {/* Game Board Grid */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4 w-full">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playCardFlip(false);
+                handleResetFlips();
+              }}
+              className="px-4 py-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-900 border border-slate-700 rounded-xl flex items-center gap-1.5 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Eliminated Cards</span>
+            </button>
+          </div>
+
+          {/* Game Board Dynamic Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 w-full">
             {template.cards.map((card) => (
               <CardFlip
                 key={card.id}
@@ -188,7 +201,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
         </>
       )}
 
-      {/* Confirm Guess Modal */}
+      {/* Modals */}
       <GuessModal
         card={selectedGuessCard}
         isOpen={isGuessModalOpen}
@@ -196,7 +209,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ template }) => {
         onConfirmGuess={handleConfirmGuess}
       />
 
-      {/* Victory / Defeat Modal */}
       <VictoryModal
         isOpen={gameResult !== null}
         isWon={gameResult === 'won'}

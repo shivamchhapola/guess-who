@@ -1,153 +1,219 @@
 import Link from 'next/link';
-import { Gamepad2, PlusCircle, Users, Sparkles, ShieldCheck, Zap, Lock } from 'lucide-react';
+import { Gamepad2, UploadCloud, Users, Sparkles, Play, ShieldCheck, Flame, ArrowRight, Tv, Film, Zap } from 'lucide-react';
+import Image from 'next/image';
+import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
-      {/* Header / Navigation */}
-      <header className="w-full border-b border-white/10 glass-panel sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950">
+      {/* Playful Header Navigation */}
+      <header className="w-full border-b border-white/10 game-panel sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl gradient-btn flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-11 h-11 rounded-2xl game-btn-primary flex items-center justify-center text-slate-950 shadow-lg group-hover:scale-105 transition-transform">
               <Gamepad2 className="w-6 h-6" />
             </div>
-            <span className="text-xl font-bold tracking-tight">
-              GuessWho<span className="gradient-text font-black">Maker</span>
+            <span className="text-2xl font-black tracking-tight text-white">
+              GuessWho<span className="text-amber-400">Party!</span> 🎭
             </span>
           </Link>
 
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3 sm:gap-4">
             <Link
               href="/templates"
-              className="text-sm font-medium text-slate-300 hover:text-cyan-400 transition-colors hidden sm:block"
+              className="text-xs sm:text-sm font-bold text-slate-300 hover:text-amber-400 transition-colors hidden sm:block"
             >
-              Browse Templates
+              Browse Games
             </Link>
             <Link
               href="/create"
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-200 glass-card rounded-lg hover:border-cyan-400/50 hover:text-white transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-slate-800/90 border border-white/15 rounded-xl hover:border-amber-400/60 hover:bg-slate-800 transition-all"
             >
-              <PlusCircle className="w-4 h-4 text-cyan-400" />
-              <span>Create Set</span>
+              <UploadCloud className="w-4 h-4 text-amber-400" />
+              <span>Make Set from Photos</span>
             </Link>
             <Link
               href="/auth/login"
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+              className="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Creator Login</span>
+              Log In
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* Main Hero Section */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 flex flex-col items-center justify-center">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card border border-cyan-500/30 text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-8 animate-pulse">
-          <Sparkles className="w-4 h-4" />
-          <span>100% Free & Open Source • No Paywalls • No Registration to Play</span>
+      {/* Hero Section */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col items-center justify-center text-center">
+        {/* Playful Game Tag */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full game-card border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider mb-6 shadow-lg shadow-amber-500/10">
+          <Flame className="w-4 h-4 text-amber-400 animate-bounce" />
+          <span>The Ultimate Custom Guess Who Game Launcher</span>
         </div>
 
         {/* Hero Title */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-center tracking-tight max-w-4xl leading-[1.1] mb-6">
-          The Ultimate <span className="gradient-text">Custom Guess Who</span> Online Platform
+        <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight max-w-4xl leading-[1.15] mb-6">
+          Guess Who? <br className="hidden sm:inline" />
+          <span className="font-game-title">Play & Create Custom Board Games!</span>
         </h1>
 
-        <p className="text-slate-400 text-lg sm:text-xl text-center max-w-2xl mb-12">
-          Play classic or community-created Guess Who games instantly with friends via room code. Design custom card sets with custom photos and traits!
+        <p className="text-slate-300 text-base sm:text-xl max-w-2xl mb-10 font-medium">
+          Play classic Guess Who online with friends or make custom card games out of your own photos, friends, The Office, or Marvel superheroes!
         </p>
 
-        {/* Action Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mb-16">
-          {/* Join Room Card */}
-          <div className="glass-panel p-8 rounded-2xl flex flex-col justify-between hover:border-cyan-500/40 transition-all group">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-100 mb-2">Join Game Room</h2>
-              <p className="text-slate-400 text-sm mb-6">
-                Enter a 6-character room code from your friend to join immediately as a guest.
-              </p>
-            </div>
-
-            <form className="flex flex-col gap-3" action="/play/practice">
+        {/* Instant Room Join & Fast Play Card */}
+        <div className="w-full max-w-3xl game-panel p-6 sm:p-8 rounded-3xl mb-12 border border-white/15 shadow-2xl">
+          <form action="/play/practice" className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative w-full flex-1">
               <input
                 type="text"
                 name="room"
-                placeholder="Enter 6-Digit Code (e.g. AB12CD)"
+                placeholder="ENTER 6-LETTER ROOM CODE (e.g. AB12CD)"
                 maxLength={6}
-                className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700/60 rounded-xl text-center text-lg font-mono tracking-widest text-white uppercase placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                className="w-full px-5 py-4 bg-slate-950/90 border-2 border-slate-700/80 rounded-2xl text-center text-xl font-mono font-black tracking-widest text-amber-300 uppercase placeholder:text-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30"
               />
-              <button
-                type="submit"
-                className="w-full py-3.5 px-6 font-bold text-white gradient-btn rounded-xl flex items-center justify-center gap-2"
-              >
-                <span>Join Game</span>
-              </button>
-            </form>
-          </div>
-
-          {/* Host New Room Card */}
-          <div className="glass-panel p-8 rounded-2xl flex flex-col justify-between hover:border-purple-500/40 transition-all group">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Zap className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-100 mb-2">Host New Game</h2>
-              <p className="text-slate-400 text-sm mb-6">
-                Create a private or public game room choosing from classic characters or thousands of custom sets.
-              </p>
             </div>
+            <button
+              type="submit"
+              className="w-full sm:w-auto px-8 py-4 text-lg game-btn-primary rounded-2xl flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
+            >
+              <Play className="w-5 h-5 fill-current" />
+              <span>Join Game</span>
+            </button>
+          </form>
 
-            <div className="flex flex-col gap-3">
-              <Link
-                href="/play/practice"
-                className="w-full py-3.5 px-6 font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02]"
-              >
-                <span>Play Practice Game</span>
-              </Link>
-              <Link
-                href="/templates"
-                className="w-full py-3 px-6 text-sm font-semibold text-slate-300 glass-card rounded-xl text-center hover:text-white hover:border-purple-400/50 transition-colors"
-              >
-                Explore Template Library
-              </Link>
-            </div>
+          <div className="flex items-center justify-center gap-6 mt-4 text-xs font-semibold text-slate-400">
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <ShieldCheck className="w-4 h-4" /> No Registration to Play
+            </span>
+            <span>•</span>
+            <Link href="/play/practice" className="hover:text-amber-400 underline transition-colors">
+              Play Solo Practice Game →
+            </Link>
           </div>
         </div>
 
-        {/* Feature Highlights Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-4xl">
-          <div className="glass-card p-6 rounded-xl border border-white/5 flex flex-col items-center text-center">
-            <ShieldCheck className="w-8 h-8 text-cyan-400 mb-3" />
-            <h3 className="font-bold text-slate-200 text-base mb-1">No Login to Play</h3>
-            <p className="text-slate-400 text-xs">Jump right into multiplayer matches without signing up or granting permissions.</p>
+        {/* Action Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-16">
+          {/* Card 1: Bulk Upload Photos */}
+          <div className="game-panel p-6 rounded-3xl flex flex-col justify-between border border-amber-500/30 hover:border-amber-400 transition-all text-left group">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <UploadCloud className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-black text-white mb-2">Create Set from Photos</h2>
+              <p className="text-slate-400 text-xs mb-6">
+                Bulk upload any number of pictures or drop a ZIP file! We automatically create character cards for your custom game.
+              </p>
+            </div>
+
+            <Link
+              href="/create"
+              className="w-full py-3 px-4 text-sm font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all"
+            >
+              <span>Make Photo Game</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
-          <div className="glass-card p-6 rounded-xl border border-white/5 flex flex-col items-center text-center">
-            <Sparkles className="w-8 h-8 text-purple-400 mb-3" />
-            <h3 className="font-bold text-slate-200 text-base mb-1">Custom Template Creator</h3>
-            <p className="text-slate-400 text-xs">Logged-in creators can upload custom photos, set character names, and publish public templates.</p>
+          {/* Card 2: Host Game Room */}
+          <div className="game-panel p-6 rounded-3xl flex flex-col justify-between border border-purple-500/30 hover:border-purple-400 transition-all text-left group">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Gamepad2 className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-black text-white mb-2">Host Online Room</h2>
+              <p className="text-slate-400 text-xs mb-6">
+                Get a private room code, set an optional passcode, and invite your friend to play online.
+              </p>
+            </div>
+
+            <Link
+              href="/host"
+              className="w-full py-3 px-4 text-sm font-bold text-white game-btn-purple rounded-xl flex items-center justify-center gap-2 transition-all"
+            >
+              <span>Host Room</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
 
-          <div className="glass-card p-6 rounded-xl border border-white/5 flex flex-col items-center text-center">
-            <Zap className="w-8 h-8 text-pink-400 mb-3" />
-            <h3 className="font-bold text-slate-200 text-base mb-1">Serverless & Open Source</h3>
-            <p className="text-slate-400 text-xs">100% hosted on Vercel with zero latency real-time multiplayer updates.</p>
+          {/* Card 3: Public Lobbies */}
+          <div className="game-panel p-6 rounded-3xl flex flex-col justify-between border border-cyan-500/30 hover:border-cyan-400 transition-all text-left group">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Users className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-black text-white mb-2">Public Game Lobbies</h2>
+              <p className="text-slate-400 text-xs mb-6">
+                Browse open game rooms created by players online and jump into a match right now.
+              </p>
+            </div>
+
+            <Link
+              href="/lobbies"
+              className="w-full py-3 px-4 text-sm font-bold text-slate-100 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl flex items-center justify-center gap-2 transition-all"
+            >
+              <span>Browse Lobbies</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Featured Popular Card Sets Showcase */}
+        <div className="w-full max-w-5xl flex flex-col gap-8 text-left">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-black text-white">Popular Game Collections</h2>
+              <p className="text-slate-400 text-sm">Play ready-made character sets from iconic TV shows and movies.</p>
+            </div>
+
+            <Link href="/templates" className="text-xs font-bold text-amber-400 hover:underline">
+              View All Sets →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {ALL_POPULAR_TEMPLATES.map((tpl) => (
+              <div key={tpl.id} className="game-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between hover:border-amber-400/60 transition-all group">
+                <div>
+                  <div className="grid grid-cols-4 gap-1.5 p-2 rounded-2xl bg-slate-950/80 mb-4 aspect-[2/1] overflow-hidden">
+                    {tpl.cards.slice(0, 8).map((c) => (
+                      <div key={c.id} className="relative w-full h-full rounded-lg overflow-hidden bg-slate-900">
+                        <Image src={c.imageUrl} alt={c.name} fill className="object-cover" unoptimized />
+                      </div>
+                    ))}
+                  </div>
+
+                  <h3 className="text-xl font-bold text-white mb-1 group-hover:text-amber-400 transition-colors">
+                    {tpl.title}
+                  </h3>
+                  <p className="text-slate-400 text-xs line-clamp-2 mb-4">{tpl.description}</p>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-white/5 text-xs font-semibold text-slate-400">
+                  <span>{tpl.cards.length} Cards</span>
+                  <Link
+                    href="/play/practice"
+                    className="px-3.5 py-1.5 font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl flex items-center gap-1 transition-all"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Play Set</span>
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-white/10 glass-panel py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} GuessWhoMaker Clone. Open Source under MIT License.</p>
-          <div className="flex items-center gap-6 text-xs text-slate-400">
-            <Link href="/templates" className="hover:text-cyan-400 transition-colors">Templates</Link>
-            <Link href="/create" className="hover:text-cyan-400 transition-colors">Create Set</Link>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">GitHub Repository</a>
+      <footer className="w-full border-t border-white/10 game-panel py-6">
+        <div className="max-w-7xl mx-auto px-4 text-center text-slate-400 text-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p>© {new Date().getFullYear()} GuessWhoParty! The Custom Board Game Platform.</p>
+          <div className="flex items-center gap-6 font-bold text-slate-300">
+            <Link href="/templates" className="hover:text-amber-400 transition-colors">Browse Sets</Link>
+            <Link href="/create" className="hover:text-amber-400 transition-colors">Make Photo Set</Link>
+            <Link href="/play/practice" className="hover:text-amber-400 transition-colors">Practice Board</Link>
           </div>
         </div>
       </footer>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CardSetTemplate } from '@/types/game';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+import { ALL_POPULAR_TEMPLATES, THE_OFFICE_TEMPLATE } from '@/data/popularTemplates';
 import { createClient } from '@/lib/supabase/client';
 import { Zap, Lock, Globe, RefreshCw, ArrowLeft, Play, Sparkles, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
@@ -10,7 +11,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 function generateRoomCode(length: number = 6): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Omit confusing characters like O, 0, I, 1
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < length; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -20,8 +21,11 @@ function generateRoomCode(length: number = 6): string {
 
 export default function HostRoomPage() {
   const [roomCode, setRoomCode] = useState<string>('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(CLASSIC_GUESS_WHO_TEMPLATE.id);
-  const [templates, setTemplates] = useState<CardSetTemplate[]>([CLASSIC_GUESS_WHO_TEMPLATE]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(THE_OFFICE_TEMPLATE.id);
+  const [templates, setTemplates] = useState<CardSetTemplate[]>([
+    ...ALL_POPULAR_TEMPLATES,
+    CLASSIC_GUESS_WHO_TEMPLATE,
+  ]);
   
   const [hasPassword, setHasPassword] = useState<boolean>(false);
   const [password, setPassword] = useState<string>('');

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CardSetTemplate } from '@/types/game';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 import { createClient } from '@/lib/supabase/client';
 import { Search, Sparkles, Play, PlusCircle, User, Tag, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -11,7 +12,10 @@ import Image from 'next/image';
 export default function TemplatesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<CardSetTemplate[]>([CLASSIC_GUESS_WHO_TEMPLATE]);
+  const [templates, setTemplates] = useState<CardSetTemplate[]>([
+    ...ALL_POPULAR_TEMPLATES,
+    CLASSIC_GUESS_WHO_TEMPLATE,
+  ]);
 
   const supabase = createClient();
 
