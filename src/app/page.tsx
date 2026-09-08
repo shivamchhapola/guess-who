@@ -72,7 +72,7 @@ export default function Home() {
               </p>
             </div>
 
-            <form className="flex flex-col gap-3" action="/play">
+            <form className="flex flex-col gap-3" action="/play/practice">
               <input
                 type="text"
                 name="room"
@@ -103,10 +103,10 @@ export default function Home() {
 
             <div className="flex flex-col gap-3">
               <Link
-                href="/host"
+                href="/play/practice"
                 className="w-full py-3.5 px-6 font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 transition-all hover:scale-[1.02]"
               >
-                <span>Host Game Room</span>
+                <span>Play Practice Game</span>
               </Link>
               <Link
                 href="/templates"
