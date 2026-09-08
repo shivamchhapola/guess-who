@@ -4,10 +4,10 @@ import React, { useState, useRef } from 'react';
 import JSZip from 'jszip';
 import { CharacterCard, CardSetTemplate } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
-import { UploadCloud, FileArchive, Save, ArrowLeft, Sparkles, CheckCircle, Image as ImageIcon, Play, Plus, Trash2 } from 'lucide-react';
-import Link from 'next/link';
+import { UploadCloud, FileArchive, CheckCircle, Image as ImageIcon, Play, Plus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { NavHeader } from '@/components/NavHeader';
 
 function formatFilenameToName(filename: string): string {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
@@ -216,33 +216,27 @@ export default function CreateTemplatePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950">
-      {/* Header */}
-      <header className="w-full border-b border-white/10 game-panel sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-18 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors font-bold text-sm">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Home</span>
-          </Link>
+    <div className="min-h-screen flex flex-col">
+      <NavHeader activePage="create" />
 
-          <span className="text-base font-black tracking-tight text-white">
-            Photo Game <span className="text-amber-400">Creator Studio</span> 📸
-          </span>
-
+      {/* Main Studio Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Top Action Bar */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>Photo Game Creator 📸</h1>
+            <p className="text-slate-400 text-sm">Upload photos or a ZIP archive to instantly create a playable game set.</p>
+          </div>
           <button
             type="button"
             onClick={handleSaveTemplate}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-slate-950 game-btn-primary rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            className="game-btn-primary px-6 py-3 cursor-pointer disabled:opacity-50"
           >
             <Play className="w-4 h-4 fill-current" />
-            <span>{saving ? 'Creating Game...' : 'Publish & Play Set'}</span>
+            <span>{saving ? 'Creating...' : 'Publish & Play'}</span>
           </button>
         </div>
-      </header>
-
-      {/* Main Studio Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Success Alert */}
         {successMsg && (
           <div className="p-4 mb-6 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-sm flex items-center gap-2 animate-in fade-in">
@@ -265,26 +259,14 @@ export default function CreateTemplatePage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 w-full max-w-lg mb-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              multiple
-              accept="image/*"
-              onChange={handleBulkImageSelect}
-              className="hidden"
-            />
-            <input
-              type="file"
-              ref={zipInputRef}
-              accept=".zip"
-              onChange={handleZipFileSelect}
-              className="hidden"
-            />
+            <input type="file" ref={fileInputRef} multiple accept="image/*" onChange={handleBulkImageSelect} className="hidden" />
+            <input type="file" ref={zipInputRef} accept=".zip" onChange={handleZipFileSelect} className="hidden" />
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 py-4 px-6 font-black text-slate-950 game-btn-primary rounded-2xl flex items-center justify-center gap-2 text-sm cursor-pointer shadow-xl"
+              className="game-btn-primary flex-1 py-4 px-6 text-sm cursor-pointer"
+              style={{ borderRadius: '1rem' }}
             >
               <ImageIcon className="w-5 h-5" />
               <span>Select Photos</span>
@@ -293,7 +275,8 @@ export default function CreateTemplatePage() {
             <button
               type="button"
               onClick={() => zipInputRef.current?.click()}
-              className="flex-1 py-4 px-6 font-bold text-white game-btn-purple rounded-2xl flex items-center justify-center gap-2 text-sm cursor-pointer shadow-xl"
+              className="game-btn-purple flex-1 py-4 px-6 text-sm cursor-pointer"
+              style={{ borderRadius: '1rem' }}
             >
               <FileArchive className="w-5 h-5" />
               <span>Upload ZIP File</span>

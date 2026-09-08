@@ -1,5 +1,6 @@
 import { MultiplayerBoard } from '@/components/game/MultiplayerBoard';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { CardSetTemplate } from '@/types/game';
 
@@ -50,6 +51,13 @@ export default async function OnlineRoomPage({ params }: RoomPageProps) {
             attributes: c.attributes || {},
           })),
         };
+      } else if (roomData.template_id) {
+        const found = [CLASSIC_GUESS_WHO_TEMPLATE, ...ALL_POPULAR_TEMPLATES].find(
+          (t) => t.id === roomData.template_id
+        );
+        if (found) {
+          activeTemplate = found;
+        }
       }
     }
   } catch (err) {

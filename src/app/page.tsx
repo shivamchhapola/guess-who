@@ -1,222 +1,343 @@
+'use client';
+
 import Link from 'next/link';
-import { Gamepad2, UploadCloud, Users, Sparkles, Play, ShieldCheck, Flame, ArrowRight, Tv, Film, Zap } from 'lucide-react';
 import Image from 'next/image';
-import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Play, UploadCloud, Users, Gamepad2, ArrowRight,
+  ShieldCheck, Flame, X, Eye,
+} from 'lucide-react';
+import { NavHeader } from '@/components/NavHeader';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
+import { CardSetTemplate } from '@/types/game';
 
-export default function Home() {
+/* ─── Template Preview Modal ─────────────────────────────────── */
+function TemplatePreviewModal({
+  template,
+  onClose,
+}: {
+  template: CardSetTemplate;
+  onClose: () => void;
+}) {
+  const router = useRouter();
   return (
-    <div className="min-h-screen flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950">
-      {/* Playful Header Navigation */}
-      <header className="w-full border-b border-white/10 game-panel sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-11 h-11 rounded-2xl game-btn-primary flex items-center justify-center text-slate-950 shadow-lg group-hover:scale-105 transition-transform">
-              <Gamepad2 className="w-6 h-6" />
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+    >
+      <div
+        className="glass-panel rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 animate-slide-in-up"
+        style={{ border: '1px solid rgba(245,158,11,0.2)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              {template.title}
+            </h2>
+            <p className="text-slate-400 text-sm mt-1">{template.description}</p>
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {template.tags.map(tag => (
+                <span key={tag} className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
+                  #{tag}
+                </span>
+              ))}
             </div>
-            <span className="text-2xl font-black tracking-tight text-white">
-              GuessWho<span className="text-amber-400">Party!</span> 🎭
-            </span>
-          </Link>
-
-          <nav className="flex items-center gap-3 sm:gap-4">
-            <Link
-              href="/templates"
-              className="text-xs sm:text-sm font-bold text-slate-300 hover:text-amber-400 transition-colors hidden sm:block"
-            >
-              Browse Games
-            </Link>
-            <Link
-              href="/create"
-              className="flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-slate-800/90 border border-white/15 rounded-xl hover:border-amber-400/60 hover:bg-slate-800 transition-all"
-            >
-              <UploadCloud className="w-4 h-4 text-amber-400" />
-              <span>Make Set from Photos</span>
-            </Link>
-            <Link
-              href="/auth/login"
-              className="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              Log In
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col items-center justify-center text-center">
-        {/* Playful Game Tag */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full game-card border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider mb-6 shadow-lg shadow-amber-500/10">
-          <Flame className="w-4 h-4 text-amber-400 animate-bounce" />
-          <span>The Ultimate Custom Guess Who Game Launcher</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0"
+            style={{ background: 'rgba(255,255,255,0.06)' }}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Hero Title */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight max-w-4xl leading-[1.15] mb-6">
-          Guess Who? <br className="hidden sm:inline" />
-          <span className="font-game-title">Play & Create Custom Board Games!</span>
-        </h1>
-
-        <p className="text-slate-300 text-base sm:text-xl max-w-2xl mb-10 font-medium">
-          Play classic Guess Who online with friends or make custom card games out of your own photos, friends, The Office, or Marvel superheroes!
+        {/* Characters Grid */}
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+          {template.cards.length} Characters
         </p>
-
-        {/* Instant Room Join & Fast Play Card */}
-        <div className="w-full max-w-3xl game-panel p-6 sm:p-8 rounded-3xl mb-12 border border-white/15 shadow-2xl">
-          <form action="/play/practice" className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative w-full flex-1">
-              <input
-                type="text"
-                name="room"
-                placeholder="ENTER 6-LETTER ROOM CODE (e.g. AB12CD)"
-                maxLength={6}
-                className="w-full px-5 py-4 bg-slate-950/90 border-2 border-slate-700/80 rounded-2xl text-center text-xl font-mono font-black tracking-widest text-amber-300 uppercase placeholder:text-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30"
-              />
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-6">
+          {template.cards.map(card => (
+            <div key={card.id} className="flex flex-col items-center gap-1.5 group">
+              <div className="relative w-full aspect-square rounded-xl overflow-hidden" style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <Image
+                  src={card.imageUrl}
+                  alt={card.name}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  unoptimized
+                />
+              </div>
+              <span className="text-[11px] font-semibold text-slate-300 text-center leading-tight truncate w-full text-center">
+                {card.name}
+              </span>
             </div>
-            <button
-              type="submit"
-              className="w-full sm:w-auto px-8 py-4 text-lg game-btn-primary rounded-2xl flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              <span>Join Game</span>
-            </button>
-          </form>
-
-          <div className="flex items-center justify-center gap-6 mt-4 text-xs font-semibold text-slate-400">
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> No Registration to Play
-            </span>
-            <span>•</span>
-            <Link href="/play/practice" className="hover:text-amber-400 underline transition-colors">
-              Play Solo Practice Game →
-            </Link>
-          </div>
+          ))}
         </div>
 
-        {/* Action Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-16">
-          {/* Card 1: Bulk Upload Photos */}
-          <div className="game-panel p-6 rounded-3xl flex flex-col justify-between border border-amber-500/30 hover:border-amber-400 transition-all text-left group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <UploadCloud className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-black text-white mb-2">Create Set from Photos</h2>
-              <p className="text-slate-400 text-xs mb-6">
-                Bulk upload any number of pictures or drop a ZIP file! We automatically create character cards for your custom game.
-              </p>
-            </div>
-
-            <Link
-              href="/create"
-              className="w-full py-3 px-4 text-sm font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all"
-            >
-              <span>Make Photo Game</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Card 2: Host Game Room */}
-          <div className="game-panel p-6 rounded-3xl flex flex-col justify-between border border-purple-500/30 hover:border-purple-400 transition-all text-left group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Gamepad2 className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-black text-white mb-2">Host Online Room</h2>
-              <p className="text-slate-400 text-xs mb-6">
-                Get a private room code, set an optional passcode, and invite your friend to play online.
-              </p>
-            </div>
-
-            <Link
-              href="/host"
-              className="w-full py-3 px-4 text-sm font-bold text-white game-btn-purple rounded-xl flex items-center justify-center gap-2 transition-all"
-            >
-              <span>Host Room</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Card 3: Public Lobbies */}
-          <div className="game-panel p-6 rounded-3xl flex flex-col justify-between border border-cyan-500/30 hover:border-cyan-400 transition-all text-left group">
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-black text-white mb-2">Public Game Lobbies</h2>
-              <p className="text-slate-400 text-xs mb-6">
-                Browse open game rooms created by players online and jump into a match right now.
-              </p>
-            </div>
-
-            <Link
-              href="/lobbies"
-              className="w-full py-3 px-4 text-sm font-bold text-slate-100 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl flex items-center justify-center gap-2 transition-all"
-            >
-              <span>Browse Lobbies</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={() => router.push(`/play/practice?template=${template.id}`)}
+            className="game-btn-primary flex-1 py-3.5 text-base justify-center"
+          >
+            <Play className="w-5 h-5 fill-current" />
+            <span>Play Solo Practice</span>
+          </button>
+          <Link
+            href={`/host?template=${template.id}`}
+            className="game-btn-purple flex-1 py-3.5 text-base justify-center"
+          >
+            <Users className="w-5 h-5" />
+            <span>Host Multiplayer Room</span>
+          </Link>
         </div>
+      </div>
+    </div>
+  );
+}
 
-        {/* Featured Popular Card Sets Showcase */}
-        <div className="w-full max-w-5xl flex flex-col gap-8 text-left">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-black text-white">Popular Game Collections</h2>
-              <p className="text-slate-400 text-sm">Play ready-made character sets from iconic TV shows and movies.</p>
-            </div>
+/* ─── Landing Page ───────────────────────────────────────────── */
+export default function Home() {
+  const [roomCode, setRoomCode] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<CardSetTemplate | null>(null);
+  const router = useRouter();
 
-            <Link href="/templates" className="text-xs font-bold text-amber-400 hover:underline">
-              View All Sets →
-            </Link>
+  const handleJoinRoom = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = roomCode.trim().toUpperCase();
+    if (code.length >= 4) {
+      router.push(`/play/${code}`);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <NavHeader activePage="home" />
+
+      <main className="flex-1">
+        {/* ── Hero Section ─────────────────────────────────── */}
+        <section className="relative overflow-hidden">
+          {/* Decorative glows */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+            <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '45%', height: '70%', background: 'radial-gradient(ellipse, rgba(139,92,246,0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
+            <div style={{ position: 'absolute', top: '10%', right: '-5%', width: '40%', height: '60%', background: 'radial-gradient(ellipse, rgba(6,182,212,0.1) 0%, transparent 70%)', borderRadius: '50%' }} />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {ALL_POPULAR_TEMPLATES.map((tpl) => (
-              <div key={tpl.id} className="game-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between hover:border-amber-400/60 transition-all group">
-                <div>
-                  <div className="grid grid-cols-4 gap-1.5 p-2 rounded-2xl bg-slate-950/80 mb-4 aspect-[2/1] overflow-hidden">
-                    {tpl.cards.slice(0, 8).map((c) => (
-                      <div key={c.id} className="relative w-full h-full rounded-lg overflow-hidden bg-slate-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 sm:pt-20 sm:pb-24 text-center relative">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider mb-8"
+              style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b' }}>
+              <Flame className="w-3.5 h-3.5 animate-bounce" />
+              <span>Free · No Login To Play · Multiplayer</span>
+            </div>
+
+            {/* Hero Title */}
+            <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tight leading-[1.05] mb-6 text-white"
+              style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Guess Who?{' '}
+              <span className="block font-game-title">
+                Party Edition! 🎭
+              </span>
+            </h1>
+
+            <p className="text-slate-300 text-lg sm:text-xl max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
+              Play with your friends using <strong className="text-white">your own photos</strong>, The Office characters, Marvel heroes, or upload anything. Jump in on Discord and start guessing!
+            </p>
+
+            {/* Join Room Form */}
+            <div className="max-w-xl mx-auto mb-6">
+              <form onSubmit={handleJoinRoom} className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={roomCode}
+                  onChange={e => setRoomCode(e.target.value.toUpperCase())}
+                  placeholder="ROOM CODE (e.g. AB12CD)"
+                  maxLength={6}
+                  className="flex-1 px-5 py-4 rounded-2xl text-center text-xl font-mono font-black tracking-widest uppercase focus:outline-none"
+                  style={{
+                    background: 'rgba(7,9,15,0.9)',
+                    border: '2px solid rgba(71,85,105,0.8)',
+                    color: '#f59e0b',
+                    caretColor: '#f59e0b',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(71,85,105,0.8)')}
+                />
+                <button type="submit" className="game-btn-primary px-8 py-4 text-base rounded-2xl shrink-0">
+                  <Play className="w-5 h-5 fill-current" />
+                  <span>Join Game</span>
+                </button>
+              </form>
+              <div className="flex items-center justify-center gap-4 mt-3 text-xs font-semibold text-slate-500">
+                <span className="flex items-center gap-1.5 text-emerald-400">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  No account needed
+                </span>
+                <span>•</span>
+                <Link href="/play/practice" className="text-slate-400 hover:text-amber-400 transition-colors">
+                  Solo practice →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Action Cards ─────────────────────────────────── */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-20">
+            {/* Upload Photos */}
+            <div className="game-panel p-6 rounded-3xl flex flex-col justify-between group cursor-pointer"
+              style={{ border: '1px solid rgba(245,158,11,0.2)' }}
+              onClick={() => router.push('/create')}
+            >
+              <div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-transform group-hover:scale-110"
+                  style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}>
+                  <UploadCloud className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  Upload Your Photos
+                </h2>
+                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  Drag & drop photos of your friends, family, or faves. We instantly turn them into a playable game — no setup needed.
+                </p>
+              </div>
+              <span className="game-btn-primary text-sm py-3 justify-center">
+                <span>Make Photo Game</span>
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+
+            {/* Host Room */}
+            <div className="game-panel p-6 rounded-3xl flex flex-col justify-between group cursor-pointer"
+              style={{ border: '1px solid rgba(139,92,246,0.2)' }}
+              onClick={() => router.push('/host')}
+            >
+              <div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-transform group-hover:scale-110"
+                  style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', color: '#a78bfa' }}>
+                  <Gamepad2 className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  Host a Room
+                </h2>
+                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  Create a private room, get a 6-letter code, and share it with your friend. Play over Discord call — no chat system needed.
+                </p>
+              </div>
+              <span className="game-btn-purple text-sm py-3 justify-center">
+                <span>Create Room</span>
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+
+            {/* Browse Lobbies */}
+            <div className="game-panel p-6 rounded-3xl flex flex-col justify-between group cursor-pointer"
+              style={{ border: '1px solid rgba(6,182,212,0.2)' }}
+              onClick={() => router.push('/lobbies')}
+            >
+              <div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-transform group-hover:scale-110"
+                  style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', color: '#22d3ee' }}>
+                  <Users className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  Join Public Lobby
+                </h2>
+                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  See all open game rooms and jump into a match instantly. No invite needed — just pick an open lobby and play.
+                </p>
+              </div>
+              <span className="flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-2xl transition-all group-hover:text-white"
+                style={{ background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)', color: '#22d3ee' }}>
+                <span>Browse Lobbies</span>
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </div>
+
+          {/* ── Popular Sets ────────────────────────────────── */}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  Ready-Made Game Sets
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">Click any set to preview all characters, then play!</p>
+              </div>
+              <Link href="/templates"
+                className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1">
+                All Sets <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {ALL_POPULAR_TEMPLATES.map(tpl => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => setSelectedTemplate(tpl)}
+                  className="game-panel p-5 rounded-3xl text-left group transition-all w-full"
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(245,158,11,0.4)')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                >
+                  {/* Photo Grid Preview */}
+                  <div className="grid grid-cols-4 gap-1.5 rounded-2xl overflow-hidden mb-4"
+                    style={{ background: '#07090f', aspectRatio: '2/1', padding: '0.375rem' }}>
+                    {tpl.cards.slice(0, 8).map(c => (
+                      <div key={c.id} className="relative rounded-lg overflow-hidden" style={{ background: '#0f172a' }}>
                         <Image src={c.imageUrl} alt={c.name} fill className="object-cover" unoptimized />
                       </div>
                     ))}
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-1 group-hover:text-amber-400 transition-colors">
+                  <h3 className="text-lg font-black text-white mb-1 group-hover:text-amber-400 transition-colors"
+                    style={{ fontFamily: 'Outfit, sans-serif' }}>
                     {tpl.title}
                   </h3>
                   <p className="text-slate-400 text-xs line-clamp-2 mb-4">{tpl.description}</p>
-                </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-white/5 text-xs font-semibold text-slate-400">
-                  <span>{tpl.cards.length} Cards</span>
-                  <Link
-                    href="/play/practice"
-                    className="px-3.5 py-1.5 font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl flex items-center gap-1 transition-all"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Play Set</span>
-                  </Link>
-                </div>
-              </div>
-            ))}
+                  <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <span className="text-xs font-semibold text-slate-500">
+                      {tpl.cards.length} Characters
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs font-black text-amber-400">
+                      <Eye className="w-3.5 h-3.5" />
+                      Preview All
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-white/10 game-panel py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-400 text-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} GuessWhoParty! The Custom Board Game Platform.</p>
-          <div className="flex items-center gap-6 font-bold text-slate-300">
+      <footer className="game-panel py-6 mt-auto" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <p>© {new Date().getFullYear()} GuessWhoParty! — Free custom Guess Who for everyone.</p>
+          <div className="flex items-center gap-5 font-semibold text-slate-400">
             <Link href="/templates" className="hover:text-amber-400 transition-colors">Browse Sets</Link>
-            <Link href="/create" className="hover:text-amber-400 transition-colors">Make Photo Set</Link>
-            <Link href="/play/practice" className="hover:text-amber-400 transition-colors">Practice Board</Link>
+            <Link href="/create" className="hover:text-amber-400 transition-colors">Upload Photos</Link>
+            <Link href="/play/practice" className="hover:text-amber-400 transition-colors">Practice</Link>
           </div>
         </div>
       </footer>
+
+      {/* Template Preview Modal */}
+      {selectedTemplate && (
+        <TemplatePreviewModal
+          template={selectedTemplate}
+          onClose={() => setSelectedTemplate(null)}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
+import { NavHeader } from '@/components/NavHeader';
+
 function generateRoomCode(length: number = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -118,19 +120,7 @@ export default function HostRoomPage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
-      {/* Header */}
-      <header className="w-full border-b border-white/10 glass-panel sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-semibold">Back to Home</span>
-          </Link>
-
-          <span className="text-sm font-extrabold tracking-tight">
-            Host Game <span className="gradient-text font-black">Room</span>
-          </span>
-        </div>
-      </header>
+      <NavHeader activePage="host" />
 
       {/* Main Container */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
