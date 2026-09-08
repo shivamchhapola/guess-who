@@ -1,11 +1,6 @@
 import { CardSetTemplate } from '@/types/game';
 
-// Avatar fallback for characters we don't have photos for
-const getAvatar = (seed: string, style: string = 'avataaars') => {
-  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=0f172a,1e293b,334155`;
-};
-
-// 1. THE OFFICE (US) TEMPLATE — Real actor photos
+// 1. THE OFFICE (US) TEMPLATE — 100% Real actor photos
 export const THE_OFFICE_TEMPLATE: CardSetTemplate = {
   id: 'the-office-us',
   title: 'The Office (Dunder Mifflin)',
@@ -24,18 +19,18 @@ export const THE_OFFICE_TEMPLATE: CardSetTemplate = {
     { id: 'off_6',  name: 'Ryan Howard',     imageUrl: '/templates/office/ryan-howard.jpg',     attributes: {} },
     { id: 'off_7',  name: 'Angela Martin',   imageUrl: '/templates/office/angela-martin.jpg',   attributes: {} },
     { id: 'off_8',  name: 'Kevin Malone',    imageUrl: '/templates/office/kevin-malone.jpg',    attributes: {} },
-    { id: 'off_9',  name: 'Oscar Martinez',  imageUrl: getAvatar('Oscar Martinez Office'), attributes: {} },
-    { id: 'off_10', name: 'Stanley Hudson',  imageUrl: getAvatar('Stanley Hudson Office'), attributes: {} },
-    { id: 'off_11', name: 'Phyllis Vance',   imageUrl: getAvatar('Phyllis Vance Office'),  attributes: {} },
-    { id: 'off_12', name: 'Creed Bratton',   imageUrl: getAvatar('Creed Bratton Office'),  attributes: {} },
-    { id: 'off_13', name: 'Meredith Palmer', imageUrl: getAvatar('Meredith Palmer Office'), attributes: {} },
-    { id: 'off_14', name: 'Toby Flenderson', imageUrl: getAvatar('Toby Flenderson Office'), attributes: {} },
-    { id: 'off_15', name: 'Kelly Kapoor',    imageUrl: getAvatar('Kelly Kapoor Office'),    attributes: {} },
-    { id: 'off_16', name: 'Darryl Philbin',  imageUrl: getAvatar('Darryl Philbin Office'),  attributes: {} },
+    { id: 'off_9',  name: 'Oscar Martinez',  imageUrl: '/templates/office/oscar-martinez.jpg',  attributes: {} },
+    { id: 'off_10', name: 'Stanley Hudson',  imageUrl: '/templates/office/stanley-hudson.jpg',  attributes: {} },
+    { id: 'off_11', name: 'Phyllis Vance',   imageUrl: '/templates/office/phyllis-vance.jpg',   attributes: {} },
+    { id: 'off_12', name: 'Creed Bratton',   imageUrl: '/templates/office/creed-bratton.jpg',   attributes: {} },
+    { id: 'off_13', name: 'Meredith Palmer', imageUrl: '/templates/office/meredith-palmer.jpg', attributes: {} },
+    { id: 'off_14', name: 'Toby Flenderson', imageUrl: '/templates/office/toby-flenderson.jpg', attributes: {} },
+    { id: 'off_15', name: 'Kelly Kapoor',    imageUrl: '/templates/office/kelly-kapoor.jpg',    attributes: {} },
+    { id: 'off_16', name: 'Darryl Philbin',  imageUrl: '/templates/office/darryl-philbin.jpg',  attributes: {} },
   ],
 };
 
-// 2. HOLLYWOOD STARS — Real actor headshots
+// 2. HOLLYWOOD STARS — 100% Real actor headshots
 export const HOLLYWOOD_ACTORS_TEMPLATE: CardSetTemplate = {
   id: 'hollywood-stars',
   title: 'Hollywood Movie Stars',
@@ -61,7 +56,7 @@ export const HOLLYWOOD_ACTORS_TEMPLATE: CardSetTemplate = {
   ],
 };
 
-// 3. MARVEL AVENGERS — Real MCU actor photos
+// 3. MARVEL AVENGERS — 100% Real MCU actor photos
 export const MARVEL_SUPERHEROES_TEMPLATE: CardSetTemplate = {
   id: 'marvel-superheroes',
   title: 'Marvel Avengers & Legends',
@@ -82,8 +77,10 @@ export const MARVEL_SUPERHEROES_TEMPLATE: CardSetTemplate = {
     { id: 'mcu_8',  name: 'Scarlet Witch',   imageUrl: '/templates/marvel/scarlet-witch.jpg',   attributes: {} },
     { id: 'mcu_9',  name: 'Nick Fury',       imageUrl: '/templates/marvel/nick-fury.jpg',       attributes: {} },
     { id: 'mcu_10', name: 'Hawkeye',         imageUrl: '/templates/marvel/hawkeye.jpg',         attributes: {} },
-    { id: 'mcu_11', name: 'Hulk',            imageUrl: getAvatar('Hulk Green MCU', 'bottts'),   attributes: {} },
-    { id: 'mcu_12', name: 'Doctor Strange',  imageUrl: getAvatar('Doctor Strange MCU', 'bottts'), attributes: {} },
+    { id: 'mcu_11', name: 'Hulk',            imageUrl: '/templates/marvel/hulk.jpg',            attributes: {} },
+    { id: 'mcu_12', name: 'Doctor Strange',  imageUrl: '/templates/marvel/doctor-strange.jpg',  attributes: {} },
+    { id: 'mcu_13', name: 'Loki',            imageUrl: '/templates/marvel/loki.jpg',            attributes: {} },
+    { id: 'mcu_14', name: 'Thanos',          imageUrl: '/templates/marvel/thanos.jpg',          attributes: {} },
   ],
 };
 

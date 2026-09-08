@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CharacterCard } from '@/types/game';
 import { soundFx } from '@/lib/audio';
-import { HelpCircle, Eye, EyeOff, Target } from 'lucide-react';
+import { Eye, EyeOff, Target, Sparkles, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 
 interface CardFlipProps {
@@ -28,22 +28,20 @@ export const CardFlip: React.FC<CardFlipProps> = ({
   onSelectSecret,
   onMakeGuess,
 }) => {
-  const handleClick = (e: React.MouseEvent) => {
+  const handleCardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isSelectable && onSelectSecret) {
       soundFx.playSelect();
       onSelectSecret(card.id);
       return;
     }
-    soundFx.playCardFlip(!isFlippingDown);
-    onToggleFlip(card.id);
   };
 
   return (
-    <div className="relative group w-full aspect-[3/4] perspective-1000 select-none">
-      {/* Secret Card Badge indicator */}
+    <div className="relative group w-full aspect-[3/4.2] perspective-1000 select-none">
+      {/* Secret Card Indicator Badge */}
       {isSecret && (
-        <div className="absolute -top-2.5 -left-2.5 z-20 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1">
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-[10px] uppercase px-2.5 py-0.5 rounded-full shadow-xl flex items-center gap-1 ring-2 ring-slate-950">
           <Eye className="w-3 h-3" />
           <span>YOUR SECRET</span>
         </div>
@@ -53,81 +51,122 @@ export const CardFlip: React.FC<CardFlipProps> = ({
         className="w-full h-full relative transform-style-3d cursor-pointer"
         initial={false}
         animate={{ rotateY: isFlippingDown ? 180 : 0 }}
-        transition={{ duration: 0.45, ease: [0.4, 0.0, 0.2, 1] }}
-        onClick={handleClick}
+        transition={{ duration: 0.4, ease: [0.4, 0.0, 0.2, 1] }}
+        onClick={handleCardClick}
       >
         {/* FRONT OF CARD (Standing Up / Revealed) */}
         <div
-          className={`absolute inset-0 w-full h-full rounded-2xl glass-card border flex flex-col items-center justify-between p-3 backface-hidden transition-all ${
+          className={`absolute inset-0 w-full h-full rounded-2xl glass-card border flex flex-col justify-between p-2.5 backface-hidden transition-all duration-200 ${
             isSecret
-              ? 'border-amber-400 ring-2 ring-amber-400/40 shadow-xl shadow-amber-500/20'
-              : 'border-slate-700/60 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-500/10'
+              ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-500/10 shadow-lg shadow-amber-500/20'
+              : 'border-slate-700/60 hover:border-cyan-400/70 hover:shadow-xl hover:shadow-cyan-500/15'
           }`}
         >
-          {/* Card Image Container */}
-          <div className="relative w-full aspect-square rounded-xl bg-slate-950/60 overflow-hidden border border-white/5 flex items-center justify-center">
+          {/* Card Portrait Photo */}
+          <div className="relative w-full aspect-[4/3.8] rounded-xl bg-slate-950 overflow-hidden border border-white/10 flex items-center justify-center">
             <Image
               src={card.imageUrl}
               alt={card.name}
               fill
-              sizes="(max-width: 768px) 25vw, 12vw"
+              sizes="(max-width: 768px) 33vw, 15vw"
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               unoptimized
             />
           </div>
 
           {/* Character Name */}
-          <div className="w-full text-center">
-            <h3 className="font-bold text-slate-100 text-sm sm:text-base truncate tracking-tight">
+          <div className="w-full text-center py-1">
+            <h3 className="font-extrabold text-slate-100 text-xs sm:text-sm truncate tracking-tight">
               {card.name}
             </h3>
           </div>
 
-          {/* Action Bar (Guess Button / Flip toggle) */}
-          <div className="w-full flex items-center justify-between gap-1 pt-1 border-t border-white/5 text-[11px] font-medium text-slate-400">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                soundFx.playCardFlip(true);
-                onToggleFlip(card.id);
-              }}
-              className="flex items-center gap-1 hover:text-cyan-400 transition-colors p-1"
-              title="Flip Down Card"
-            >
-              <EyeOff className="w-3.5 h-3.5 text-slate-400" />
-              <span className="hidden lg:inline">Eliminate</span>
-            </button>
-
-            {isGuessable && onMakeGuess && (
+          {/* Action Buttons Bar */}
+          <div className="w-full flex items-center gap-1.5 pt-1 border-t border-white/10">
+            {isSelectable ? (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   soundFx.playSelect();
-                  onMakeGuess(card);
+                  if (onSelectSecret) onSelectSecret(card.id);
                 }}
-                className="flex items-center gap-1 text-pink-400 hover:text-pink-300 font-semibold p-1 hover:bg-pink-500/10 rounded transition-colors"
-                title="Guess this is the secret card!"
+                className="w-full py-1.5 px-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-1 shadow-md transition-all hover:scale-[1.02]"
               >
-                <Target className="w-3.5 h-3.5 text-pink-400" />
-                <span>Guess</span>
+                <Sparkles className="w-3.5 h-3.5 fill-current" />
+                <span>Select Card</span>
               </button>
+            ) : (
+              <>
+                {/* Eliminate / Flip Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    soundFx.playCardFlip(true);
+                    onToggleFlip(card.id);
+                  }}
+                  className="flex-1 py-1 px-1.5 bg-slate-900/90 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1 transition-colors"
+                  title="Eliminate / Flip Down Card"
+                >
+                  <EyeOff className="w-3 h-3 text-slate-400 group-hover:text-amber-400" />
+                  <span>Eliminate</span>
+                </button>
+
+                {/* Guess Button */}
+                {isGuessable && onMakeGuess && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      soundFx.playSelect();
+                      onMakeGuess(card);
+                    }}
+                    className="py-1 px-2 bg-pink-500/20 hover:bg-pink-500/40 text-pink-300 border border-pink-500/30 hover:border-pink-400 font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1 transition-colors"
+                    title="Make final guess on this character!"
+                  >
+                    <Target className="w-3 h-3 text-pink-400" />
+                    <span>Guess</span>
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {/* BACK OF CARD (Flipped Down / Eliminated) */}
-        <div className="absolute inset-0 w-full h-full rounded-2xl glass-panel border border-slate-800 flex flex-col items-center justify-center p-3 rotate-y-180 backface-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/40">
-          <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-700/80 flex items-center justify-center text-slate-600 mb-2">
-            <HelpCircle className="w-5 h-5 text-slate-500" />
+        <div
+          className="absolute inset-0 w-full h-full rounded-2xl border border-slate-800 flex flex-col items-center justify-between p-3 rotate-y-180 backface-hidden bg-slate-950/95"
+          style={{
+            backgroundImage: 'radial-gradient(ellipse at 50% 50%, rgba(239, 68, 68, 0.12) 0%, transparent 80%)',
+          }}
+        >
+          <div className="w-full flex justify-center pt-2">
+            <span className="text-[10px] font-black text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              ELIMINATED
+            </span>
           </div>
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest text-center">
-            ELIMINATED
-          </span>
-          <span className="text-xs font-bold text-slate-400 line-through mt-1 truncate max-w-full">
-            {card.name}
-          </span>
+
+          <div className="text-center px-1">
+            <span className="text-xs font-bold text-slate-400 line-through truncate block max-w-[110px] mx-auto">
+              {card.name}
+            </span>
+          </div>
+
+          {/* Unflip / Undo Elimination Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              soundFx.playCardFlip(false);
+              onToggleFlip(card.id);
+            }}
+            className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1 transition-colors"
+            title="Unflip / Restore Card"
+          >
+            <RotateCcw className="w-3 h-3 text-cyan-400" />
+            <span>Unflip Card</span>
+          </button>
         </div>
       </motion.div>
     </div>
