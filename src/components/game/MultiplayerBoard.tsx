@@ -327,16 +327,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 card={card}
                 isFlippingDown={false}
                 isSelectable={true}
-                onToggleFlip={() => {}}
+                onToggleFlip={() => { }}
                 onSelectSecret={handleSelectSecret}
               />
             ))}
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 w-full">
           {/* Main Card Grid */}
-          <div className="lg:col-span-3 flex flex-col">
+          <div className="lg:col-span-4 flex flex-col">
             <div className="w-full game-panel p-3.5 sm:p-4 rounded-2xl mb-6 flex items-center justify-between gap-4 border border-white/10">
               <span className="text-xs font-black bg-amber-400 text-slate-950 px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
                 {standingCardsCount} / {template.cards.length} Remaining
@@ -355,7 +355,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 w-full">
               {template.cards.map((card) => (
                 <CardFlip
                   key={card.id}
@@ -371,7 +371,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           </div>
 
           {/* In-Game Realtime Chat Box */}
-          <div className="lg:col-span-1 game-panel p-4 sm:p-5 rounded-3xl border border-white/10 flex flex-col justify-between h-[620px] shadow-2xl">
+          <div className="lg:col-span-2 game-panel p-4 sm:p-5 rounded-3xl border border-white/10 flex flex-col justify-between h-[620px] shadow-2xl lg:sticky lg:top-4">
             <div className="flex flex-col h-full overflow-hidden">
               <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10 shrink-0">
                 <div className="flex items-center gap-2">
@@ -407,9 +407,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                     return (
                       <div
                         key={msg.id}
-                        className={`flex flex-col max-w-[88%] ${
-                          isMe ? 'self-end items-end' : 'self-start items-start'
-                        }`}
+                        className={`flex flex-col max-w-[88%] ${isMe ? 'self-end items-end' : 'self-start items-start'
+                          }`}
                       >
                         <div className="flex items-center gap-1.5 mb-0.5 px-1">
                           <span className="text-[10px] font-black text-slate-400 whitespace-nowrap">
@@ -418,11 +417,10 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                           <span className="text-[9px] text-slate-500 whitespace-nowrap">{msg.timestamp}</span>
                         </div>
                         <div
-                          className={`p-2.5 rounded-2xl text-xs font-medium leading-relaxed break-words max-w-full ${
-                            isMe
-                              ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 rounded-tr-none font-semibold shadow-md'
-                              : 'bg-slate-900 border border-slate-700/80 text-slate-100 rounded-tl-none'
-                          }`}
+                          className={`p-2.5 rounded-2xl text-xs font-medium leading-relaxed break-words max-w-full ${isMe
+                            ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 rounded-tr-none font-semibold shadow-md'
+                            : 'bg-slate-900 border border-slate-700/80 text-slate-100 rounded-tl-none'
+                            }`}
                         >
                           <p className="break-words">{msg.question}</p>
                         </div>
