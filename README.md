@@ -1,70 +1,36 @@
-# Guess Who Maker (Open Source Clone) 🎭
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-An open-source, modern, serverless web application inspired by Guess Who Maker. Anyone can play online custom Guess Who games for free without signing up or paying. Custom template creation requires a free account.
+## Getting Started
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Next.js](https://img.shields.io/badge/Next.js-14+-black?logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?logo=typescript)
-
----
-
-## ✨ Features
-
-- 🎮 **No Login to Play**: Jump straight into a game using a 6-character room code, direct link, or public lobby.
-- 🔓 **No Paywall**: 100% free and open-source forever.
-- 🎨 **Custom Template Creator**: Logged-in users can design custom card sets with images, titles, and attribute tags.
-- 🌐 **Serverless Multiplayer**: Play online with room codes, optional passwords, or public matchmaking.
-- ⚡ **Zero Backend Overhead**: Runs 100% serverless on Vercel App Router.
-- 💫 **Stunning UI/UX**: Dark mode, dynamic glassmorphism aesthetics, smooth card flip animations, and sound effects.
-
----
-
-## 🚀 Tech Stack
-
-- **Framework**: Next.js (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS & Framer Motion
-- **Database & Auth**: Supabase / PostgreSQL
-- **Multiplayer**: WebRTC P2P / Supabase Realtime
-- **Deployment**: Vercel
-
----
-
-## 🛠️ Getting Started (Local Development)
+First, run the development server:
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/guess-who-maker.git
-
-# Navigate to project directory
-cd guess-who-maker
-
-# Install dependencies
-npm install
-
-# Run development server
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
----
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## 📚 Documentation & Architecture
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-- 📐 [Architecture Overview](file:///e:/GuessWho/ARCHITECTURE.md)
-- 🌿 [Branching Strategy](file:///e:/GuessWho/BRANCHING_STRATEGY.md)
-- 📜 [Architecture Decision Log](file:///e:/GuessWho/DECISION_LOG.md)
-- 🤖 [AI Development Guidelines](file:///e:/GuessWho/.agents/AGENTS.md)
+## Learn More
 
----
+To learn more about Next.js, take a look at the following resources:
 
-## 🤝 Contributing
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Contributions are welcome! Please check our [Branching Strategy](file:///e:/GuessWho/BRANCHING_STRATEGY.md) before submitting a Pull Request.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
----
+## Deploy on Vercel
 
-## 📄 License
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-MIT License. Free for public use and modification.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
