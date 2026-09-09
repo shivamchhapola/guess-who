@@ -143,8 +143,12 @@ function HostRoomContent() {
       }
 
       if (typeof window !== 'undefined') {
+        // presenceKey format: "https://avatarUrl NickName" — same as joiner, so opponent can extract avatar
+        const hostPresenceKey = selectedAvatar && selectedAvatar.startsWith('https://')
+          ? `${selectedAvatar} ${finalHostName}`
+          : finalHostName;
         sessionStorage.setItem(`room_${upperCode}_role`, 'host');
-        sessionStorage.setItem(`room_${upperCode}_name`, finalHostName);
+        sessionStorage.setItem(`room_${upperCode}_name`, hostPresenceKey);
         sessionStorage.setItem(`room_${upperCode}_avatar`, selectedAvatar);
         sessionStorage.setItem(`room_${upperCode}_template`, selectedTemplateId);
       }

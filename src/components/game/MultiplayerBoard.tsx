@@ -111,6 +111,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [passError, setPassError] = useState<string | null>(null);
 
   const [playerName, setPlayerName] = useState<string>('');
+  const [presenceKey, setPresenceKey] = useState<string>(''); // full "https://avatar NickName" for channel
   const [hasSetIdentity, setHasSetIdentity] = useState<boolean>(false);
   const [joinNickname, setJoinNickname] = useState<string>('');
   const [selectedAvatar, setSelectedAvatar] = useState<string>('🎮');
@@ -120,7 +121,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     if (typeof window !== 'undefined') {
       setIsHost(sessionStorage.getItem(`room_${roomCode}_role`) === 'host');
       const rawName = sessionStorage.getItem(`room_${roomCode}_name`) || '';
-      // rawName may be "https://avatar NickName" for joiners, or just "NickName" for hosts
+      // rawName is the full presenceKey: "https://avatarUrl NickName"
+      setPresenceKey(rawName);
       if (rawName.startsWith('https://')) {
         const spaceIdx = rawName.indexOf(' ');
         if (spaceIdx > 0) {
@@ -169,11 +171,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   }, [template]);
 
   useEffect(() => {
-    if (!isUnlocked || !hasSetIdentity || !playerName) return;
+    if (!isUnlocked || !hasSetIdentity || !presenceKey) return;
 
     const channel = supabase.channel(`room:${roomCode}`, {
       config: {
-        presence: { key: playerName },
+        presence: { key: presenceKey },
       },
     });
     channelRef.current = channel;
@@ -182,9 +184,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       const state = channel.presenceState();
       const players = Object.keys(state);
       setConnectedPlayers(players);
-      const otherKey = players.find((p) => p !== playerName);
+      const otherKey = players.find((p) => p !== presenceKey);
       if (otherKey) {
-        // playerName format: "https://avatar-url NickName" or just "NickName"
+        // presenceKey format: "https://avatar-url NickName" or just "NickName"
         const spaceIdx = otherKey.indexOf(' ');
         if (spaceIdx > 0 && otherKey.startsWith('https://')) {
           setOpponentAvatar(otherKey.slice(0, spaceIdx));
@@ -251,7 +253,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomCode, playerName, isUnlocked, hasSetIdentity]);
+  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -439,19 +441,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
       const nicknameToUse = joinNickname.trim() || generateRandomName();
       const avatarUrl = selectedAvatar.startsWith('https://') ? selectedAvatar : '';
-      // Store avatar separately and name as combined key for presence
-      const presenceKey = avatarUrl ? `${avatarUrl} ${nicknameToUse}` : nicknameToUse;
+      const localPresenceKey = avatarUrl ? `${avatarUrl} ${nicknameToUse}` : nicknameToUse;
 
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`room_${roomCode}_name`, presenceKey);
+        sessionStorage.setItem(`room_${roomCode}_name`, localPresenceKey);
         if (avatarUrl) sessionStorage.setItem(`room_${roomCode}_avatar`, avatarUrl);
       }
 
       setPlayerAvatar(avatarUrl);
-      // playerName is used as the Supabase presence key — keep it as presenceKey so the channel
-      // subscription (which depends on playerName) uses the avatar+nickname string for matching.
-      // The display name is parsed from presenceKey in the lobby render below.
-      setPlayerName(presenceKey);
+      setPresenceKey(localPresenceKey);
+      setPlayerName(nicknameToUse);
       setPassError(null);
       setIsUnlocked(true);
       setHasSetIdentity(true);
@@ -648,12 +647,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
               <div className="flex flex-col gap-3">
                 {/* Current Player Row */}
-                {(() => {
-                  // playerName may be "https://avatar-url NickName" (presenceKey) — extract display name
-                  const displayName = playerName.startsWith('https://')
-                    ? playerName.slice(playerName.indexOf(' ') + 1)
-                    : playerName;
-                  return (
+                {/* Current Player Row */}
                 <div className="p-4 rounded-2xl bg-slate-950/80 border border-amber-500/30 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     {playerAvatar && playerAvatar.startsWith('http') ? (
@@ -668,7 +662,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                     )}
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm font-bold text-white truncate">
-                        {displayName}
+                        {playerName}
                       </span>
                       <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 shrink-0">
                         You
@@ -681,8 +675,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                     </span>
                   )}
                 </div>
-                  );
-                })()}
+
 
                 {/* Opponent Player Row / Empty Slot */}
                 {opponentName ? (
