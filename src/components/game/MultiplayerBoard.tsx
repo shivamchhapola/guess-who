@@ -331,11 +331,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       {/* ── Mobile Chat Panel (collapsible) ─────────────────── */}
       {chatOpen && (
         <div className="lg:hidden game-panel p-4 rounded-2xl mb-4 flex flex-col gap-3"
-          style={{ border: '1px solid rgba(255,255,255,0.09)', maxHeight: '280px' }}>
+          style={{ border: '1px solid rgba(255,255,255,0.09)', maxHeight: '380px' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-amber-400" />
-              <h4 className="font-extrabold text-white text-sm">Room Chat</h4>
+              <h4 className="font-extrabold text-white text-sm">Room Chat &amp; Questions</h4>
             </div>
             <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 rounded-full"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -345,7 +345,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
           <div className="flex-1 overflow-y-auto flex flex-col gap-2" style={{ minHeight: 0 }}>
             {chatMessages.length === 0 ? (
-              <p className="text-slate-600 text-xs text-center py-4">No messages yet. Say hi!</p>
+              <p className="text-slate-600 text-xs text-center py-4">No messages yet. Ask a question below!</p>
             ) : (
               chatMessages.map((msg) => {
                 if (msg.sender === 'system') {
@@ -360,8 +360,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 }
                 const isMe = msg.senderId === playerName || msg.senderName === playerName;
                 return (
-                  <div key={msg.id} className={`flex flex-col max-w-[80%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
-                    <div className={`px-3 py-2 rounded-2xl text-xs font-medium leading-relaxed break-words ${isMe
+                  <div key={msg.id} className={`flex flex-col max-w-[85%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
+                    <div className={`px-3.5 py-2 rounded-2xl text-xs font-medium leading-relaxed break-words ${isMe
                         ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 rounded-tr-none font-semibold'
                         : 'text-slate-100 rounded-tl-none'
                       }`}
@@ -375,18 +375,33 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             <div ref={chatBottomRef} />
           </div>
 
+          {/* Quick Question Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar shrink-0">
+            {['Glasses?', 'Hat?', 'Blonde hair?', 'Facial hair?', 'Male?', 'Female?'].map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => setChatInput(`Does your character have ${q.toLowerCase()}`)}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-amber-300 shrink-0 transition-colors"
+                style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={handleSendChat} className="flex items-center gap-2">
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Ask a question…"
-              className="flex-1 px-3 py-2 rounded-xl text-xs text-white placeholder:text-slate-600 focus:outline-none"
+              placeholder="Ask a question (e.g. Do they wear glasses?)"
+              className="flex-1 px-3 py-2.5 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none"
               style={{ background: 'rgba(7,9,15,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}
               onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.4)')}
               onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
             />
-            <button type="submit" className="p-2 rounded-xl shrink-0"
+            <button type="submit" className="p-2.5 rounded-xl shrink-0 font-bold text-xs flex items-center gap-1"
               style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', color: '#0a0f1a' }}>
               <Send className="w-3.5 h-3.5" />
             </button>
@@ -473,36 +488,46 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             </div>
           </div>
 
-          {/* Desktop Chat Sidebar */}
-          <div className="hidden lg:flex flex-col w-72 xl:w-80 game-panel p-4 rounded-3xl shrink-0 lg:sticky lg:top-4"
-            style={{ border: '1px solid rgba(255,255,255,0.09)', height: 'fit-content', maxHeight: 'calc(100vh - 6rem)' }}>
+          {/* Desktop Chat Sidebar (Bigger & Roomier) */}
+          <div className="hidden lg:flex flex-col w-80 xl:w-96 2xl:w-[420px] game-panel p-5 rounded-3xl shrink-0 lg:sticky lg:top-4"
+            style={{ border: '1px solid rgba(255,255,255,0.1)', height: 'fit-content', maxHeight: 'calc(100vh - 5rem)' }}>
             {/* Chat Header */}
-            <div className="flex items-center justify-between mb-3 pb-3 shrink-0"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-amber-400" />
-                <h4 className="font-extrabold text-white text-sm">Room Chat</h4>
+            <div className="flex items-center justify-between mb-4 pb-3 shrink-0"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-white text-base leading-tight">Live Game Chat</h4>
+                  <p className="text-[11px] text-slate-400">Ask questions &amp; chat with opponent</p>
+                </div>
               </div>
-              <span className="text-[10px] font-bold text-slate-400 px-2 py-0.5 rounded-full truncate max-w-[110px]"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <span className="text-[11px] font-bold text-slate-300 px-3 py-1 rounded-full truncate max-w-[130px]"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
                 {opponentName ? `VS ${opponentName}` : 'Waiting…'}
               </span>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 mb-3" style={{ minHeight: '260px', maxHeight: '420px' }}>
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-3 mb-4 pr-1" style={{ minHeight: '340px', maxHeight: '520px' }}>
               {chatMessages.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-slate-600 text-xs font-semibold mb-1">No messages yet</p>
-                  <p className="text-[11px] text-slate-700">Ask: "Does your character have glasses?"</p>
+                <div className="text-center py-12 px-4">
+                  <div className="w-10 h-10 rounded-2xl bg-slate-900 border border-white/10 text-slate-500 flex items-center justify-center mx-auto mb-3">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <p className="text-slate-400 text-xs font-bold mb-1">No questions asked yet</p>
+                  <p className="text-[11px] text-slate-500 max-w-[220px] mx-auto leading-relaxed">
+                    Use quick chips below or type a custom question to narrow down character features!
+                  </p>
                 </div>
               ) : (
                 chatMessages.map((msg) => {
                   if (msg.sender === 'system') {
                     return (
                       <div key={msg.id} className="text-center py-1">
-                        <span className="text-[10px] font-bold text-amber-300 px-3 py-1.5 rounded-2xl inline-block"
-                          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                        <span className="text-[11px] font-bold text-amber-300 px-3.5 py-1.5 rounded-2xl inline-block"
+                          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
                           ✨ {msg.question}
                         </span>
                       </div>
@@ -511,14 +536,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                   const isMe = msg.senderId === playerName || msg.senderName === playerName;
                   return (
                     <div key={msg.id} className={`flex flex-col max-w-[88%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
-                      <span className="text-[10px] font-bold text-slate-500 mb-0.5 px-1">
+                      <span className="text-[10px] font-bold text-slate-400 mb-1 px-1">
                         {isMe ? 'You' : msg.senderName || 'Opponent'} · {msg.timestamp}
                       </span>
-                      <div className={`px-3 py-2 rounded-2xl text-xs font-medium leading-relaxed break-words max-w-full ${isMe
-                          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 rounded-tr-none font-semibold shadow-md'
+                      <div className={`px-4 py-2.5 rounded-2xl text-xs font-medium leading-relaxed break-words max-w-full ${isMe
+                          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 rounded-tr-none font-bold shadow-md'
                           : 'text-slate-100 rounded-tl-none'
                         }`}
-                        style={!isMe ? { background: 'rgba(25,35,60,0.9)', border: '1px solid rgba(255,255,255,0.08)' } : {}}>
+                        style={!isMe ? { background: 'rgba(25,35,60,0.95)', border: '1px solid rgba(255,255,255,0.09)' } : {}}>
                         {msg.question}
                       </div>
                     </div>
@@ -528,22 +553,45 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
               <div ref={chatBottomRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSendChat} className="flex items-center gap-2 pt-3 shrink-0"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            {/* Quick Question Chips */}
+            <div className="mb-3 pt-2 border-t border-white/5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Quick Questions</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Does your character wear glasses?',
+                  'Is your character male?',
+                  'Does your character wear a hat?',
+                  'Does your character have blonde hair?',
+                  'Does your character have facial hair?'
+                ].map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => setChatInput(q)}
+                    className="px-2.5 py-1 rounded-xl text-[11px] font-semibold text-slate-300 hover:text-amber-300 transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Input Form */}
+            <form onSubmit={handleSendChat} className="flex items-center gap-2 pt-2 shrink-0 border-t border-white/5">
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask a question…"
-                className="flex-1 px-3 py-2 rounded-xl text-xs text-white placeholder:text-slate-600 focus:outline-none transition-colors"
-                style={{ background: 'rgba(7,9,15,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.4)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
+                placeholder="Ask a question or type a message…"
+                className="flex-1 px-4 py-3 rounded-2xl text-xs text-white placeholder:text-slate-500 focus:outline-none transition-colors"
+                style={{ background: 'rgba(7,9,15,0.95)', border: '1px solid rgba(255,255,255,0.1)' }}
+                onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.5)')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
-              <button type="submit" className="p-2 rounded-xl shrink-0 transition-transform hover:scale-105"
+              <button type="submit" className="p-3 rounded-2xl shrink-0 font-extrabold text-xs flex items-center justify-center transition-transform hover:scale-105"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', color: '#0a0f1a' }}>
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-4 h-4" />
               </button>
             </form>
           </div>

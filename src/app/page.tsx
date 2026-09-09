@@ -139,9 +139,9 @@ export default function Home() {
             {/* Hero Title */}
             <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-[1.08] mb-4 text-white"
               style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Guess Who
+              Guess Whooo?
               <span className="block font-game-title mt-1">
-                with your friends
+                with your friends !
               </span>
             </h1>
 
