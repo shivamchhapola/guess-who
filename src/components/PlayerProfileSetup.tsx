@@ -97,10 +97,10 @@ export function PlayerProfileSetup({
                     key={style.id}
                     type="button"
                     onClick={() => updateAvatar(style.id, selectedSeed)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 ${
                       selectedStyle === style.id
-                        ? 'bg-amber-500 text-black font-extrabold shadow-md scale-[1.02]'
-                        : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
+                        : 'bg-white/5 text-slate-300 hover:bg-white/10 border-white/10'
                     }`}
                   >
                     <span>{style.icon}</span>
@@ -124,9 +124,9 @@ export function PlayerProfileSetup({
                       key={seed}
                       type="button"
                       onClick={() => updateAvatar(selectedStyle, seed)}
-                      className={`aspect-square rounded-xl p-1 border flex items-center justify-center transition-all ${
+                      className={`aspect-square rounded-xl p-1 border transition-colors flex items-center justify-center ${
                         isSelected
-                          ? 'border-amber-400 bg-amber-500/20 ring-2 ring-amber-400/50 scale-105'
+                          ? 'border-amber-400 bg-amber-500/20 shadow-sm shadow-amber-500/30'
                           : 'border-white/10 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-700'
                       }`}
                       title={`Variant ${idx + 1}`}
