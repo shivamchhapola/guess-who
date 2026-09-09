@@ -79,6 +79,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [chatMessages, setChatMessages] = useState<QuestionLogItem[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
 
   const [selectedGuessCard, setSelectedGuessCard] = useState<CharacterCard | null>(null);
   const [isGuessModalOpen, setIsGuessModalOpen] = useState<boolean>(false);
@@ -237,6 +239,23 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     navigator.clipboard.writeText(`${origin}/play/${roomCode}`);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleCopyRoomCode = () => {
+    soundFx.playSelect();
+    navigator.clipboard.writeText(roomCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleConfirmLeave = () => {
+    soundFx.playSelect();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(`room_${roomCode}_role`);
+      sessionStorage.removeItem(`room_${roomCode}_name`);
+      sessionStorage.removeItem(`room_${roomCode}_avatar`);
+    }
+    router.push(isHost ? '/host' : '/');
   };
 
   const handleOpenGuessModal = (card: CharacterCard) => {
@@ -415,19 +434,24 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       <div className="w-full max-w-5xl mx-auto px-4 py-8 sm:py-12 flex flex-col gap-8">
         
         {/* Lobby Top Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl game-panel border border-white/10 shadow-xl">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white transition-colors"
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl game-panel border border-white/10 shadow-xl">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playSelect();
+                setShowLeaveModal(true);
+              }}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
-              title="Leave Room"
+              title={isHost ? 'Back to room setup' : 'Leave room'}
+              aria-label={isHost ? 'Back to room setup' : 'Leave room'}
             >
               <ArrowLeft className="w-5 h-5" />
-            </Link>
+            </button>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-400 block">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-amber-400 block">
                   GAME ROOM LOBBY
                 </span>
                 {isHost && (
@@ -436,7 +460,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl font-black text-white font-mono tracking-wider">
+              <h1 className="text-2xl sm:text-3xl font-black text-white font-mono tracking-wider">
                 #{roomCode}
               </h1>
             </div>
@@ -445,16 +469,17 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleCopyInviteLink}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+              onClick={handleCopyRoomCode}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
               style={{
-                background: copiedLink ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
-                border: copiedLink ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.09)',
-                color: copiedLink ? '#34d399' : '#e2e8f0',
+                background: copiedCode ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                border: copiedCode ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.09)',
+                color: copiedCode ? '#34d399' : '#e2e8f0',
               }}
+              title="Copy room code"
             >
-              {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4 text-amber-400" />}
-              <span>{copiedLink ? 'Link Copied!' : 'Copy Room Code / Link'}</span>
+              {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4 text-amber-400" />}
+              <span>{copiedCode ? 'Code Copied!' : 'Copy Room Code'}</span>
             </button>
           </div>
         </div>
@@ -726,6 +751,45 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Leave Confirmation Modal */}
+        {showLeaveModal && (
+          <div
+            className="modal-backdrop z-50 fixed inset-0 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
+            onClick={() => setShowLeaveModal(false)}
+          >
+            <div
+              className="game-panel p-6 sm:p-8 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl text-left flex flex-col gap-5 animate-in zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div>
+                <h3 className="text-xl font-extrabold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  {isHost ? 'Back to Room Setup?' : 'Leave Game Room?'}
+                </h3>
+                <p className="text-slate-300 text-xs sm:text-sm mt-1.5 leading-relaxed">
+                  Are you sure you want to leave room <span className="font-mono font-bold text-amber-400">#{roomCode}</span>? Leaving will disconnect you from the active lobby.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLeaveModal(false)}
+                  className="flex-1 py-3 rounded-xl text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmLeave}
+                  className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 border border-rose-500/30 transition-all cursor-pointer shadow-lg shadow-rose-600/20"
+                >
+                  {isHost ? 'Leave & Setup' : 'Leave Room'}
+                </button>
+              </div>
             </div>
           </div>
         )}
