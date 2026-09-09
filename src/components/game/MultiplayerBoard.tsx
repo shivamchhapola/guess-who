@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { SetPreviewModal } from '../SetPreviewModal';
 import { PlayerProfileSetup } from '../PlayerProfileSetup';
 
 interface MultiplayerBoardProps {
@@ -29,8 +31,10 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   template,
   requiredPassword,
 }) => {
+  const router = useRouter();
   const [inLobby, setInLobby] = useState<boolean>(true);
   const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
+  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
   const [isHost] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem(`room_${roomCode}_role`) === 'host';
@@ -740,14 +744,15 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
         {/* Left: back + room info */}
         <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/"
-            className="p-2 rounded-xl text-slate-300 hover:text-white transition-colors shrink-0"
+          <button
+            type="button"
+            onClick={() => setShowExitConfirm(true)}
+            className="p-2 rounded-xl text-slate-300 hover:text-white transition-colors shrink-0 cursor-pointer"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
-            title="Back to Home"
+            title="Leave Room"
           >
             <ArrowLeft className="w-4 h-4" />
-          </Link>
+          </button>
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -758,7 +763,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 Live
               </span>
             </div>
-            <p className="text-slate-500 text-[11px] font-semibold truncate">{currentTemplate.title} · {currentTemplate.cards.length} cards</p>
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(true)}
+              className="text-left group flex items-center gap-1 text-slate-400 hover:text-amber-400 transition-colors text-[11px] font-semibold truncate cursor-pointer"
+            >
+              <span className="truncate">{currentTemplate.title}</span>
+              <span className="text-slate-600">•</span>
+              <span className="shrink-0">{currentTemplate.cards.length} cards</span>
+              <Eye className="w-3 h-3 text-slate-500 group-hover:text-amber-400 ml-0.5 shrink-0" />
+            </button>
           </div>
         </div>
 
@@ -1103,6 +1117,50 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         secretCard={opponentSecretCard}
         onPlayAgain={() => setGameResult(null)}
       />
+
+      {/* Set Preview Drawer / Modal */}
+      <SetPreviewModal
+        template={currentTemplate}
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+      />
+
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="modal-backdrop" onClick={() => setShowExitConfirm(false)}>
+          <div
+            className="glass-panel p-6 sm:p-8 rounded-3xl max-w-sm w-full text-center animate-slide-in-up"
+            style={{ border: '1px solid rgba(244,63,94,0.3)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-4">
+              <ArrowLeft className="w-6 h-6" />
+            </div>
+            <h3 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Leave Game Room?
+            </h3>
+            <p className="text-slate-400 text-xs mb-6">
+              Are you sure you want to exit room <strong className="text-amber-400">#{roomCode}</strong>? Your active match progress will end.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowExitConfirm(false)}
+                className="game-btn-secondary flex-1 py-2.5 text-xs font-bold"
+              >
+                Stay in Room
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/')}
+                className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition-colors flex-1 cursor-pointer"
+              >
+                Leave Room
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
