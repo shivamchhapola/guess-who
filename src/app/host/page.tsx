@@ -6,19 +6,13 @@ import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { ALL_POPULAR_TEMPLATES, THE_OFFICE_TEMPLATE } from '@/data/popularTemplates';
 import { createClient } from '@/lib/supabase/client';
 import {
-  Zap,
   Lock,
   Globe,
   RefreshCw,
   Play,
-  Sparkles,
   Check,
   Copy,
-  ShieldCheck,
   User,
-  Crown,
-  Eye,
-  ChevronRight,
   Layers,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -39,33 +33,30 @@ function generateRandomCode(length: number = 6): string {
 
 export default function HostRoomPage() {
   const [roomCode, setRoomCode] = useState<string>('');
-  const [checkingCode, setCheckingCode] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(THE_OFFICE_TEMPLATE.id);
   const [templates, setTemplates] = useState<CardSetTemplate[]>([
     THE_OFFICE_TEMPLATE,
-    ...ALL_POPULAR_TEMPLATES.filter(t => t.id !== THE_OFFICE_TEMPLATE.id),
+    ...ALL_POPULAR_TEMPLATES.filter((t) => t.id !== THE_OFFICE_TEMPLATE.id),
     CLASSIC_GUESS_WHO_TEMPLATE,
   ]);
 
   const [hasPassword, setHasPassword] = useState<boolean>(false);
   const [password, setPassword] = useState<string>('');
   const [isPublic, setIsPublic] = useState<boolean>(true);
-  
+
   const [hostName, setHostName] = useState<string>('Host Player');
   const [selectedAvatar, setSelectedAvatar] = useState<string>('👑');
-  
+
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const router = useRouter();
   const supabase = createClient();
 
-  // Supabase DB uniqueness check
   const getUniqueRoomCode = useCallback(async (): Promise<string> => {
-    setCheckingCode(true);
     let code = generateRandomCode(6);
     try {
       for (let i = 0; i < 10; i++) {
@@ -76,22 +67,19 @@ export default function HostRoomPage() {
           .maybeSingle();
 
         if (!data) {
-          setCheckingCode(false);
           return code;
         }
         code = generateRandomCode(6);
       }
     } catch {
-      // Fallback
+      // Quiet fallback
     }
-    setCheckingCode(false);
     return code;
   }, [supabase]);
 
   useEffect(() => {
-    getUniqueRoomCode().then(code => setRoomCode(code));
+    getUniqueRoomCode().then((code) => setRoomCode(code));
 
-    // Fetch public custom templates from Supabase
     async function fetchTemplates() {
       try {
         const { data: dbTemplates } = await supabase
@@ -109,17 +97,19 @@ export default function HostRoomPage() {
             tags: t.tags || ['Custom'],
             createdAt: t.created_at,
             updatedAt: t.updated_at,
-            cards: (t.cards || []).map((c: { id: string; name: string; image_url: string; attributes: Record<string, unknown> }) => ({
-              id: c.id,
-              name: c.name,
-              imageUrl: c.image_url,
-              attributes: c.attributes || {},
-            })),
+            cards: (t.cards || []).map(
+              (c: { id: string; name: string; image_url: string; attributes: Record<string, unknown> }) => ({
+                id: c.id,
+                name: c.name,
+                imageUrl: c.image_url,
+                attributes: c.attributes || {},
+              })
+            ),
           }));
 
           setTemplates((prev) => [
             ...prev,
-            ...formatted.filter(ft => !prev.some(pt => pt.id === ft.id)),
+            ...formatted.filter((ft) => !prev.some((pt) => pt.id === ft.id)),
           ]);
         }
       } catch (err) {
@@ -162,7 +152,6 @@ export default function HostRoomPage() {
     const finalHostName = `${selectedAvatar} ${hostName.trim() || 'Host Player'}`;
 
     try {
-      // Re-verify uniqueness in Supabase before creation
       const { data: existing } = await supabase
         .from('game_rooms')
         .select('code')
@@ -189,10 +178,9 @@ export default function HostRoomPage() {
 
       const { error } = await supabase.from('game_rooms').insert(roomPayload);
       if (error && error.code !== '23505') {
-        console.warn('Supabase DB room insert note:', error);
+        console.warn('Room creation note:', error);
       }
 
-      // Store local host session metadata
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(`room_${upperCode}_role`, 'host');
         sessionStorage.setItem(`room_${upperCode}_name`, finalHostName);
@@ -201,7 +189,7 @@ export default function HostRoomPage() {
 
       router.push(`/play/${upperCode}?template=${selectedTemplateId}`);
     } catch (err) {
-      console.error('Error creating room:', err);
+      console.error('Error launching room:', err);
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(`room_${upperCode}_role`, 'host');
         sessionStorage.setItem(`room_${upperCode}_name`, finalHostName);
@@ -213,7 +201,7 @@ export default function HostRoomPage() {
     }
   };
 
-  const selectedTemplate = templates.find(t => t.id === selectedTemplateId) || templates[0];
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) || templates[0];
 
   return (
     <div className="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-black">
@@ -222,55 +210,40 @@ export default function HostRoomPage() {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <form onSubmit={handleCreateRoom} className="flex flex-col gap-8">
-
-          {/* Top Hero Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2"
-                style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b' }}>
-                <Zap className="w-3.5 h-3.5 animate-bounce" />
-                <span>Multiplayer Game Setup</span>
-              </div>
-              <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight"
-                style={{ fontFamily: 'Outfit, sans-serif' }}>
-                Host a Game Room
-              </h1>
-              <p className="text-slate-400 text-sm mt-1">
-                Pick a deck, customize your room settings, and invite your friend to play!
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || checkingCode}
-              className="game-btn-primary py-4 px-8 text-base sm:text-lg rounded-2xl shrink-0 justify-center shadow-xl shadow-amber-500/20"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              <span>{loading ? 'Creating Room...' : 'Launch Room'}</span>
-            </button>
+          
+          {/* Page Header */}
+          <div>
+            <span className="text-xs font-black uppercase tracking-widest text-amber-500 mb-1 block">
+              MULTIPLAYER GAME SETUP
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Host a Game Room
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">
+              Choose a character deck, set up your player profile, and launch the match.
+            </p>
           </div>
 
           {errorMessage && (
-            <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-semibold text-center">
+            <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm font-medium text-center">
               {errorMessage}
             </div>
           )}
 
-          {/* 2-Column Main Layout */}
+          {/* Main Grid: Decisions on Left, Persistent Summary on Right */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* ── Left Column: Config Controls ──────────────── */}
-            <div className="lg:col-span-7 flex flex-col gap-6">
-
-              {/* Box 1: Select Game Deck */}
-              <div>
+            {/* ── LEFT COLUMN: Configuration Steps (7 Cols) ─────── */}
+            <div className="lg:col-span-7 flex flex-col gap-8">
+              
+              {/* 1. CHOOSE CHARACTER DECK */}
+              <section>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-black text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
-                    <span>1. Choose Character Deck</span>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <span className="text-amber-500 font-black">1.</span> Choose Character Deck
                   </h2>
-                  <span className="text-xs font-bold text-slate-400">
-                    {templates.length} Decks Ready
+                  <span className="text-xs font-semibold text-slate-400">
+                    {templates.length} Decks
                   </span>
                 </div>
 
@@ -284,314 +257,327 @@ export default function HostRoomPage() {
                           soundFx.playSelect();
                           setSelectedTemplateId(tpl.id);
                         }}
-                        className="game-panel p-5 rounded-3xl border cursor-pointer transition-all flex flex-col justify-between relative group"
+                        className="game-panel p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between h-[230px] relative group"
                         style={{
                           border: isSelected ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.08)',
                           background: isSelected ? 'rgba(245,158,11,0.06)' : 'rgba(13,17,28,0.7)',
-                          boxShadow: isSelected ? '0 0 24px rgba(245,158,11,0.2)' : 'none',
                         }}
                       >
-                        {/* Selected Badge */}
+                        {/* Selected Indicator Badge */}
                         {isSelected && (
-                          <div className="absolute top-4 right-4 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
+                          <div className="absolute top-3.5 right-3.5 bg-amber-500 text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow">
                             <Check className="w-3 h-3 stroke-[3]" />
-                            <span>SELECTED</span>
+                            <span>Selected</span>
                           </div>
                         )}
 
                         <div>
-                          {/* Photo Grid Preview */}
-                          <div className="grid grid-cols-4 gap-1.5 p-2 rounded-2xl mb-4 aspect-[2.2/1] overflow-hidden"
-                            style={{ background: '#07090f', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          {/* Deck Image Preview Grid */}
+                          <div
+                            className="grid grid-cols-4 gap-1 p-1.5 rounded-xl mb-3 aspect-[2.4/1] overflow-hidden"
+                            style={{ background: '#07090f', border: '1px solid rgba(255,255,255,0.05)' }}
+                          >
                             {tpl.cards.slice(0, 4).map((c) => (
-                              <div key={c.id} className="relative w-full h-full rounded-lg bg-slate-900 overflow-hidden">
+                              <div key={c.id} className="relative w-full h-full rounded bg-slate-900 overflow-hidden">
                                 <Image src={c.imageUrl} alt={c.name} fill className="object-cover" unoptimized />
                               </div>
                             ))}
                           </div>
 
-                          <h3 className="font-black text-white text-lg mb-1 group-hover:text-amber-400 transition-colors"
-                            style={{ fontFamily: 'Outfit, sans-serif' }}>
+                          <h3 className="font-extrabold text-white text-base truncate mb-1 group-hover:text-amber-400 transition-colors">
                             {tpl.title}
                           </h3>
-                          <p className="text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">{tpl.description}</p>
+                          {/* Reserved 2-line height description container */}
+                          <p className="text-slate-400 text-xs leading-relaxed line-clamp-2 h-[2.5rem] overflow-hidden">
+                            {tpl.description || 'Custom Guess Who card set ready for party play.'}
+                          </p>
                         </div>
 
-                        <div className="flex items-center justify-between text-xs pt-3 border-t border-white/5">
-                          <span className="font-bold text-slate-300">{tpl.cards.length} Cards</span>
-                          <span className="text-amber-400 font-semibold">{tpl.creatorName}</span>
+                        {/* Deck Card Footer */}
+                        <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/5">
+                          <span className="font-semibold text-slate-300 flex items-center gap-1">
+                            <Layers className="w-3.5 h-3.5 text-amber-500" />
+                            {tpl.cards.length} Cards
+                          </span>
+                          <span className="text-slate-400 text-[11px] truncate max-w-[100px]">{tpl.creatorName}</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </section>
 
-              {/* Box 2: Host Identity */}
-              <div className="game-panel p-6 rounded-3xl" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
-                    style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}>
-                    <User className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>2. Host Profile</h2>
-                    <p className="text-xs text-slate-400">Choose your avatar icon and handle</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                  {/* Quick Avatar Picker */}
-                  <div className="flex items-center gap-1.5 p-2 rounded-2xl overflow-x-auto w-full sm:w-auto"
-                    style={{ background: 'rgba(7,9,15,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    {AVATAR_EMOJIS.map(emoji => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => {
-                          soundFx.playSelect();
-                          setSelectedAvatar(emoji);
-                        }}
-                        className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-transform ${
-                          selectedAvatar === emoji
-                            ? 'bg-amber-400 text-black scale-110 font-bold shadow-md'
-                            : 'hover:bg-white/10 text-white'
-                        }`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Name Input */}
-                  <input
-                    type="text"
-                    required
-                    value={hostName}
-                    onChange={(e) => setHostName(e.target.value)}
-                    placeholder="Host Display Name"
-                    maxLength={20}
-                    className="flex-1 w-full px-4 py-3 rounded-2xl text-base font-bold text-white focus:outline-none transition-all"
-                    style={{
-                      background: 'rgba(7,9,15,0.9)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                    }}
-                    onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
-                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-                  />
-                </div>
-              </div>
-
-              {/* Box 3: Privacy & Password Settings */}
-              <div className="game-panel p-6 rounded-3xl" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-                <h2 className="text-lg font-black text-white mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  3. Room Privacy &amp; Security
+              {/* 2. PLAYER PROFILE */}
+              <section>
+                <h2 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <span className="text-amber-500 font-black">2.</span> Player Profile
                 </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Public Lobby Finder Toggle */}
-                  <div
-                    onClick={() => {
-                      soundFx.playSelect();
-                      setIsPublic(!isPublic);
-                    }}
-                    className="p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between"
-                    style={{
-                      background: isPublic ? 'rgba(6,182,212,0.08)' : 'rgba(7,9,15,0.6)',
-                      border: isPublic ? '1px solid rgba(6,182,212,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', color: '#22d3ee' }}>
-                        <Globe className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>Public Lobby</h3>
-                        <p className="text-xs text-slate-400">{isPublic ? 'Listed for anyone to join' : 'Private link only'}</p>
-                      </div>
+                <div className="game-panel p-5 rounded-2xl flex flex-col gap-4" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    {/* Compact Avatar Selector */}
+                    <div
+                      className="flex items-center gap-1.5 p-1.5 rounded-xl overflow-x-auto w-full sm:w-auto shrink-0"
+                      style={{ background: 'rgba(7,9,15,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                      {AVATAR_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            soundFx.playSelect();
+                            setSelectedAvatar(emoji);
+                          }}
+                          className={`w-8 h-8 rounded-lg text-base flex items-center justify-center transition-all ${
+                            selectedAvatar === emoji
+                              ? 'bg-amber-500 text-black font-bold shadow'
+                              : 'hover:bg-white/10 text-white'
+                          }`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
                     </div>
 
-                    <div className={`w-11 h-6 rounded-full transition-colors p-1 relative flex items-center ${isPublic ? 'bg-cyan-400' : 'bg-slate-800'}`}>
-                      <div className={`w-4 h-4 rounded-full bg-slate-950 transition-transform ${isPublic ? 'translate-x-5' : 'translate-x-0'}`} />
+                    {/* Clean Handle Input */}
+                    <div className="relative flex-1 w-full">
+                      <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input
+                        type="text"
+                        required
+                        value={hostName}
+                        onChange={(e) => setHostName(e.target.value)}
+                        placeholder="Your Display Name"
+                        maxLength={20}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-semibold text-white focus:outline-none transition-all"
+                        style={{
+                          background: 'rgba(7,9,15,0.9)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                        }}
+                        onFocus={(e) => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
+                        onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                      />
                     </div>
                   </div>
+                </div>
+              </section>
 
-                  {/* Password Protection */}
-                  <div
-                    className="p-4 rounded-2xl border flex flex-col justify-between"
-                    style={{
-                      background: hasPassword ? 'rgba(245,158,11,0.08)' : 'rgba(7,9,15,0.6)',
-                      border: hasPassword ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                    }}
-                  >
+              {/* 3. ROOM PRIVACY */}
+              <section>
+                <h2 className="text-xl font-bold text-white mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <span className="text-amber-500 font-black">3.</span> Room Privacy
+                </h2>
+
+                <div className="flex flex-col gap-3">
+                  {/* Fixed Equal Height Privacy Cards Grid (Option B) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Public Lobby Card */}
+                    <div
+                      onClick={() => {
+                        soundFx.playSelect();
+                        setIsPublic(!isPublic);
+                      }}
+                      className="game-panel p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between h-[72px]"
+                      style={{
+                        background: isPublic ? 'rgba(6,182,212,0.08)' : 'rgba(7,9,15,0.6)',
+                        border: isPublic ? '1px solid rgba(6,182,212,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee' }}
+                        >
+                          <Globe className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-white">Public Lobby</h3>
+                          <p className="text-xs text-slate-400">Anyone can join</p>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`w-10 h-5 rounded-full transition-colors p-0.5 relative flex items-center ${
+                          isPublic ? 'bg-cyan-400' : 'bg-slate-800'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full bg-slate-950 transition-transform ${
+                            isPublic ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Password Protection Card */}
                     <div
                       onClick={() => {
                         soundFx.playSelect();
                         setHasPassword(!hasPassword);
                       }}
-                      className="flex items-center justify-between cursor-pointer"
+                      className="game-panel p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between h-[72px]"
+                      style={{
+                        background: hasPassword ? 'rgba(245,158,11,0.08)' : 'rgba(7,9,15,0.6)',
+                        border: hasPassword ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                      }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                          style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}>
-                          <Lock className="w-5 h-5" />
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}
+                        >
+                          <Lock className="w-4 h-4" />
                         </div>
                         <div>
-                          <h3 className="text-sm font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>Password</h3>
-                          <p className="text-xs text-slate-400">{hasPassword ? 'Protected by passcode' : 'No passcode'}</p>
+                          <h3 className="text-sm font-bold text-white">Password</h3>
+                          <p className="text-xs text-slate-400">Require a passcode</p>
                         </div>
                       </div>
 
-                      <div className={`w-11 h-6 rounded-full transition-colors p-1 relative flex items-center ${hasPassword ? 'bg-amber-400' : 'bg-slate-800'}`}>
-                        <div className={`w-4 h-4 rounded-full bg-slate-950 transition-transform ${hasPassword ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </div>
-                    </div>
-
-                    {hasPassword && (
-                      <div className="mt-3 pt-3 border-t border-white/10">
-                        <input
-                          type="password"
-                          required={hasPassword}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Secret passcode"
-                          className="w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white focus:outline-none"
-                          style={{
-                            background: 'rgba(7,9,15,0.95)',
-                            border: '1px solid rgba(245,158,11,0.4)',
-                          }}
+                      <div
+                        className={`w-10 h-5 rounded-full transition-colors p-0.5 relative flex items-center ${
+                          hasPassword ? 'bg-amber-400' : 'bg-slate-800'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full bg-slate-950 transition-transform ${
+                            hasPassword ? 'translate-x-5' : 'translate-x-0'
+                          }`}
                         />
                       </div>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Password Input expanded BELOW if password enabled (Option B - prevents card resizing) */}
+                  {hasPassword && (
+                    <div className="p-4 rounded-2xl bg-slate-900/90 border border-amber-500/30 flex items-center gap-3">
+                      <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+                      <input
+                        type="password"
+                        required={hasPassword}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter room password"
+                        className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-white focus:outline-none"
+                        style={{
+                          background: 'rgba(7,9,15,0.95)',
+                          border: '1px solid rgba(245,158,11,0.4)',
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
+              </section>
 
             </div>
 
-            {/* ── Right Column: Live Room Code & Lobby Summary Card ───── */}
-            <div className="lg:col-span-5 flex flex-col gap-6 lg:sticky lg:top-8">
-              
-              {/* Room Ticket Box */}
-              <div className="game-panel p-6 sm:p-8 rounded-3xl relative overflow-hidden shadow-2xl"
-                style={{ border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(13,17,28,0.9)' }}>
-                
-                <div className="pointer-events-none absolute -top-16 -right-16 w-36 h-36 rounded-full"
-                  style={{ background: 'radial-gradient(ellipse, rgba(245,158,11,0.2) 0%, transparent 70%)' }} />
-
-                {/* Ticket Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Crown className="w-5 h-5 text-amber-400" />
-                    <h3 className="font-extrabold text-white text-base">Verified Room Ticket</h3>
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full"
-                    style={{ background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.3)' }}>
-                    DB Verified
+            {/* ── RIGHT COLUMN: Persistent Room Summary Sidebar (5 Cols) ─ */}
+            <div className="lg:col-span-5 lg:sticky lg:top-8">
+              <div
+                className="game-panel p-6 rounded-3xl flex flex-col gap-5 border shadow-xl"
+                style={{
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  background: 'rgba(13,17,28,0.95)',
+                }}
+              >
+                {/* Header with human-friendly status */}
+                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                  <h3 className="font-extrabold text-white text-base uppercase tracking-wider" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    Room Summary
+                  </h3>
+                  <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                    Ready to share
                   </span>
                 </div>
 
-                {/* Big Monospace Code Display */}
-                <div className="text-center mb-6">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-2">Room Code</span>
-                  <div className="p-4 rounded-2xl flex items-center justify-center gap-2 relative"
-                    style={{ background: 'rgba(7,9,15,0.95)', border: '2px solid rgba(245,158,11,0.5)' }}>
-                    <span className="text-3xl sm:text-4xl font-mono font-black tracking-widest text-amber-400 uppercase">
+                {/* Room Code Area */}
+                <div>
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                    Room Code
+                  </span>
+                  <div
+                    className="p-3.5 rounded-2xl flex items-center justify-between relative"
+                    style={{ background: 'rgba(7,9,15,0.95)', border: '1.5 solid rgba(245,158,11,0.5)' }}
+                  >
+                    <span className="text-2xl font-mono font-black text-amber-400 uppercase tracking-widest">
                       {roomCode}
                     </span>
                     <button
                       type="button"
                       onClick={handleRegenerateCode}
-                      disabled={checkingCode}
-                      className="p-2 rounded-xl text-slate-400 hover:text-amber-400 transition-colors ml-2"
-                      title="Generate Fresh Code"
+                      className="p-2 rounded-xl text-slate-400 hover:text-amber-400 transition-colors"
+                      title="Regenerate Code"
                     >
-                      <RefreshCw className={`w-4 h-4 ${checkingCode ? 'animate-spin' : ''}`} />
+                      <RefreshCw className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Supabase DB Uniqueness Badge */}
-                  <div className="mt-2 flex items-center justify-center gap-1.5 text-xs font-bold">
-                    {checkingCode ? (
-                      <span className="text-amber-400 flex items-center gap-1">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Verifying DB uniqueness...
-                      </span>
-                    ) : (
-                      <span className="text-emerald-400 flex items-center gap-1">
-                        <ShieldCheck className="w-4 h-4" /> Code verified unique in database
-                      </span>
-                    )}
+                  {/* Copy Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2 mt-2.5">
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      className="py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                      style={{
+                        background: copiedCode ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                        color: copiedCode ? '#34d399' : '#cbd5e1',
+                        border: copiedCode ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.09)',
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyInviteLink}
+                      className="py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                      style={{
+                        background: copiedLink ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                        color: copiedLink ? '#34d399' : '#cbd5e1',
+                        border: copiedLink ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.09)',
+                      }}
+                    >
+                      <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{copiedLink ? 'Link Copied' : 'Copy Link'}</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Quick Action Buttons for Host */}
-                <div className="grid grid-cols-2 gap-2 mb-6">
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                    style={{
-                      background: copiedCode ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.06)',
-                      color: copiedCode ? '#34d399' : '#fff',
-                      border: copiedCode ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.1)',
-                    }}
-                  >
-                    {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5 text-amber-400" />}
-                    <span>{copiedCode ? 'Code Copied' : 'Copy Code'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleCopyInviteLink}
-                    className="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                    style={{
-                      background: copiedLink ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.06)',
-                      color: copiedLink ? '#34d399' : '#fff',
-                      border: copiedLink ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.1)',
-                    }}
-                  >
-                    {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5 text-cyan-400" />}
-                    <span>{copiedLink ? 'Link Copied' : 'Copy Link'}</span>
-                  </button>
-                </div>
-
-                {/* Summary Card Details */}
-                <div className="space-y-3 pt-4 border-t border-white/10 text-xs">
+                {/* Configuration Summary Items */}
+                <div className="space-y-2.5 pt-3 border-t border-white/10 text-xs">
                   <div className="flex items-center justify-between text-slate-300">
-                    <span className="text-slate-400 font-medium">Selected Deck:</span>
-                    <span className="font-extrabold text-amber-400 flex items-center gap-1">
-                      <Layers className="w-3.5 h-3.5" />
-                      {selectedTemplate.title} ({selectedTemplate.cards.length} Cards)
+                    <span className="text-slate-400">Deck</span>
+                    <span className="font-extrabold text-amber-400 truncate max-w-[160px]">
+                      {selectedTemplate.title}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-slate-300">
-                    <span className="text-slate-400 font-medium">Host Player:</span>
-                    <span className="font-extrabold text-white">
+                    <span className="text-slate-400">Host</span>
+                    <span className="font-bold text-white">
                       {selectedAvatar} {hostName || 'Host Player'}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-slate-300">
-                    <span className="text-slate-400 font-medium">Visibility:</span>
+                    <span className="text-slate-400">Visibility</span>
                     <span className="font-bold text-cyan-400">
-                      {isPublic ? 'Public Match' : 'Private Match'}
+                      {isPublic ? 'Public' : 'Private'}
                     </span>
                   </div>
                 </div>
 
-                {/* Big Launch CTA */}
+                {/* SINGLE PRIMARY CTA ON THE SCREEN */}
                 <button
                   type="submit"
-                  disabled={loading || checkingCode}
-                  className="game-btn-primary w-full py-4 text-lg rounded-2xl justify-center shadow-xl shadow-amber-500/25 mt-6"
+                  disabled={loading}
+                  className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 mt-2"
                 >
-                  <Play className="w-6 h-6 fill-current shrink-0" />
+                  <Play className="w-5 h-5 fill-current shrink-0" />
                   <span>{loading ? 'Launching Room...' : 'Launch Game Room'}</span>
                 </button>
               </div>
-
             </div>
 
           </div>
