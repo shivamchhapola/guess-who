@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Lock, Mail, Key, Sparkles, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Key, Sparkles, User, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { NavHeader } from '@/components/NavHeader';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -26,7 +27,7 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -53,113 +54,126 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
-      {/* Header */}
-      <header className="w-full border-b border-white/10 glass-panel sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-semibold">Back to Home</span>
-          </Link>
+    <div className="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-black">
+      <NavHeader />
 
-          <span className="text-sm font-extrabold tracking-tight">
-            GuessWho<span className="gradient-text font-black">Maker</span> Auth
-          </span>
-        </div>
-      </header>
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-8">
+        <div className="w-full max-w-md game-panel p-8 rounded-3xl relative overflow-hidden"
+          style={{ border: '1px solid rgba(245,158,11,0.2)' }}>
+          {/* Top glow */}
+          <div className="pointer-events-none absolute -top-24 -left-24 w-48 h-48 rounded-full"
+            style={{ background: 'radial-gradient(ellipse, rgba(245,158,11,0.15) 0%, transparent 70%)' }} />
 
-      {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-white/10 shadow-2xl">
           {/* Header Info */}
-          <div className="flex flex-col items-center text-center mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mb-3">
-              <Lock className="w-6 h-6" />
+          <div className="flex flex-col items-center text-center mb-8 relative">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-transform hover:scale-105"
+              style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b' }}>
+              <Lock className="w-7 h-7" />
             </div>
-            <h1 className="text-2xl font-black text-slate-100">
-              {mode === 'login' ? 'Creator Login' : 'Create Creator Account'}
+            <h1 className="text-3xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              {mode === 'login' ? 'Creator Sign In' : 'Create Account'}
             </h1>
-            <p className="text-slate-400 text-xs mt-1">
-              Playing games requires NO login. Account is only needed to create and publish custom card templates.
+            <p className="text-slate-400 text-xs leading-relaxed max-w-xs">
+              Playing GuessWho requires <span className="text-amber-400 font-bold">no account</span>. Login is only needed for saving custom card sets.
             </p>
           </div>
 
-          {/* Mode Tabs */}
-          <div className="flex rounded-xl glass-card p-1 mb-6 border border-white/5">
+          {/* Switch Tabs */}
+          <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl mb-6"
+            style={{ background: 'rgba(7,9,15,0.8)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <button
               type="button"
-              onClick={() => setMode('login')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                mode === 'login'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              onClick={() => { setMode('login'); setErrorMsg(null); setSuccessMsg(null); }}
+              className="py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider"
+              style={{
+                background: mode === 'login' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
+                color: mode === 'login' ? '#000' : '#94a3b8',
+                boxShadow: mode === 'login' ? '0 4px 12px rgba(245,158,11,0.3)' : 'none',
+              }}
             >
               Log In
             </button>
             <button
               type="button"
-              onClick={() => setMode('signup')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                mode === 'signup'
-                  ? 'bg-cyan-500 text-slate-950 shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              onClick={() => { setMode('signup'); setErrorMsg(null); setSuccessMsg(null); }}
+              className="py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider"
+              style={{
+                background: mode === 'signup' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'transparent',
+                color: mode === 'signup' ? '#000' : '#94a3b8',
+                boxShadow: mode === 'signup' ? '0 4px 12px rgba(245,158,11,0.3)' : 'none',
+              }}
             >
               Sign Up
             </button>
           </div>
 
-          {/* Feedback Alerts */}
+          {/* Messages */}
           {errorMsg && (
-            <div className="p-3 mb-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <div className="p-3.5 mb-6 rounded-2xl text-xs flex items-center gap-2.5 font-semibold"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3 mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <div className="p-3.5 mb-6 rounded-2xl text-xs flex items-center gap-2.5 font-semibold"
+              style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}>
+              <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />
               <span>{successMsg}</span>
             </div>
           )}
 
-          {/* Auth Form */}
+          {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === 'signup' && (
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Username</label>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Username</label>
                 <div className="relative">
+                  <User className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
                     type="text"
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="CreatorHandle"
-                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400"
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-semibold text-white focus:outline-none transition-all"
+                    style={{
+                      background: 'rgba(7,9,15,0.9)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
                   />
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Email Address</label>
               <div className="relative">
+                <Mail className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="creator@example.com"
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-semibold text-white focus:outline-none transition-all"
+                  style={{
+                    background: 'rgba(7,9,15,0.9)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Password</label>
               <div className="relative">
+                <Key className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="password"
                   required
@@ -167,7 +181,13 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl text-sm font-semibold text-white focus:outline-none transition-all"
+                  style={{
+                    background: 'rgba(7,9,15,0.9)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
                 />
               </div>
             </div>
@@ -175,24 +195,29 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 mt-2 font-bold text-white gradient-btn rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] disabled:opacity-50"
+              className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center mt-2"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-5 h-5 fill-current" />
               <span>{loading ? 'Processing...' : mode === 'login' ? 'Log In to Studio' : 'Create Account'}</span>
             </button>
           </form>
 
-          {/* Anonymous Creator Shortcut */}
-          <div className="mt-6 pt-4 border-t border-white/5 text-center">
+          {/* Guest Shortcut */}
+          <div className="mt-8 pt-5 border-t border-white/10 text-center">
             <Link
               href="/create"
-              className="text-xs text-cyan-400 hover:underline font-semibold"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors"
             >
-              Continue to Template Creator Studio as Guest →
+              <span>Continue as Guest Creator</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
       </main>
+
+      <footer className="game-panel py-6 text-center text-xs text-slate-500" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        © {new Date().getFullYear()} GuessWhoParty!
+      </footer>
     </div>
   );
 }
