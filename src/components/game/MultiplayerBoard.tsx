@@ -9,10 +9,12 @@ import { VictoryModal } from './VictoryModal';
 import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
-  ArrowLeft, Lock, RotateCcw, ChevronDown, ChevronUp,
+  ArrowLeft, Lock, RotateCcw, ChevronDown, ChevronUp, Users,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+
+const AVATAR_EMOJIS = ['👑', '🎮', '🦊', '🚀', '⚡', '🎯', '👾', '🦄', '🍿', '🎸'];
 
 interface MultiplayerBoardProps {
   roomCode: string;
@@ -33,12 +35,22 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [inputPassword, setInputPassword] = useState<string>('');
   const [passError, setPassError] = useState<string | null>(null);
 
-  const [playerName] = useState<string>(() => {
+  const [playerName, setPlayerName] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`room_${roomCode}_name`) || `Player_${Math.floor(Math.random() * 1000)}`;
+      return sessionStorage.getItem(`room_${roomCode}_name`) || '';
     }
-    return `Player_${Math.floor(Math.random() * 1000)}`;
+    return '';
   });
+
+  const [hasSetIdentity, setHasSetIdentity] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return Boolean(sessionStorage.getItem(`room_${roomCode}_name`));
+    }
+    return false;
+  });
+
+  const [joinNickname, setJoinNickname] = useState<string>('');
+  const [selectedAvatar, setSelectedAvatar] = useState<string>('🎮');
 
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [opponentSecretId, setOpponentSecretId] = useState<string | null>(null);
@@ -60,7 +72,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   }, [chatMessages]);
 
   useEffect(() => {
-    if (!isUnlocked) return;
+    if (!isUnlocked || !hasSetIdentity || !playerName) return;
 
     const channel = supabase.channel(`room:${roomCode}`, {
       config: {
@@ -109,7 +121,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomCode, playerName, isUnlocked]);
+  }, [roomCode, playerName, isUnlocked, hasSetIdentity]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,11 +164,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       sender: 'player',
       senderName: playerName,
       senderId: playerName,
-      question: chatInput,
+      question: chatInput.trim(),
     };
 
     setChatMessages((prev) => [...prev, item]);
     setChatInput('');
+    soundFx.playSelect();
 
     const channel = supabase.channel(`room:${roomCode}`);
     channel.send({
@@ -167,11 +180,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   };
 
   const handleCopyInviteLink = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
-    }
+    soundFx.playSelect();
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    navigator.clipboard.writeText(`${origin}/play/${roomCode}`);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleOpenGuessModal = (card: CharacterCard) => {
@@ -179,14 +192,15 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setIsGuessModalOpen(true);
   };
 
-  const handleConfirmGuess = (card: CharacterCard) => {
-    setIsGuessModalOpen(false);
-    const isWinner = opponentSecretId ? card.id === opponentSecretId : true;
+  const handleConfirmGuess = (guessedCard: CharacterCard) => {
+    const isCorrect = opponentSecretCard ? guessedCard.id === opponentSecretCard.id : true;
 
-    if (isWinner) {
+    if (isCorrect) {
       setGameResult('won');
+      soundFx.playVictory();
     } else {
       setGameResult('lost');
+      soundFx.playDefeat();
     }
 
     const channel = supabase.channel(`room:${roomCode}`);
@@ -195,7 +209,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       event: 'game_event',
       payload: {
         type: 'declare_victory',
-        winner: isWinner ? playerName : opponentName || 'Opponent',
+        winner: isCorrect ? playerName : opponentName,
       },
     });
   };
@@ -203,6 +217,144 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const playerSecretCard = template.cards.find((c) => c.id === playerSecretId) || null;
   const opponentSecretCard = template.cards.find((c) => c.id === opponentSecretId) || null;
   const standingCardsCount = template.cards.length - flippedCardIds.length;
+
+  /* ── Player Identity / Join Setup Gate ───────────────────────── */
+  if (!hasSetIdentity) {
+    const handleJoinSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      soundFx.playSelect();
+
+      if (requiredPassword && inputPassword !== requiredPassword) {
+        setPassError('Incorrect room passcode.');
+        return;
+      }
+
+      const nicknameToUse = joinNickname.trim() || 'Guest Player';
+      const finalName = `${selectedAvatar} ${nicknameToUse}`;
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`room_${roomCode}_name`, finalName);
+      }
+
+      setPlayerName(finalName);
+      setPassError(null);
+      setIsUnlocked(true);
+      setHasSetIdentity(true);
+    };
+
+    return (
+      <div className="w-full max-w-lg mx-auto px-4 py-12 sm:py-16">
+        <div
+          className="game-panel p-6 sm:p-8 rounded-3xl text-left shadow-2xl animate-slide-in-up"
+          style={{ border: '1px solid rgba(245,158,11,0.3)' }}
+        >
+          {/* Room Context Header */}
+          <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-0.5">
+                Joining Room
+              </span>
+              <h2 className="text-2xl font-black text-white font-mono tracking-wider">
+                #{roomCode}
+              </h2>
+            </div>
+            <div className="text-right">
+              <span className="text-[11px] font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1 rounded-full block mb-1">
+                {template.title}
+              </span>
+              <span className="text-[10px] text-slate-500 font-semibold block">
+                {template.cards.length} Characters
+              </span>
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Your Player Profile
+            </h1>
+            <p className="text-slate-400 text-xs mt-1">
+              Choose your nickname and avatar before entering the game room.
+            </p>
+          </div>
+
+          <form onSubmit={handleJoinSubmit} className="flex flex-col gap-6">
+            {/* Avatar Selector */}
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Choose Avatar
+              </label>
+              <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 p-2 rounded-2xl bg-slate-950 border border-white/10">
+                {AVATAR_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                      soundFx.playSelect();
+                      setSelectedAvatar(emoji);
+                    }}
+                    className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all ${
+                      selectedAvatar === emoji
+                        ? 'bg-amber-500 text-black font-bold scale-110 shadow-lg'
+                        : 'hover:bg-white/10 text-white'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Nickname Input */}
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                Your Nickname
+              </label>
+              <input
+                type="text"
+                required
+                value={joinNickname}
+                onChange={(e) => setJoinNickname(e.target.value)}
+                placeholder="e.g. Alex, GameMaster"
+                maxLength={18}
+                className="w-full px-4 py-3 rounded-2xl text-sm font-bold text-white bg-slate-950 border border-white/10 focus:border-amber-400 focus:outline-none"
+              />
+            </div>
+
+            {/* Room Password Input (If Password Protected) */}
+            {requiredPassword && (
+              <div>
+                <label className="block text-xs font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  Room Passcode Required
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={inputPassword}
+                  onChange={(e) => setInputPassword(e.target.value)}
+                  placeholder="Enter room passcode"
+                  className="w-full px-4 py-3 rounded-2xl text-sm font-bold text-white bg-slate-950 border border-amber-500/40 focus:border-amber-400 focus:outline-none"
+                />
+                {passError && (
+                  <p className="text-rose-400 text-xs font-semibold mt-1.5">{passError}</p>
+                )}
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 font-bold flex items-center gap-2"
+            >
+              <Users className="w-5 h-5" />
+              <span>Enter Room</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   /* ── Password Gate ─────────────────────────────────────────── */
   if (!isUnlocked) {
