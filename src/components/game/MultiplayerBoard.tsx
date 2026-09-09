@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CardSetTemplate, CharacterCard, QuestionLogItem } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
+import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
+import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { CardFlip } from './CardFlip';
 import { GuessModal } from './GuessModal';
 import { VictoryModal } from './VictoryModal';
@@ -10,6 +12,7 @@ import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
   ArrowLeft, Lock, RotateCcw, ChevronDown, ChevronUp, Users,
+  Play, RefreshCw, X, Sparkles, ArrowRight,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -26,6 +29,22 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   template,
   requiredPassword,
 }) => {
+  const [inLobby, setInLobby] = useState<boolean>(true);
+  const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
+  const [isHost] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(`room_${roomCode}_role`) === 'host';
+    }
+    return false;
+  });
+  const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
+  const [isChangeSetOpen, setIsChangeSetOpen] = useState<boolean>(false);
+  const [availableTemplates] = useState<CardSetTemplate[]>([
+    ...ALL_POPULAR_TEMPLATES,
+    CLASSIC_GUESS_WHO_TEMPLATE,
+  ]);
+
   const [playerSecretId, setPlayerSecretId] = useState<string | null>(null);
   const [flippedCardIds, setFlippedCardIds] = useState<string[]>([]);
   const [isSecretSelected, setIsSecretSelected] = useState<boolean>(false);
@@ -82,12 +101,17 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       const players = Object.keys(state);
+      setConnectedPlayers(players);
       const other = players.find((p) => p !== playerName);
       if (other) setOpponentName(other);
     });
 
     channel.on('broadcast', { event: 'game_event' }, ({ payload }) => {
-      if (payload.type === 'secret_selected') {
+      if (payload.type === 'template_changed') {
+        setCurrentTemplate(payload.template);
+      } else if (payload.type === 'start_game') {
+        setInLobby(false);
+      } else if (payload.type === 'secret_selected') {
         if (payload.sender !== playerName) {
           setOpponentSecretId(payload.cardId);
           setChatMessages((prev) => [
@@ -130,6 +154,31 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     } else {
       setPassError('Incorrect room password.');
     }
+  };
+
+  const handleHostChangeTemplate = (newTemplate: CardSetTemplate) => {
+    soundFx.playSelect();
+    setCurrentTemplate(newTemplate);
+    setIsChangeSetOpen(false);
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'template_changed', template: newTemplate },
+    });
+  };
+
+  const handleStartGame = () => {
+    soundFx.playSelect();
+    setInLobby(false);
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'start_game', startedBy: playerName },
+    });
   };
 
   const handleSelectSecret = (cardId: string) => {
@@ -213,9 +262,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     });
   };
 
-  const playerSecretCard = template.cards.find((c) => c.id === playerSecretId) || null;
-  const opponentSecretCard = template.cards.find((c) => c.id === opponentSecretId) || null;
-  const standingCardsCount = template.cards.length - flippedCardIds.length;
+  const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
+  const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
+  const standingCardsCount = currentTemplate.cards.length - flippedCardIds.length;
 
   /* ── Player Identity / Join Setup Gate ───────────────────────── */
   if (!hasSetIdentity) {
@@ -356,6 +405,331 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     );
   }
 
+  /* ── Room Lobby View (Pre-Game Context) ─────────────────────── */
+  if (inLobby) {
+    return (
+      <div className="w-full max-w-5xl mx-auto px-4 py-8 sm:py-12 flex flex-col gap-8">
+        
+        {/* Lobby Top Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl game-panel border border-white/10 shadow-xl">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="p-2.5 rounded-xl text-slate-400 hover:text-white transition-colors"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+              title="Leave Room"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-400 block">
+                  GAME ROOM LOBBY
+                </span>
+                {isHost && (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    Host
+                  </span>
+                )}
+              </div>
+              <h1 className="text-3xl font-black text-white font-mono tracking-wider">
+                #{roomCode}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyInviteLink}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+              style={{
+                background: copiedLink ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                border: copiedLink ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.09)',
+                color: copiedLink ? '#34d399' : '#e2e8f0',
+              }}
+            >
+              {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4 text-amber-400" />}
+              <span>{copiedLink ? 'Link Copied!' : 'Copy Room Code / Link'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 2-Column Composition */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column: Players & Match Controls */}
+          <div className="lg:col-span-6 flex flex-col gap-6">
+            
+            {/* Players In Room */}
+            <div className="game-panel p-6 rounded-3xl border border-white/10">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <Users className="w-5 h-5 text-amber-400" />
+                  <span>Players in Room ({connectedPlayers.length || 1})</span>
+                </h3>
+                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  Live Presence
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {/* Current Player */}
+                <div className="p-4 rounded-2xl bg-slate-950/80 border border-amber-500/30 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{playerName.split(' ')[0] || '🎮'}</span>
+                    <div>
+                      <span className="text-sm font-bold text-white block">
+                        {playerName.split(' ').slice(1).join(' ') || playerName}
+                      </span>
+                      <span className="text-[10px] text-amber-400 font-semibold">You</span>
+                    </div>
+                  </div>
+                  {isHost && (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Host
+                    </span>
+                  )}
+                </div>
+
+                {/* Opponent Player */}
+                {opponentName ? (
+                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/30 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{opponentName.split(' ')[0] || '👾'}</span>
+                      <div>
+                        <span className="text-sm font-bold text-white block">
+                          {opponentName.split(' ').slice(1).join(' ') || opponentName}
+                        </span>
+                        <span className="text-[10px] text-cyan-400 font-semibold">Connected</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-slate-950/40 border border-dashed border-white/10 text-center py-6">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-900 text-slate-500 flex items-center justify-center mx-auto mb-2 animate-pulse">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-400 mb-1">Waiting for opponent to join…</p>
+                    <p className="text-[11px] text-slate-500">Share room code <span className="font-mono text-amber-400 font-bold">#{roomCode}</span> with a friend!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Match Controls */}
+            <div className="game-panel p-6 rounded-3xl border border-white/10">
+              <h3 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Pre-Game Status
+              </h3>
+
+              {isHost ? (
+                <div className="flex flex-col gap-3">
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    You are the host. When everyone is ready, click <span className="text-amber-400 font-bold">Start Game</span> to begin character selection.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleStartGame}
+                    className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 font-bold flex items-center gap-2 mt-2"
+                  >
+                    <Play className="w-5 h-5 fill-current shrink-0" />
+                    <span>Start Game</span>
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center gap-3 text-cyan-300 text-xs font-bold">
+                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                  <span>Waiting for the host to start the game…</span>
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Right Column: Currently Selected Set & Host Controls */}
+          <div className="lg:col-span-6 flex flex-col gap-6">
+            <div className="game-panel p-6 rounded-3xl border border-amber-500/30 flex flex-col gap-5">
+              
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-0.5">
+                    Selected Deck
+                  </span>
+                  <h3 className="text-xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    {currentTemplate.title}
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-slate-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
+                  {currentTemplate.cards.length} Cards
+                </span>
+              </div>
+
+              <p className="text-slate-400 text-xs font-normal leading-relaxed">
+                {currentTemplate.description || 'Guess Who character deck.'}
+              </p>
+
+              {/* 4-Card Artwork Preview Grid */}
+              <div className="grid grid-cols-4 gap-2 p-2 rounded-2xl bg-slate-950 border border-white/10 aspect-[3/1] overflow-hidden">
+                {currentTemplate.cards.slice(0, 4).map((c) => (
+                  <div key={c.id} className="relative w-full h-full rounded-xl overflow-hidden bg-slate-900 border border-white/5">
+                    <Image src={c.imageUrl} alt={c.name} fill className="object-cover object-top" unoptimized />
+                  </div>
+                ))}
+              </div>
+
+              {/* Set Action Controls */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(true)}
+                  className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-200 hover:text-white transition-colors flex-1"
+                >
+                  <Eye className="w-4 h-4 text-amber-400" />
+                  <span>Preview Character Cards</span>
+                </button>
+
+                {isHost && (
+                  <button
+                    type="button"
+                    onClick={() => setIsChangeSetOpen(true)}
+                    className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors flex-1"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Change Deck</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Set Preview Modal */}
+        {isPreviewOpen && (
+          <div className="modal-backdrop" onClick={() => setIsPreviewOpen(false)}>
+            <div
+              className="glass-panel rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 animate-slide-in-up"
+              style={{ border: '1px solid rgba(245,158,11,0.3)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    {currentTemplate.title}
+                  </h2>
+                  <p className="text-slate-400 text-sm mt-1">{currentTemplate.description}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-6">
+                {currentTemplate.cards.map((card) => (
+                  <div key={card.id} className="flex flex-col items-center gap-1.5">
+                    <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-900 border border-white/10">
+                      <Image src={card.imageUrl} alt={card.name} fill className="object-cover" unoptimized />
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-300 text-center leading-tight truncate w-full">
+                      {card.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(false)}
+                className="game-btn-primary w-full py-3.5 text-sm justify-center"
+              >
+                Done Previewing
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Change Set Switcher Modal (For Host) */}
+        {isChangeSetOpen && (
+          <div className="modal-backdrop" onClick={() => setIsChangeSetOpen(false)}>
+            <div
+              className="glass-panel rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 animate-slide-in-up"
+              style={{ border: '1px solid rgba(139,92,246,0.3)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    Select a Character Deck
+                  </h2>
+                  <p className="text-slate-400 text-xs mt-1">
+                    Choose a deck for this room. Everyone in the lobby will see the change instantly.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsChangeSetOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                {availableTemplates.map((tpl) => {
+                  const isSelected = currentTemplate.id === tpl.id;
+                  return (
+                    <div
+                      key={tpl.id}
+                      onClick={() => handleHostChangeTemplate(tpl)}
+                      className={`p-4 rounded-2xl cursor-pointer transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-2 border-amber-500 bg-amber-500/10 shadow-lg'
+                          : 'border border-white/10 bg-slate-900/60 hover:border-amber-500/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-extrabold text-white text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                          {tpl.title}
+                        </h4>
+                        {isSelected && (
+                          <span className="text-[10px] font-black uppercase text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">
+                            Selected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-400 text-xs line-clamp-2 mb-3">{tpl.description}</p>
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        {tpl.cards.length} Cards
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsChangeSetOpen(false)}
+                className="py-3 px-4 rounded-2xl text-xs font-bold text-slate-400 hover:text-white bg-white/5 border border-white/10 w-full"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    );
+  }
+
   /* ── Main Game Board ───────────────────────────────────────── */
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
@@ -384,7 +758,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 Live
               </span>
             </div>
-            <p className="text-slate-500 text-[11px] font-semibold truncate">{template.title} · {template.cards.length} cards</p>
+            <p className="text-slate-500 text-[11px] font-semibold truncate">{currentTemplate.title} · {currentTemplate.cards.length} cards</p>
           </div>
         </div>
 
