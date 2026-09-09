@@ -44,10 +44,47 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
   const [isChangeSetOpen, setIsChangeSetOpen] = useState<boolean>(false);
-  const [availableTemplates] = useState<CardSetTemplate[]>([
+  const [availableTemplates, setAvailableTemplates] = useState<CardSetTemplate[]>([
     ...ALL_POPULAR_TEMPLATES,
     CLASSIC_GUESS_WHO_TEMPLATE,
   ]);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchAllTemplates() {
+      try {
+        const { data: dbTemplates } = await supabase
+          .from('templates')
+          .select('*, cards(*)')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false });
+
+        if (dbTemplates && dbTemplates.length > 0) {
+          const formatted: CardSetTemplate[] = dbTemplates.map((t) => ({
+            id: t.id,
+            title: t.title,
+            description: t.description || '',
+            creatorName: t.creator_name || 'Community Creator',
+            isPublic: t.is_public,
+            tags: t.tags || ['Custom'],
+            createdAt: t.created_at,
+            updatedAt: t.updated_at,
+            cards: (t.cards || []).map((c: { id: string; name: string; image_url: string; attributes: Record<string, unknown> }) => ({
+              id: c.id,
+              name: c.name,
+              imageUrl: c.image_url,
+              attributes: c.attributes || {},
+            })),
+          }));
+          setAvailableTemplates([...ALL_POPULAR_TEMPLATES, CLASSIC_GUESS_WHO_TEMPLATE, ...formatted]);
+        }
+      } catch (err) {
+        console.warn('Could not load remote templates for lobby:', err);
+      }
+    }
+    fetchAllTemplates();
+  }, [supabase]);
 
   const [playerSecretId, setPlayerSecretId] = useState<string | null>(null);
   const [flippedCardIds, setFlippedCardIds] = useState<string[]>([]);
@@ -95,7 +132,6 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [chatOpen, setChatOpen] = useState<boolean>(false);
 
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
