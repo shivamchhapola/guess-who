@@ -151,6 +151,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [chatOpen, setChatOpen] = useState<boolean>(false);
 
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -170,6 +171,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         presence: { key: playerName },
       },
     });
+    channelRef.current = channel;
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
@@ -182,6 +184,19 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     channel.on('broadcast', { event: 'game_event' }, ({ payload }) => {
       if (payload.type === 'template_changed') {
         setCurrentTemplate(payload.template);
+        soundFx.playSelect();
+        setPlayerSecretId(null);
+        setIsSecretSelected(false);
+        setFlippedCardIds([]);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `Host updated character deck to "${payload.template.title}"`,
+          },
+        ]);
       } else if (payload.type === 'start_game') {
         setInLobby(false);
       } else if (payload.type === 'secret_selected') {
@@ -215,6 +230,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     });
 
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
   }, [roomCode, playerName, isUnlocked, hasSetIdentity]);
@@ -229,24 +245,50 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     }
   };
 
-  const handleHostChangeTemplate = (newTemplate: CardSetTemplate) => {
+  const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
     soundFx.playSelect();
     setCurrentTemplate(newTemplate);
     setIsChangeSetOpen(false);
+    setPlayerSecretId(null);
+    setIsSecretSelected(false);
+    setFlippedCardIds([]);
 
-    const channel = supabase.channel(`room:${roomCode}`);
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `Host updated character deck to "${newTemplate.title}"`,
+      },
+    ]);
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'template_changed', template: newTemplate },
     });
+
+    try {
+      const { error } = await supabase
+        .from('game_rooms')
+        .update({ template_id: newTemplate.id })
+        .eq('room_code', roomCode);
+
+      if (error) {
+        console.warn('Could not persist template change to Supabase game_rooms:', error);
+      }
+    } catch (err) {
+      console.warn('Failed to update room template in DB:', err);
+    }
   };
 
   const handleStartGame = () => {
     soundFx.playSelect();
     setInLobby(false);
 
-    const channel = supabase.channel(`room:${roomCode}`);
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
@@ -259,7 +301,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setIsSecretSelected(true);
     soundFx.playSelect();
 
-    const channel = supabase.channel(`room:${roomCode}`);
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
@@ -292,7 +334,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setChatInput('');
     soundFx.playSelect();
 
-    const channel = supabase.channel(`room:${roomCode}`);
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
