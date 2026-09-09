@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Shuffle } from 'lucide-react';
+import { User, Shuffle, Dices } from 'lucide-react';
 import { soundFx } from '@/lib/audio';
 
 const AVATAR_STYLES = [
@@ -14,6 +14,13 @@ const AVATAR_STYLES = [
 
 const SEED_VARIATIONS = [
   'Alex', 'Jordan', 'Taylor', 'Morgan', 'Riley', 'Sam', 'Dakota', 'Skyler', 'Felix', 'Maya', 'Leo', 'Nova'
+];
+
+const RANDOM_NICKNAMES = [
+  'Captain Guess', 'Mystery Master', 'Shadow Detective', 'Sly Fox', 'Pixel Ninja',
+  'Cheeky Panda', 'Cyber Falcon', 'Witty Wizard', 'Turbo Turtle', 'Laser Llama',
+  'Cosmic Owl', 'Neon Phantom', 'Velvet Viper', 'Retro Bandit', 'Jolly Joker',
+  'Astral Ace', 'Snazzy Bandit', 'Glitch Goblin', 'Clever Otter', 'Breezy Bear'
 ];
 
 interface PlayerProfileSetupProps {
@@ -49,10 +56,18 @@ export function PlayerProfileSetup({
     onAvatarChange(newUrl);
   };
 
-  const handleRandomize = () => {
+  const handleRandomizeAvatar = () => {
     const randomStyle = AVATAR_STYLES[Math.floor(Math.random() * AVATAR_STYLES.length)].id;
     const randomSeed = SEED_VARIATIONS[Math.floor(Math.random() * SEED_VARIATIONS.length)] + Math.floor(Math.random() * 100);
     updateAvatar(randomStyle, randomSeed);
+  };
+
+  const handleRandomizeNickname = () => {
+    soundFx.playSelect();
+    const current = name.trim();
+    const available = RANDOM_NICKNAMES.filter((n) => n !== current);
+    const randomName = available[Math.floor(Math.random() * available.length)];
+    onNameChange(randomName);
   };
 
   return (
@@ -76,7 +91,7 @@ export function PlayerProfileSetup({
             </div>
             <button
               type="button"
-              onClick={handleRandomize}
+              onClick={handleRandomizeAvatar}
               className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500/50 transition-all flex items-center gap-1.5"
             >
               <Shuffle className="w-3.5 h-3.5" />
@@ -144,9 +159,21 @@ export function PlayerProfileSetup({
 
       {/* Nickname Input Section */}
       <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
-          Nickname
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+            Nickname
+          </label>
+          <button
+            type="button"
+            onClick={handleRandomizeNickname}
+            className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500/50 transition-all flex items-center gap-1.5"
+            title="Randomize nickname"
+          >
+            <Dices className="w-3.5 h-3.5" />
+            <span>Randomize</span>
+          </button>
+        </div>
+
         <div className="relative w-full">
           <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
           <input
