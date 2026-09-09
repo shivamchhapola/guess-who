@@ -145,14 +145,7 @@ function HostRoomContent() {
       router.push(`/play/${upperCode}`);
     } catch (err) {
       console.error('Error launching room:', err);
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`room_${upperCode}_role`, 'host');
-        sessionStorage.setItem(`room_${upperCode}_name`, finalHostName);
-        sessionStorage.setItem(`room_${upperCode}_avatar`, selectedAvatar);
-        sessionStorage.setItem(`room_${upperCode}_template`, selectedTemplateId);
-      }
-      router.push(`/play/${upperCode}`);
-    } finally {
+      setErrorMessage('Could not launch room. Please try again.');
       isSubmittingRef.current = false;
       setLoading(false);
     }
