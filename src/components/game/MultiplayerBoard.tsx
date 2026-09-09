@@ -119,10 +119,21 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setIsHost(sessionStorage.getItem(`room_${roomCode}_role`) === 'host');
-      const name = sessionStorage.getItem(`room_${roomCode}_name`) || '';
-      setPlayerName(name);
-      setHasSetIdentity(Boolean(name));
-      setPlayerAvatar(sessionStorage.getItem(`room_${roomCode}_avatar`) || '');
+      const rawName = sessionStorage.getItem(`room_${roomCode}_name`) || '';
+      // rawName may be "https://avatar NickName" for joiners, or just "NickName" for hosts
+      if (rawName.startsWith('https://')) {
+        const spaceIdx = rawName.indexOf(' ');
+        if (spaceIdx > 0) {
+          setPlayerAvatar(rawName.slice(0, spaceIdx));
+          setPlayerName(rawName.slice(spaceIdx + 1));
+        } else {
+          setPlayerName(rawName);
+        }
+      } else {
+        setPlayerName(rawName);
+        setPlayerAvatar(sessionStorage.getItem(`room_${roomCode}_avatar`) || '');
+      }
+      setHasSetIdentity(Boolean(rawName));
       setJoinNickname(generateRandomName());
       setSelectedAvatar(generateRandomAvatar());
     }
@@ -427,13 +438,20 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       }
 
       const nicknameToUse = joinNickname.trim() || generateRandomName();
-      const finalName = `${selectedAvatar} ${nicknameToUse}`;
+      const avatarUrl = selectedAvatar.startsWith('https://') ? selectedAvatar : '';
+      // Store avatar separately and name as combined key for presence
+      const presenceKey = avatarUrl ? `${avatarUrl} ${nicknameToUse}` : nicknameToUse;
 
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`room_${roomCode}_name`, finalName);
+        sessionStorage.setItem(`room_${roomCode}_name`, presenceKey);
+        if (avatarUrl) sessionStorage.setItem(`room_${roomCode}_avatar`, avatarUrl);
       }
 
-      setPlayerName(finalName);
+      setPlayerAvatar(avatarUrl);
+      // playerName is used as the Supabase presence key — keep it as presenceKey so the channel
+      // subscription (which depends on playerName) uses the avatar+nickname string for matching.
+      // The display name is parsed from presenceKey in the lobby render below.
+      setPlayerName(presenceKey);
       setPassError(null);
       setIsUnlocked(true);
       setHasSetIdentity(true);
@@ -630,6 +648,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
               <div className="flex flex-col gap-3">
                 {/* Current Player Row */}
+                {(() => {
+                  // playerName may be "https://avatar-url NickName" (presenceKey) — extract display name
+                  const displayName = playerName.startsWith('https://')
+                    ? playerName.slice(playerName.indexOf(' ') + 1)
+                    : playerName;
+                  return (
                 <div className="p-4 rounded-2xl bg-slate-950/80 border border-amber-500/30 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     {playerAvatar && playerAvatar.startsWith('http') ? (
@@ -644,7 +668,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                     )}
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm font-bold text-white truncate">
-                        {playerName}
+                        {displayName}
                       </span>
                       <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 shrink-0">
                         You
@@ -657,6 +681,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                     </span>
                   )}
                 </div>
+                  );
+                })()}
 
                 {/* Opponent Player Row / Empty Slot */}
                 {opponentName ? (
