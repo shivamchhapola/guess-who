@@ -693,33 +693,63 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             </div>
 
             {/* Match Controls */}
-            <div className="game-panel p-6 rounded-3xl border border-white/10">
-              <h3 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                Pre-Game Status
-              </h3>
+            {(() => {
+              const isReadyToStart = Boolean(opponentName) || connectedPlayers.length >= 2;
+              return (
+                <div className="game-panel p-6 rounded-3xl border border-white/10">
+                  <h3 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    Pre-Game Status
+                  </h3>
 
-              {isHost ? (
-                <div className="flex flex-col gap-3">
-                  <p className="text-slate-400 text-xs leading-relaxed">
-                    You are the host. When everyone is ready, click <span className="text-amber-400 font-bold">Start Game</span> to begin character selection.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleStartGame}
-                    className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 font-bold flex items-center gap-2 mt-2"
-                  >
-                    <Play className="w-5 h-5 fill-current shrink-0" />
-                    <span>Start Game</span>
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </button>
+                  {isHost ? (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-slate-400 text-xs leading-relaxed">
+                        {isReadyToStart ? (
+                          <span>
+                            Both players connected! Click <span className="text-amber-400 font-bold">Start Game</span> to begin character selection.
+                          </span>
+                        ) : (
+                          <span>
+                            Waiting for second player. Share room code <span className="font-mono text-amber-400 font-bold">#{roomCode}</span> with a friend to join.
+                          </span>
+                        )}
+                      </p>
+
+                      {isReadyToStart ? (
+                        <button
+                          type="button"
+                          onClick={handleStartGame}
+                          className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 font-bold flex items-center gap-2 mt-2 cursor-pointer transition-all hover:scale-[1.01]"
+                        >
+                          <Play className="w-5 h-5 fill-current shrink-0" />
+                          <span>Start Game</span>
+                          <ArrowRight className="w-4 h-4 ml-1" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full py-4 text-xs sm:text-sm font-bold rounded-2xl bg-white/5 border border-white/10 text-slate-500 flex items-center justify-center gap-2 mt-2 cursor-not-allowed opacity-75"
+                          title="Waiting for second player to join"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-amber-400/60 animate-ping" />
+                          <span>Waiting for second player...</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center gap-3 text-cyan-300 text-xs font-bold">
+                      <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                      <span>
+                        {isReadyToStart
+                          ? 'Connected! Waiting for host to start the game…'
+                          : 'Waiting for host to start the game…'}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center gap-3 text-cyan-300 text-xs font-bold">
-                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-                  <span>Waiting for the host to start the game…</span>
-                </div>
-              )}
-            </div>
+              );
+            })()}
 
           </div>
 
