@@ -16,11 +16,22 @@ const SEED_VARIATIONS = [
   'Alex', 'Jordan', 'Taylor', 'Morgan', 'Riley', 'Sam', 'Dakota', 'Skyler', 'Felix', 'Maya', 'Leo', 'Nova'
 ];
 
-const RANDOM_NICKNAMES = [
-  'Captain Guess', 'Mystery Master', 'Shadow Detective', 'Sly Fox', 'Pixel Ninja',
-  'Cheeky Panda', 'Cyber Falcon', 'Witty Wizard', 'Turbo Turtle', 'Laser Llama',
-  'Cosmic Owl', 'Neon Phantom', 'Velvet Viper', 'Retro Bandit', 'Jolly Joker',
-  'Astral Ace', 'Snazzy Bandit', 'Glitch Goblin', 'Clever Otter', 'Breezy Bear'
+const PRIMARY_MODIFIERS = [
+  'Captain', 'Shadow', 'Sly', 'Pixel', 'Cheeky', 'Cyber', 'Witty', 'Turbo',
+  'Laser', 'Cosmic', 'Neon', 'Velvet', 'Retro', 'Jolly', 'Astral', 'Snazzy',
+  'Glitch', 'Clever', 'Breezy', 'Mystic', 'Phantom', 'Dapper', 'Groovy', 'Spiffy',
+  'Funky', 'Hyper', 'Electric', 'Solar', 'Vivid', 'Sneaky', 'Zen', 'Atomic',
+  'Chilly', 'Daring', 'Epic', 'Fierce', 'Giggling', 'Heroic', 'Iron', 'Jazzy',
+  'Lucky', 'Mighty', 'Noble', 'Orbit', 'Psycho', 'Quirky', 'Radical', 'Sonic'
+];
+
+const SECONDARY_NOUNS = [
+  'Guess', 'Master', 'Detective', 'Fox', 'Ninja', 'Panda', 'Falcon', 'Wizard',
+  'Turtle', 'Llama', 'Owl', 'Viper', 'Bandit', 'Joker', 'Ace', 'Goblin',
+  'Otter', 'Bear', 'Panther', 'Phoenix', 'Penguin', 'Rabbit', 'Tiger', 'Dragon',
+  'Koala', 'Badger', 'Dolphin', 'Giraffe', 'Hamster', 'Jaguar', 'Raven', 'Shark',
+  'Sloth', 'Vulture', 'Walrus', 'Zebra', 'Capybara', 'Chameleon', 'Gecko', 'Lemur',
+  'Meerkat', 'Narwhal', 'Quokka', 'Raccoon', 'Toucan', 'Yeti', 'Lynx', 'Moose'
 ];
 
 interface PlayerProfileSetupProps {
@@ -65,9 +76,17 @@ export function PlayerProfileSetup({
   const handleRandomizeNickname = () => {
     soundFx.playSelect();
     const current = name.trim();
-    const available = RANDOM_NICKNAMES.filter((n) => n !== current);
-    const randomName = available[Math.floor(Math.random() * available.length)];
-    onNameChange(randomName);
+    let newName = current;
+    for (let attempts = 0; attempts < 10; attempts++) {
+      const primary = PRIMARY_MODIFIERS[Math.floor(Math.random() * PRIMARY_MODIFIERS.length)];
+      const secondary = SECONDARY_NOUNS[Math.floor(Math.random() * SECONDARY_NOUNS.length)];
+      const candidate = `${primary} ${secondary}`;
+      if (candidate !== current) {
+        newName = candidate;
+        break;
+      }
+    }
+    onNameChange(newName);
   };
 
   return (
