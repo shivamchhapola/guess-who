@@ -178,14 +178,6 @@ export default function PublicLobbiesPage() {
                   Host New Game
                 </Link>
               )}
-              <button
-                type="button"
-                onClick={fetchPublicRooms}
-                className="py-2.5 px-5 text-sm font-semibold text-slate-300 rounded-xl hover:text-white transition-colors glass-card"
-              >
-                <RefreshCw className="w-4 h-4 inline mr-2" />
-                Refresh
-              </button>
             </div>
           </div>
         )}

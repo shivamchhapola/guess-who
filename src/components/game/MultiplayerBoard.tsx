@@ -130,6 +130,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   }, [roomCode]);
 
   const [opponentName, setOpponentName] = useState<string | null>(null);
+  const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null);
   const [opponentSecretId, setOpponentSecretId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<QuestionLogItem[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
@@ -170,8 +171,21 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       const state = channel.presenceState();
       const players = Object.keys(state);
       setConnectedPlayers(players);
-      const other = players.find((p) => p !== playerName);
-      if (other) setOpponentName(other);
+      const otherKey = players.find((p) => p !== playerName);
+      if (otherKey) {
+        // playerName format: "https://avatar-url NickName" or just "NickName"
+        const spaceIdx = otherKey.indexOf(' ');
+        if (spaceIdx > 0 && otherKey.startsWith('https://')) {
+          setOpponentAvatar(otherKey.slice(0, spaceIdx));
+          setOpponentName(otherKey.slice(spaceIdx + 1));
+        } else {
+          setOpponentAvatar(null);
+          setOpponentName(otherKey);
+        }
+      } else {
+        setOpponentName(null);
+        setOpponentAvatar(null);
+      }
     });
 
     channel.on('broadcast', { event: 'game_event' }, ({ payload }) => {
@@ -648,17 +662,19 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 {opponentName ? (
                   <div className="p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/30 flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xl shrink-0">
-                        👾
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-bold text-white truncate">
-                          {opponentName}
-                        </span>
-                        <span className="text-[10px] font-semibold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20 shrink-0">
-                          Connected
-                        </span>
-                      </div>
+                      {opponentAvatar && opponentAvatar.startsWith('http') ? (
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={opponentAvatar} alt="Opponent avatar" className="w-full h-full object-contain" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xl shrink-0">
+                          👾
+                        </div>
+                      )}
+                      <span className="text-sm font-bold text-white truncate">
+                        {opponentName}
+                      </span>
                     </div>
                     {!isHost && (
                       <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
@@ -1038,7 +1054,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           template={previewingTemplate}
           isOpen={Boolean(previewingTemplate)}
           onClose={() => setPreviewingTemplate(null)}
-          onSelectSet={isHost ? (tpl) => {
+          onSelectSet={isHost && isChangeSetOpen ? (tpl) => {
             handleHostChangeTemplate(tpl);
             setPreviewingTemplate(null);
             setIsChangeSetOpen(false);

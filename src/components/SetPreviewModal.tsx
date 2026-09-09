@@ -122,51 +122,43 @@ export function SetPreviewModal({
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10 shrink-0">
-          {onSecondaryAction && (
-            <button
-              type="button"
-              onClick={() => {
-                onSecondaryAction(template);
-                onClose();
-              }}
-              className="py-3.5 px-5 rounded-2xl text-xs font-bold text-slate-200 hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
-              title={secondaryActionLabel}
-              aria-label={secondaryActionLabel}
-            >
-              <Play className="w-4 h-4 fill-current text-amber-400" />
-              <span>{secondaryActionLabel}</span>
-            </button>
-          )}
+        {/* Footer Actions — only shown when there are real actions */}
+        {(onSelectSet || onSecondaryAction) && (
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10 shrink-0">
+            {onSecondaryAction && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSecondaryAction(template);
+                  onClose();
+                }}
+                className="py-3.5 px-5 rounded-2xl text-xs font-bold text-slate-200 hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+                title={secondaryActionLabel}
+                aria-label={secondaryActionLabel}
+              >
+                <Play className="w-4 h-4 fill-current text-amber-400" />
+                <span>{secondaryActionLabel}</span>
+              </button>
+            )}
 
-          {onSelectSet ? (
-            <button
-              type="button"
-              onClick={() => {
-                onSelectSet(template);
-                onClose();
-              }}
-              className="game-btn-primary flex-1 py-3.5 text-sm justify-center rounded-2xl font-bold flex items-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-              title={primaryActionLabel}
-              aria-label={primaryActionLabel}
-            >
-              <Check className="w-4 h-4 stroke-[3]" />
-              <span>{primaryActionLabel}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="game-btn-primary flex-1 py-3.5 text-sm justify-center rounded-2xl font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-              title="Close preview"
-              aria-label="Close preview"
-            >
-              Close Preview
-            </button>
-          )}
-        </div>
+            {onSelectSet && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectSet(template);
+                  onClose();
+                }}
+                className="game-btn-primary flex-1 py-3.5 text-sm justify-center rounded-2xl font-bold flex items-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                title={primaryActionLabel}
+                aria-label={primaryActionLabel}
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+                <span>{primaryActionLabel}</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
