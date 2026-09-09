@@ -3,36 +3,14 @@
 import React, { useState } from 'react';
 import { User, Shuffle, Dices } from 'lucide-react';
 import { soundFx } from '@/lib/audio';
-
-const AVATAR_STYLES = [
-  { id: 'avataaars', label: 'People', icon: '🧑' },
-  { id: 'bottts', label: 'Robots', icon: '🤖' },
-  { id: 'personas', label: 'Personas', icon: '🎭' },
-  { id: 'big-smile', label: 'Expressive', icon: '😄' },
-  { id: 'pixel-art', label: 'Pixel', icon: '👾' },
-];
-
-const SEED_VARIATIONS = [
-  'Alex', 'Jordan', 'Taylor', 'Morgan', 'Riley', 'Sam', 'Dakota', 'Skyler', 'Felix', 'Maya', 'Leo', 'Nova'
-];
-
-const PRIMARY_MODIFIERS = [
-  'Captain', 'Shadow', 'Sly', 'Pixel', 'Cheeky', 'Cyber', 'Witty', 'Turbo',
-  'Laser', 'Cosmic', 'Neon', 'Velvet', 'Retro', 'Jolly', 'Astral', 'Snazzy',
-  'Glitch', 'Clever', 'Breezy', 'Mystic', 'Phantom', 'Dapper', 'Groovy', 'Spiffy',
-  'Funky', 'Hyper', 'Electric', 'Solar', 'Vivid', 'Sneaky', 'Zen', 'Atomic',
-  'Chilly', 'Daring', 'Epic', 'Fierce', 'Giggling', 'Heroic', 'Iron', 'Jazzy',
-  'Lucky', 'Mighty', 'Noble', 'Orbit', 'Psycho', 'Quirky', 'Radical', 'Sonic'
-];
-
-const SECONDARY_NOUNS = [
-  'Guess', 'Master', 'Detective', 'Fox', 'Ninja', 'Panda', 'Falcon', 'Wizard',
-  'Turtle', 'Llama', 'Owl', 'Viper', 'Bandit', 'Joker', 'Ace', 'Goblin',
-  'Otter', 'Bear', 'Panther', 'Phoenix', 'Penguin', 'Rabbit', 'Tiger', 'Dragon',
-  'Koala', 'Badger', 'Dolphin', 'Giraffe', 'Hamster', 'Jaguar', 'Raven', 'Shark',
-  'Sloth', 'Vulture', 'Walrus', 'Zebra', 'Capybara', 'Chameleon', 'Gecko', 'Lemur',
-  'Meerkat', 'Narwhal', 'Quokka', 'Raccoon', 'Toucan', 'Yeti', 'Lynx', 'Moose'
-];
+import {
+  AVATAR_STYLES,
+  SEED_VARIATIONS,
+  PRIMARY_MODIFIERS,
+  SECONDARY_NOUNS,
+  generateRandomName,
+  generateRandomAvatar,
+} from '@/lib/randomIdentity';
 
 interface PlayerProfileSetupProps {
   name: string;
@@ -68,23 +46,18 @@ export function PlayerProfileSetup({
   };
 
   const handleRandomizeAvatar = () => {
-    const randomStyle = AVATAR_STYLES[Math.floor(Math.random() * AVATAR_STYLES.length)].id;
-    const randomSeed = SEED_VARIATIONS[Math.floor(Math.random() * SEED_VARIATIONS.length)] + Math.floor(Math.random() * 100);
-    updateAvatar(randomStyle, randomSeed);
+    soundFx.playSelect();
+    const newAvatar = generateRandomAvatar();
+    onAvatarChange(newAvatar);
   };
 
   const handleRandomizeNickname = () => {
     soundFx.playSelect();
     const current = name.trim();
-    let newName = current;
+    let newName = generateRandomName();
     for (let attempts = 0; attempts < 10; attempts++) {
-      const primary = PRIMARY_MODIFIERS[Math.floor(Math.random() * PRIMARY_MODIFIERS.length)];
-      const secondary = SECONDARY_NOUNS[Math.floor(Math.random() * SECONDARY_NOUNS.length)];
-      const candidate = `${primary} ${secondary}`;
-      if (candidate !== current) {
-        newName = candidate;
-        break;
-      }
+      if (newName !== current) break;
+      newName = generateRandomName();
     }
     onNameChange(newName);
   };

@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { SetPreviewModal } from '../SetPreviewModal';
 import { PlayerProfileSetup } from '../PlayerProfileSetup';
 import { matchesSearch, getCreatorLabel, getCharacterCountLabel, getTruncatedDescription } from '@/lib/setUtils';
+import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
 
 interface MultiplayerBoardProps {
   roomCode: string;
@@ -122,6 +123,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       setPlayerName(name);
       setHasSetIdentity(Boolean(name));
       setPlayerAvatar(sessionStorage.getItem(`room_${roomCode}_avatar`) || '');
+      setJoinNickname(generateRandomName());
+      setSelectedAvatar(generateRandomAvatar());
     }
     setIsMounted(true);
   }, [roomCode]);
@@ -409,7 +412,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         return;
       }
 
-      const nicknameToUse = joinNickname.trim() || 'Guest Player';
+      const nicknameToUse = joinNickname.trim() || generateRandomName();
       const finalName = `${selectedAvatar} ${nicknameToUse}`;
 
       if (typeof window !== 'undefined') {

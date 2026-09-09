@@ -23,6 +23,8 @@ function generateRandomCode(length: number = 6): string {
   return code;
 }
 
+import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
+
 function HostRoomContent() {
   const searchParams = useSearchParams();
   const initialTemplateId = searchParams.get('template') || THE_OFFICE_TEMPLATE.id;
@@ -34,8 +36,13 @@ function HostRoomContent() {
   const [password, setPassword] = useState<string>('');
   const [isPublic, setIsPublic] = useState<boolean>(true);
 
-  const [hostName, setHostName] = useState<string>('Host Player');
-  const [selectedAvatar, setSelectedAvatar] = useState<string>('https://api.dicebear.com/7.x/avataaars/svg?seed=Alex');
+  const [hostName, setHostName] = useState<string>('');
+  const [selectedAvatar, setSelectedAvatar] = useState<string>('');
+
+  useEffect(() => {
+    setHostName(generateRandomName());
+    setSelectedAvatar(generateRandomAvatar());
+  }, []);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [nameError, setNameError] = useState<string | null>(null);
