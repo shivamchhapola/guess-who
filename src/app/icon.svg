@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0a0f1a" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0f1a" stop-opacity="0.25"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <rect width="64" height="64" rx="16" fill="url(#shadow)"/>
+
+  <!-- Question mark -->
+  <!-- Curved top of ? -->
+  <path
+    d="M22 24 C22 17 42 17 42 26 C42 31 36 33 32 37"
+    stroke="#0a0f1a"
+    stroke-width="5.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- Dot of ? -->
+  <circle cx="32" cy="46" r="3.5" fill="#0a0f1a"/>
+</svg>

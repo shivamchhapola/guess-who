@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CharacterCard } from '@/types/game';
 import { soundFx } from '@/lib/audio';
-import { Eye, EyeOff, Target, Sparkles, RotateCcw } from 'lucide-react';
+import { EyeOff, Target, Sparkles, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 
 interface CardFlipProps {
@@ -28,22 +28,13 @@ export const CardFlip: React.FC<CardFlipProps> = ({
   onSelectSecret,
   onMakeGuess,
 }) => {
-  const handleCardClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isSelectable && onSelectSecret) {
-      soundFx.playSelect();
-      onSelectSecret(card.id);
-      return;
-    }
-  };
-
   return (
     <div className="relative group w-full aspect-[3/4.2] perspective-1000 select-none">
-      {/* Secret Card Indicator Badge */}
+      {/* Secret Card Badge */}
       {isSecret && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-[10px] uppercase px-2 py-0.5 rounded-full shadow-xl flex items-center gap-1 ring-2 ring-slate-950 whitespace-nowrap">
-          <Eye className="w-3 h-3 shrink-0" />
-          <span>YOUR SECRET</span>
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-[9px] uppercase px-2 py-0.5 rounded-full shadow-xl flex items-center gap-0.5 ring-2 ring-slate-950 whitespace-nowrap">
+          <Sparkles className="w-2.5 h-2.5 shrink-0" />
+          <span>SECRET</span>
         </div>
       )}
 
@@ -52,52 +43,39 @@ export const CardFlip: React.FC<CardFlipProps> = ({
         initial={false}
         animate={{ rotateY: isFlippingDown ? 180 : 0 }}
         transition={{ duration: 0.4, ease: [0.4, 0.0, 0.2, 1] }}
-        onClick={handleCardClick}
       >
-        {/* FRONT OF CARD (Standing Up / Revealed) */}
+        {/* ── FRONT OF CARD ───────────────────────────────── */}
         <div
-          className={`absolute inset-0 w-full h-full rounded-2xl glass-card border flex flex-col justify-between p-2 backface-hidden transition-all duration-200 ${isSecret
-            ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-500/10 shadow-lg shadow-amber-500/20'
-            : 'border-slate-700/60 hover:border-cyan-400/70 hover:shadow-xl hover:shadow-cyan-500/15'
-            }`}
+          className={`absolute inset-0 w-full h-full rounded-2xl overflow-hidden backface-hidden flex flex-col ${
+            isSecret
+              ? 'ring-2 ring-amber-400/60 shadow-lg shadow-amber-500/25'
+              : ''
+          }`}
+          style={{
+            background: 'rgba(14, 22, 44, 0.95)',
+            border: isSecret
+              ? '1px solid rgba(245,158,11,0.6)'
+              : '1px solid rgba(255,255,255,0.07)',
+          }}
         >
-          {/* Card Portrait Photo */}
-          <div className="relative w-full aspect-[4/3.8] rounded-xl bg-slate-950 overflow-hidden border border-white/10 flex items-center justify-center">
+          {/* Card Photo (takes all available vertical space) */}
+          <div className="relative flex-1 overflow-hidden">
             <Image
               src={card.imageUrl}
               alt={card.name}
               fill
-              sizes="(max-width: 768px) 33vw, 15vw"
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 14vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
               unoptimized
             />
-          </div>
 
-          {/* Character Name */}
-          <div className="w-full text-center py-0.5 px-0.5">
-            <h3 className="font-extrabold text-slate-100 text-md truncate tracking-tight whitespace-nowrap">
-              {card.name}
-            </h3>
-          </div>
-
-          {/* Action Buttons Bar */}
-          <div className="w-full flex items-center justify-between gap-1 pt-1 border-t border-white/10">
-            {isSelectable ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  soundFx.playSelect();
-                  if (onSelectSecret) onSelectSecret(card.id);
-                }}
-                className="w-full py-1 px-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-[12px] rounded-lg flex items-center justify-center gap-1 shadow-md transition-all hover:scale-[1.02] whitespace-nowrap"
+            {/* Hover overlay with action buttons */}
+            {!isSelectable && (
+              <div
+                className="absolute inset-0 flex items-end justify-center pb-2 gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                style={{ background: 'linear-gradient(to top, rgba(7,9,15,0.85) 0%, transparent 55%)' }}
               >
-                <Sparkles className="w-3 h-3 shrink-0 fill-current" />
-                <span>Select</span>
-              </button>
-            ) : (
-              <>
-                {/* Eliminate / Flip Button */}
+                {/* Eliminate button */}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -105,14 +83,19 @@ export const CardFlip: React.FC<CardFlipProps> = ({
                     soundFx.playCardFlip(true);
                     onToggleFlip(card.id);
                   }}
-                  className="flex-1 py-1 px-1 bg-slate-900/90 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 font-bold text-[12px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap overflow-hidden cursor-pointer"
-                  title="Eliminate / Flip Down Card"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] text-amber-300 transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    background: 'rgba(245,158,11,0.2)',
+                    border: '1px solid rgba(245,158,11,0.35)',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                  title="Eliminate this card"
                 >
-                  <EyeOff className="w-3 h-3 shrink-0 text-slate-400 group-hover:text-amber-400" />
-                  <span>Eliminate</span>
+                  <EyeOff className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">Elim</span>
                 </button>
 
-                {/* Guess Button */}
+                {/* Guess button */}
                 {isGuessable && onMakeGuess && (
                   <button
                     type="button"
@@ -121,38 +104,80 @@ export const CardFlip: React.FC<CardFlipProps> = ({
                       soundFx.playSelect();
                       onMakeGuess(card);
                     }}
-                    className="py-1 px-1.5 bg-pink-500/20 hover:bg-pink-500/40 text-pink-300 border border-pink-500/30 hover:border-pink-400 font-extrabold text-[12px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-                    title="Make final guess on this character!"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] text-pink-300 transition-all hover:scale-105 active:scale-95"
+                    style={{
+                      background: 'rgba(236,72,153,0.2)',
+                      border: '1px solid rgba(236,72,153,0.35)',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                    title="Guess this is opponent's character!"
                   >
-                    <Target className="w-3 h-3 shrink-0 text-pink-400" />
-                    <span>Guess</span>
+                    <Target className="w-3 h-3 shrink-0" />
+                    <span className="hidden sm:inline">Guess</span>
                   </button>
                 )}
-              </>
+              </div>
+            )}
+
+            {/* Selectable overlay */}
+            {isSelectable && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  soundFx.playSelect();
+                  if (onSelectSecret) onSelectSecret(card.id);
+                }}
+                className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                style={{ background: 'rgba(245,158,11,0.3)', backdropFilter: 'blur(2px)' }}
+              >
+                <Sparkles className="w-6 h-6 text-amber-300 mb-1" />
+                <span className="text-xs font-black text-white">Select</span>
+              </button>
+            )}
+          </div>
+
+          {/* Card Name Bar */}
+          <div
+            className="px-2 py-1.5 text-center shrink-0"
+            style={{ background: 'rgba(7,9,15,0.85)' }}
+          >
+            <p className="font-extrabold text-slate-100 text-[11px] sm:text-xs truncate tracking-tight">
+              {card.name}
+            </p>
+            {isSelectable && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  soundFx.playSelect();
+                  if (onSelectSecret) onSelectSecret(card.id);
+                }}
+                className="mt-1 w-full py-0.5 rounded-md font-black text-[10px] text-slate-950 transition-all hover:scale-[1.03]"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}
+              >
+                Choose
+              </button>
             )}
           </div>
         </div>
 
-        {/* BACK OF CARD (Flipped Down / Eliminated) */}
+        {/* ── BACK OF CARD (Eliminated) ─────────────────── */}
         <div
-          className="absolute inset-0 w-full h-full rounded-2xl border border-slate-800 flex flex-col items-center justify-between p-2.5 rotate-y-180 backface-hidden bg-slate-950/95"
+          className="absolute inset-0 w-full h-full rounded-2xl border border-slate-800/80 flex flex-col items-center justify-between p-2.5 rotate-y-180 backface-hidden"
           style={{
-            backgroundImage: 'radial-gradient(ellipse at 50% 50%, rgba(239, 68, 68, 0.12) 0%, transparent 80%)',
+            background: 'rgba(10,12,22,0.97)',
+            backgroundImage: 'radial-gradient(ellipse at 50% 40%, rgba(239,68,68,0.1) 0%, transparent 75%)',
           }}
         >
-          <div className="w-full flex justify-center pt-1">
-            <span className="text-[9px] font-black text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
-              ELIMINATED
-            </span>
-          </div>
+          <span className="text-[9px] font-black text-rose-400 bg-rose-500/12 border border-rose-500/25 px-2 py-0.5 rounded-full uppercase tracking-wider mt-1">
+            ELIMINATED
+          </span>
 
-          <div className="text-center px-1">
-            <span className="text-[12px] font-bold text-slate-400 line-through truncate block max-w-[110px] mx-auto whitespace-nowrap">
-              {card.name}
-            </span>
-          </div>
+          <span className="text-[11px] font-bold text-slate-600 line-through truncate max-w-full px-1 text-center">
+            {card.name}
+          </span>
 
-          {/* Unflip / Undo Elimination Button */}
           <button
             type="button"
             onClick={(e) => {
@@ -160,11 +185,15 @@ export const CardFlip: React.FC<CardFlipProps> = ({
               soundFx.playCardFlip(false);
               onToggleFlip(card.id);
             }}
-            className="w-full py-1 bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-500/30 font-bold text-[10px] rounded-lg flex items-center justify-center gap-1 transition-colors whitespace-nowrap cursor-pointer"
-            title="Unflip / Restore Card"
+            className="w-full py-1 rounded-lg font-bold text-[10px] text-cyan-400 transition-all hover:scale-[1.03] flex items-center justify-center gap-1"
+            style={{
+              background: 'rgba(6,182,212,0.08)',
+              border: '1px solid rgba(6,182,212,0.25)',
+            }}
+            title="Restore card"
           >
-            <RotateCcw className="w-3 h-3 shrink-0 text-cyan-400" />
-            <span>Unflip</span>
+            <RotateCcw className="w-3 h-3 shrink-0" />
+            <span>Restore</span>
           </button>
         </div>
       </motion.div>
