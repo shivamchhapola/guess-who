@@ -1,86 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { Search, PlusCircle, User, Eye } from 'lucide-react';
 import { CardSetTemplate } from '@/types/game';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 import { createClient } from '@/lib/supabase/client';
-import { Search, Play, PlusCircle, User, Eye, X } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { NavHeader } from '@/components/NavHeader';
-import { useRouter } from 'next/navigation';
-
-function TemplatePreviewModal({
-  template,
-  onClose,
-}: {
-  template: CardSetTemplate;
-  onClose: () => void;
-}) {
-  const router = useRouter();
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="glass-panel rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 animate-slide-in-up"
-        style={{ border: '1px solid rgba(245,158,11,0.2)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              {template.title}
-            </h2>
-            <p className="text-slate-400 text-sm mt-1">{template.description}</p>
-            <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
-              <User className="w-3.5 h-3.5" />
-              <span>By {template.creatorName}</span>
-              <span>•</span>
-              <span>{template.cards.length} Characters</span>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0"
-            style={{ background: 'rgba(255,255,255,0.06)' }}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-6">
-          {template.cards.map(card => (
-            <div key={card.id} className="flex flex-col items-center gap-1.5">
-              <div className="relative w-full aspect-square rounded-xl overflow-hidden" style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <Image src={card.imageUrl} alt={card.name} fill className="object-cover" unoptimized />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-300 text-center truncate w-full">{card.name}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={() => router.push(`/play/practice?template=${template.id}`)}
-            className="game-btn-primary flex-1 py-3.5 text-base justify-center"
-          >
-            <Play className="w-5 h-5 fill-current" />
-            <span>Play Solo Practice</span>
-          </button>
-          <Link
-            href={`/host?template=${template.id}`}
-            className="game-btn-purple flex-1 py-3.5 text-base justify-center"
-          >
-            <span>Host Multiplayer Room</span>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { SetPreviewModal } from '@/components/SetPreviewModal';
 
 export default function TemplatesPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<CardSetTemplate | null>(null);
@@ -266,12 +199,15 @@ export default function TemplatesPage() {
       </main>
 
       {/* Preview Modal */}
-      {previewTemplate && (
-        <TemplatePreviewModal
-          template={previewTemplate}
-          onClose={() => setPreviewTemplate(null)}
-        />
-      )}
+      <SetPreviewModal
+        template={previewTemplate}
+        isOpen={previewTemplate !== null}
+        onClose={() => setPreviewTemplate(null)}
+        primaryActionLabel="Host Multiplayer Room"
+        onSelectSet={(tpl) => router.push(`/host?template=${tpl.id}`)}
+        secondaryActionLabel="Play Solo Practice"
+        onSecondaryAction={(tpl) => router.push(`/play/practice?template=${tpl.id}`)}
+      />
     </div>
   );
 }
