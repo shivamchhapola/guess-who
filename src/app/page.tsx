@@ -63,9 +63,9 @@ export default function Home() {
 
             {/* ── THREE PRIMARY ENTRY PATHS ─────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left max-w-5xl mx-auto mb-12">
-              
+
               {/* CARD 1: HOST A GAME */}
-              <div 
+              <div
                 className="game-panel p-6 sm:p-7 rounded-3xl flex flex-col justify-between group transition-all"
                 style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(15, 23, 42, 0.75)' }}
               >
@@ -96,7 +96,7 @@ export default function Home() {
               </div>
 
               {/* CARD 2: JOIN A GAME WITH CODE */}
-              <div 
+              <div
                 className="game-panel p-6 sm:p-7 rounded-3xl flex flex-col justify-between group transition-all"
                 style={{ border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(15, 23, 42, 0.75)' }}
               >
@@ -141,7 +141,7 @@ export default function Home() {
               </div>
 
               {/* CARD 3: JOIN PUBLIC LOBBY */}
-              <div 
+              <div
                 className="game-panel p-6 sm:p-7 rounded-3xl flex flex-col justify-between group transition-all"
                 style={{ border: '1px solid rgba(6,182,212,0.3)', background: 'rgba(15, 23, 42, 0.75)' }}
               >
@@ -240,7 +240,7 @@ export default function Home() {
           {/* Branding */}
           <div className="text-center sm:text-left">
             <p className="text-sm font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              GuessWho<span style={{ color: '#f59e0b' }}>Party!</span>
+              Guess<span style={{ color: '#f59e0b' }}>Whooo?</span>
             </p>
             <p className="text-xs text-slate-500 mt-0.5">© {new Date().getFullYear()} · Free custom Guess Who for everyone.</p>
           </div>
