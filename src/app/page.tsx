@@ -51,14 +51,14 @@ export default function Home() {
             {/* Hero Title */}
             <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-[1.08] mb-4 text-white"
               style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Guess Whooo?
+              GuessWhooo?
               <span className="block font-game-title mt-1">
                 with your friends !
               </span>
             </h1>
 
             <p className="text-slate-400 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-              Pick a ready-made deck or upload custom photos. Play Guess Who online with zero friction.
+              Pick a ready-made deck or upload custom photos. Play GuessWhooo? online with zero friction.
             </p>
 
             {/* ── THREE PRIMARY ENTRY PATHS ─────────────────────────────── */}
@@ -242,7 +242,7 @@ export default function Home() {
             <p className="text-sm font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
               Guess<span style={{ color: '#f59e0b' }}>Whooo?</span>
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">© {new Date().getFullYear()} · Free custom Guess Who for everyone.</p>
+            <p className="text-xs text-slate-500 mt-0.5">© {new Date().getFullYear()} · Free custom GuessWhooo? for everyone.</p>
           </div>
 
           {/* Social Links */}

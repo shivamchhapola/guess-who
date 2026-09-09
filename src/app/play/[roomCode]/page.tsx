@@ -12,8 +12,8 @@ interface RoomPageProps {
 export async function generateMetadata({ params }: RoomPageProps) {
   const { roomCode } = await params;
   return {
-    title: `Room #${roomCode.toUpperCase()} - Guess Who Maker`,
-    description: `Play online Guess Who in room #${roomCode.toUpperCase()} with zero login required.`,
+    title: `Room #${roomCode.toUpperCase()} - GuessWhooo?`,
+    description: `Play online GuessWhooo? in room #${roomCode.toUpperCase()} with zero login required.`,
   };
 }
 

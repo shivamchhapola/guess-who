@@ -540,7 +540,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Room Lobby View (Pre-Game Context) ─────────────────────── */
   if (inLobby) {
     return (
-      <div className="w-full max-w-5xl mx-auto px-4 py-8 sm:py-12 flex flex-col gap-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-8">
         
         {/* Lobby Top Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl game-panel border border-white/10 shadow-xl">
@@ -678,15 +678,6 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                         </span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleCopyRoomCode}
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-                      title="Copy room code"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>{copiedCode ? 'Copied!' : 'Copy Code'}</span>
-                    </button>
                   </div>
                 )}
               </div>
@@ -815,18 +806,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
         </div>
 
-        {/* Set Preview Modal Integration */}
-        <SetPreviewModal
-          template={previewingTemplate}
-          isOpen={Boolean(previewingTemplate)}
-          onClose={() => setPreviewingTemplate(null)}
-          onSelectSet={isHost ? (tpl) => {
-            handleHostChangeTemplate(tpl);
-            setPreviewingTemplate(null);
-            setIsChangeSetOpen(false);
-          } : undefined}
-          primaryActionLabel="Use This Set"
-        />
+
 
         {/* Enhanced Change Set Switcher Modal (For Host) */}
         {isChangeSetOpen && (
@@ -1049,6 +1029,19 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             </div>
           </div>
         )}
+
+        {/* Set Preview Modal Integration */}
+        <SetPreviewModal
+          template={previewingTemplate}
+          isOpen={Boolean(previewingTemplate)}
+          onClose={() => setPreviewingTemplate(null)}
+          onSelectSet={isHost ? (tpl) => {
+            handleHostChangeTemplate(tpl);
+            setPreviewingTemplate(null);
+            setIsChangeSetOpen(false);
+          } : undefined}
+          primaryActionLabel="Use This Set"
+        />
 
         {/* Leave Confirmation Modal */}
         {showLeaveModal && (

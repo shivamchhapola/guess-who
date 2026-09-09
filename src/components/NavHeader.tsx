@@ -42,11 +42,8 @@ export function NavHeader({ activePage }: NavHeaderProps) {
             >
               <Gamepad2 className="w-5 h-5" />
             </div>
-            <span className="text-xl font-black tracking-tight text-white hidden sm:block" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <span className="text-lg font-black tracking-tight text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
               Guess<span style={{ color: '#f59e0b' }}>Whooo?</span>
-            </span>
-            <span className="text-lg font-black tracking-tight text-white sm:hidden" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              GWP<span style={{ color: '#f59e0b' }}>!</span>
             </span>
           </Link>
 

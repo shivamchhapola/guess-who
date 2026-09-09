@@ -29,7 +29,7 @@ export function SetPreviewModal({
 
   return (
     <div
-      className="modal-backdrop z-50 fixed inset-0 flex items-center justify-center p-4"
+      className="modal-backdrop z-[100] fixed inset-0 flex items-center justify-center p-4"
       style={{ background: 'rgba(5, 7, 13, 0.85)', backdropFilter: 'blur(12px)' }}
       onClick={onClose}
     >
