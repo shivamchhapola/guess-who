@@ -4,7 +4,7 @@ import { CardSetTemplate } from '@/types/game';
 export const THE_OFFICE_TEMPLATE: CardSetTemplate = {
   id: 'the-office-us',
   title: 'The Office (Dunder Mifflin)',
-  description: 'Characters from the Dunder Mifflin Scranton crew.',
+  description: 'Characters from the Dunder Mifflin crew.',
   creatorName: 'Dunder Mifflin Staff',
   isPublic: true,
   tags: ['TV Show', 'Comedy', 'The Office', 'Popular'],
@@ -34,7 +34,7 @@ export const THE_OFFICE_TEMPLATE: CardSetTemplate = {
 export const HOLLYWOOD_ACTORS_TEMPLATE: CardSetTemplate = {
   id: 'hollywood-stars',
   title: 'Hollywood Movie Stars',
-  description: 'Iconic actors and actresses from blockbuster films.',
+  description: 'Iconic characters from blockbuster films.',
   creatorName: 'Cinema Club',
   isPublic: true,
   tags: ['Movies', 'Hollywood', 'Actors', 'Celebrities'],
@@ -60,7 +60,7 @@ export const HOLLYWOOD_ACTORS_TEMPLATE: CardSetTemplate = {
 export const MARVEL_SUPERHEROES_TEMPLATE: CardSetTemplate = {
   id: 'marvel-superheroes',
   title: 'Marvel Avengers & Legends',
-  description: 'Assemble! Guess your favorite Marvel heroes and villains from the MCU universe.',
+  description: 'Marvel heroes and villains.',
   creatorName: 'Marvel Universe',
   isPublic: true,
   tags: ['Marvel', 'Superheroes', 'Comics', 'Action'],

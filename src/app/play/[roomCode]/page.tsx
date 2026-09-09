@@ -12,8 +12,8 @@ interface RoomPageProps {
 export async function generateMetadata({ params }: RoomPageProps) {
   const { roomCode } = await params;
   return {
-    title: `Room #${roomCode.toUpperCase()} - Guess Who Maker`,
-    description: `Play online Guess Who in room #${roomCode.toUpperCase()} with zero login required.`,
+    title: `Room #${roomCode.toUpperCase()} - GuessWhooo?`,
+    description: `Play online GuessWhooo? in room #${roomCode.toUpperCase()} with zero login required.`,
   };
 }
 
@@ -49,8 +49,9 @@ export default async function OnlineRoomPage({ params, searchParams }: RoomPageP
 
     if (roomData) {
       requiredPassword = roomData.password_hash || null;
+      const targetTemplateId = roomData.template_id || roomData.state?.selectedTemplateId || queryTemplateId;
 
-      if (roomData.templates && roomData.templates.cards) {
+      if (roomData.templates && roomData.templates.cards && roomData.templates.cards.length > 0) {
         activeTemplate = {
           id: roomData.templates.id,
           title: roomData.templates.title,
@@ -67,10 +68,36 @@ export default async function OnlineRoomPage({ params, searchParams }: RoomPageP
             attributes: c.attributes || {},
           })),
         };
-      } else if (roomData.template_id) {
-        const found = allAvailableTemplates.find((t) => t.id === roomData.template_id);
-        if (found) {
-          activeTemplate = found;
+      } else if (targetTemplateId) {
+        const foundStatic = allAvailableTemplates.find((t) => t.id === targetTemplateId);
+        if (foundStatic) {
+          activeTemplate = foundStatic;
+        } else {
+          // Check if targetTemplateId is a custom template in DB
+          const { data: customTpl } = await supabase
+            .from('templates')
+            .select('*, cards(*)')
+            .eq('id', targetTemplateId)
+            .maybeSingle();
+
+          if (customTpl && customTpl.cards && customTpl.cards.length > 0) {
+            activeTemplate = {
+              id: customTpl.id,
+              title: customTpl.title,
+              description: customTpl.description || '',
+              creatorName: customTpl.creator_name || 'Community Creator',
+              isPublic: customTpl.is_public,
+              tags: customTpl.tags || ['Custom'],
+              createdAt: customTpl.created_at,
+              updatedAt: customTpl.updated_at,
+              cards: customTpl.cards.map((c: { id: string; name: string; image_url: string; attributes: Record<string, unknown> }) => ({
+                id: c.id,
+                name: c.name,
+                imageUrl: c.image_url,
+                attributes: c.attributes || {},
+              })),
+            };
+          }
         }
       }
     }
