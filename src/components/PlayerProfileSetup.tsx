@@ -23,6 +23,22 @@ interface PlayerProfileSetupProps {
   nameError?: string | null;
 }
 
+function parseAvatarUrl(url: string): { style: string; seed: string } {
+  if (!url || !url.startsWith('http')) {
+    return { style: 'avataaars', seed: 'Alex' };
+  }
+  try {
+    const urlObj = new URL(url);
+    const parts = urlObj.pathname.split('/');
+    const styleIdx = parts.findIndex(p => p === '7.x') + 1;
+    const style = (styleIdx > 0 && parts[styleIdx]) ? parts[styleIdx] : 'avataaars';
+    const seed = urlObj.searchParams.get('seed') || 'Alex';
+    return { style, seed };
+  } catch {
+    return { style: 'avataaars', seed: 'Alex' };
+  }
+}
+
 export function PlayerProfileSetup({
   name,
   avatar,
@@ -30,17 +46,14 @@ export function PlayerProfileSetup({
   onAvatarChange,
   nameError,
 }: PlayerProfileSetupProps) {
-  const [selectedStyle, setSelectedStyle] = useState('avataaars');
-  const [selectedSeed, setSelectedSeed] = useState('Alex');
+  const { style: activeStyle, seed: activeSeed } = parseAvatarUrl(avatar);
 
   const currentAvatarUrl = avatar && avatar.startsWith('http')
     ? avatar
-    : `https://api.dicebear.com/7.x/${selectedStyle}/svg?seed=${selectedSeed}`;
+    : `https://api.dicebear.com/7.x/${activeStyle}/svg?seed=${activeSeed}`;
 
   const updateAvatar = (style: string, seed: string) => {
     soundFx.playSelect();
-    setSelectedStyle(style);
-    setSelectedSeed(seed);
     const newUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
     onAvatarChange(newUrl);
   };
@@ -103,9 +116,9 @@ export function PlayerProfileSetup({
                   <button
                     key={style.id}
                     type="button"
-                    onClick={() => updateAvatar(style.id, selectedSeed)}
+                    onClick={() => updateAvatar(style.id, activeSeed)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 ${
-                      selectedStyle === style.id
+                      activeStyle === style.id
                         ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
                         : 'bg-white/5 text-slate-300 hover:bg-white/10 border-white/10'
                     }`}
@@ -124,13 +137,13 @@ export function PlayerProfileSetup({
               </span>
               <div className="grid grid-cols-6 gap-1.5">
                 {SEED_VARIATIONS.map((seed, idx) => {
-                  const seedUrl = `https://api.dicebear.com/7.x/${selectedStyle}/svg?seed=${seed}`;
-                  const isSelected = selectedSeed === seed;
+                  const seedUrl = `https://api.dicebear.com/7.x/${activeStyle}/svg?seed=${seed}`;
+                  const isSelected = activeSeed === seed;
                   return (
                     <button
                       key={seed}
                       type="button"
-                      onClick={() => updateAvatar(selectedStyle, seed)}
+                      onClick={() => updateAvatar(activeStyle, seed)}
                       className={`aspect-square rounded-xl p-1 border transition-colors flex items-center justify-center ${
                         isSelected
                           ? 'border-amber-400 bg-amber-500/20 shadow-sm shadow-amber-500/30'

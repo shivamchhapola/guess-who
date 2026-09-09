@@ -36,6 +36,6 @@ export function generateRandomName(): string {
 
 export function generateRandomAvatar(): string {
   const style = AVATAR_STYLES[Math.floor(Math.random() * AVATAR_STYLES.length)].id;
-  const seed = SEED_VARIATIONS[Math.floor(Math.random() * SEED_VARIATIONS.length)] + Math.floor(Math.random() * 100);
+  const seed = SEED_VARIATIONS[Math.floor(Math.random() * SEED_VARIATIONS.length)];
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
 }
