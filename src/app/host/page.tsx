@@ -142,7 +142,7 @@ function HostRoomContent() {
         sessionStorage.setItem(`room_${upperCode}_template`, selectedTemplateId);
       }
 
-      router.push(`/play/${upperCode}`);
+      router.push(`/play/${upperCode}?template=${encodeURIComponent(selectedTemplateId)}`);
     } catch (err) {
       console.error('Error launching room:', err);
       setErrorMessage('Could not launch room. Please try again.');

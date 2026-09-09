@@ -102,6 +102,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   }, [chatMessages]);
 
   useEffect(() => {
+    if (template && template.id) {
+      setCurrentTemplate(template);
+    }
+  }, [template]);
+
+  useEffect(() => {
     if (!isUnlocked || !hasSetIdentity || !playerName) return;
 
     const channel = supabase.channel(`room:${roomCode}`, {
