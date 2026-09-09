@@ -13,8 +13,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-
-const AVATAR_EMOJIS = ['👑', '🎮', '🦊', '🚀', '⚡', '🎯', '👾', '🦄', '🍿', '🎸'];
+import { PlayerProfileSetup } from '../PlayerProfileSetup';
 
 interface MultiplayerBoardProps {
   roomCode: string;
@@ -279,47 +278,13 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           </div>
 
           <form onSubmit={handleJoinSubmit} className="flex flex-col gap-6">
-            {/* Avatar Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                Choose Avatar
-              </label>
-              <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 p-2 rounded-2xl bg-slate-950 border border-white/10">
-                {AVATAR_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => {
-                      soundFx.playSelect();
-                      setSelectedAvatar(emoji);
-                    }}
-                    className={`w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all ${
-                      selectedAvatar === emoji
-                        ? 'bg-amber-500 text-black font-bold scale-110 shadow-lg'
-                        : 'hover:bg-white/10 text-white'
-                    }`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Nickname Input */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-                Your Nickname
-              </label>
-              <input
-                type="text"
-                required
-                value={joinNickname}
-                onChange={(e) => setJoinNickname(e.target.value)}
-                placeholder="e.g. Alex, GameMaster"
-                maxLength={18}
-                className="w-full px-4 py-3 rounded-2xl text-sm font-bold text-white bg-slate-950 border border-white/10 focus:border-amber-400 focus:outline-none"
-              />
-            </div>
+            <PlayerProfileSetup
+              name={joinNickname}
+              avatar={selectedAvatar}
+              onNameChange={setJoinNickname}
+              onAvatarChange={setSelectedAvatar}
+              compact={false}
+            />
 
             {/* Room Password Input (If Password Protected) */}
             {requiredPassword && (

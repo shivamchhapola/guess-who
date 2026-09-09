@@ -18,8 +18,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { soundFx } from '@/lib/audio';
-
-const AVATAR_EMOJIS = ['👑', '🎮', '🦊', '🚀', '⚡', '🎯', '👾', '🦄'];
+import { PlayerProfileSetup } from '@/components/PlayerProfileSetup';
 
 function generateRandomCode(length: number = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -28,6 +27,26 @@ function generateRandomCode(length: number = 6): string {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
+}
+
+function getDeckCategory(template: CardSetTemplate): string {
+  if (template.id === 'the-office-us') return 'Dunder Mifflin';
+  if (template.id === 'hollywood-stars') return 'Movies';
+  if (template.id === 'marvel-superheroes') return 'Marvel';
+  if (template.id === 'classic-24') return 'Classic';
+  if (template.tags && template.tags.length > 0) {
+    const tag = template.tags[0];
+    return tag.length > 16 ? tag.slice(0, 16) : tag;
+  }
+  return 'Custom';
+}
+
+function getDeckDescription(template: CardSetTemplate): string {
+  if (template.id === 'the-office-us') return 'Characters from the Dunder Mifflin crew.';
+  if (template.id === 'hollywood-stars') return 'Iconic characters from blockbuster films.';
+  if (template.id === 'marvel-superheroes') return 'Marvel heroes and villains.';
+  if (template.id === 'classic-24') return 'The original Guess Who characters.';
+  return template.description || 'Guess Who character set.';
 }
 
 export default function HostRoomPage() {
@@ -237,7 +256,7 @@ export default function HostRoomPage() {
               
               {/* 1. CHOOSE A CHARACTER DECK */}
               <section>
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4">
                   <h2 className="text-xl font-bold text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     <span className="text-amber-500 font-extrabold">1.</span> Choose a Character Deck
                   </h2>
@@ -246,6 +265,9 @@ export default function HostRoomPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {templates.map((tpl) => {
                     const isSelected = selectedTemplateId === tpl.id;
+                    const category = getDeckCategory(tpl);
+                    const description = getDeckDescription(tpl);
+
                     return (
                       <div
                         key={tpl.id}
@@ -253,42 +275,57 @@ export default function HostRoomPage() {
                           soundFx.playSelect();
                           setSelectedTemplateId(tpl.id);
                         }}
-                        className={`p-4 rounded-2xl cursor-pointer transition-all flex flex-col justify-between h-[180px] relative group ${
+                        className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 flex flex-col justify-between h-full relative group ${
                           isSelected
-                            ? 'border-2 border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10'
-                            : 'border border-white/10 bg-slate-900/60 hover:border-slate-700'
+                            ? 'border-2 border-amber-500 bg-amber-500/[0.08] shadow-lg shadow-amber-500/10'
+                            : 'border border-white/10 bg-slate-900/60 hover:border-amber-500/30 hover:bg-slate-900/80'
                         }`}
                       >
-                        {/* Selected Check Badge (Positioned cleanly in top-right) */}
-                        {isSelected && (
-                          <div className="absolute top-3 right-3 bg-amber-500 text-slate-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow z-10">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                            <span>Selected</span>
-                          </div>
-                        )}
+                        {/* Card Top Header with Selected Badge positioned cleanly in top-right padding area */}
+                        <div className="flex items-center justify-between mb-3 h-5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Deck Option
+                          </span>
+                          {isSelected && (
+                            <div className="bg-amber-500 text-slate-950 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              <span>Selected</span>
+                            </div>
+                          )}
+                        </div>
 
-                        <div>
-                          {/* Compact 4-Image Grid Preview */}
-                          <div className="grid grid-cols-4 gap-1 p-1 rounded-lg mb-3 aspect-[3.2/1] overflow-hidden bg-slate-950/80 border border-white/5">
-                            {tpl.cards.slice(0, 4).map((c) => (
-                              <div key={c.id} className="relative w-full h-full rounded overflow-hidden bg-slate-900">
-                                <Image src={c.imageUrl} alt={c.name} fill className="object-cover" unoptimized />
-                              </div>
-                            ))}
-                          </div>
+                        {/* Character Artwork Preview (Fixed Height) */}
+                        <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-xl bg-slate-950/80 border border-white/10 mb-3 h-24 sm:h-28 overflow-hidden">
+                          {tpl.cards.slice(0, 4).map((c) => (
+                            <div key={c.id} className="relative w-full h-full rounded-lg overflow-hidden bg-slate-900 border border-white/5">
+                              <Image
+                                src={c.imageUrl}
+                                alt={c.name}
+                                fill
+                                className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                                unoptimized
+                              />
+                            </div>
+                          ))}
+                        </div>
 
-                          <h3 className="font-bold text-white text-base truncate mb-1 group-hover:text-amber-400 transition-colors">
+                        {/* Card Main Info */}
+                        <div className="flex-1 flex flex-col justify-start">
+                          <h3
+                            className="font-extrabold text-white text-base tracking-tight mb-1 group-hover:text-amber-400 transition-colors"
+                            style={{ fontFamily: 'Outfit, sans-serif' }}
+                          >
                             {tpl.title}
                           </h3>
-                          <p className="text-slate-400 text-xs font-normal leading-relaxed line-clamp-1">
-                            {tpl.description || 'Guess Who character set.'}
+                          <p className="text-slate-400 text-xs font-normal leading-snug">
+                            {description}
                           </p>
                         </div>
 
-                        {/* Deck Card Footer */}
-                        <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-white/5">
-                          <span className="font-medium">{tpl.cards.length} cards</span>
-                          <span className="text-slate-400 text-[11px] truncate max-w-[120px]">{tpl.creatorName}</span>
+                        {/* Deck Card Metadata Footer */}
+                        <div className="mt-4 pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 font-medium">
+                          <span>{tpl.cards.length} cards</span>
+                          <span>{category}</span>
                         </div>
                       </div>
                     );
@@ -302,49 +339,14 @@ export default function HostRoomPage() {
                   <span className="text-amber-500 font-extrabold">2.</span> Player Identity
                 </h2>
 
-                <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-white/10 flex flex-col gap-4">
-                  <div className="flex flex-col sm:flex-row gap-4 items-center">
-                    {/* Compact Avatar Selector */}
-                    <div className="flex flex-col gap-1 w-full sm:w-auto">
-                      <span className="text-[11px] font-semibold text-slate-400">Avatar</span>
-                      <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/80 border border-white/10 overflow-x-auto">
-                        {AVATAR_EMOJIS.map((emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            onClick={() => {
-                              soundFx.playSelect();
-                              setSelectedAvatar(emoji);
-                            }}
-                            className={`w-8 h-8 rounded-lg text-base flex items-center justify-center transition-all ${
-                              selectedAvatar === emoji
-                                ? 'bg-amber-500 text-black font-bold shadow'
-                                : 'hover:bg-white/10 text-white'
-                            }`}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Handle Input */}
-                    <div className="flex flex-col gap-1 flex-1 w-full">
-                      <span className="text-[11px] font-semibold text-slate-400">Player Name</span>
-                      <div className="relative w-full">
-                        <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                          type="text"
-                          required
-                          value={hostName}
-                          onChange={(e) => setHostName(e.target.value)}
-                          placeholder="Host Player"
-                          maxLength={20}
-                          className="w-full pl-10 pr-4 py-2 rounded-xl text-sm font-semibold text-white focus:outline-none transition-all bg-slate-950/80 border border-white/10 focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-white/10">
+                  <PlayerProfileSetup
+                    name={hostName}
+                    avatar={selectedAvatar}
+                    onNameChange={setHostName}
+                    onAvatarChange={setSelectedAvatar}
+                    compact={true}
+                  />
                 </div>
               </section>
 
