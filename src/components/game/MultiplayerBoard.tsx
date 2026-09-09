@@ -12,13 +12,14 @@ import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
   ArrowLeft, Lock, RotateCcw, ChevronDown, ChevronUp, Users,
-  Play, RefreshCw, X, Sparkles, ArrowRight,
+  Play, RefreshCw, X, Sparkles, ArrowRight, Search,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SetPreviewModal } from '../SetPreviewModal';
 import { PlayerProfileSetup } from '../PlayerProfileSetup';
+import { matchesSearch, getCreatorLabel, getCharacterCountLabel, getTruncatedDescription } from '@/lib/setUtils';
 
 interface MultiplayerBoardProps {
   roomCode: string;
@@ -42,12 +43,30 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     return false;
   });
   const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
-  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
   const [isChangeSetOpen, setIsChangeSetOpen] = useState<boolean>(false);
+  const [setSearchQuery, setSetSearchQuery] = useState<string>('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
+  const [previewingTemplate, setPreviewingTemplate] = useState<CardSetTemplate | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<CardSetTemplate[]>([
     ...ALL_POPULAR_TEMPLATES,
     CLASSIC_GUESS_WHO_TEMPLATE,
   ]);
+
+  const availableTags = React.useMemo(() => {
+    const tagSet = new Set<string>();
+    availableTemplates.forEach((t) => {
+      (t.tags || []).forEach((tag) => tagSet.add(tag));
+    });
+    return Array.from(tagSet);
+  }, [availableTemplates]);
+
+  const filteredTemplates = React.useMemo(() => {
+    return availableTemplates.filter((t) => {
+      const queryMatch = matchesSearch(t, setSearchQuery);
+      const tagMatch = !selectedTagFilter || (t.tags || []).includes(selectedTagFilter);
+      return queryMatch && tagMatch;
+    });
+  }, [availableTemplates, setSearchQuery, selectedTagFilter]);
 
   const supabase = createClient();
 
@@ -697,8 +716,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsPreviewOpen(true)}
-                  className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-200 hover:text-white transition-colors flex-1"
+                  onClick={() => setPreviewingTemplate(currentTemplate)}
+                  className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-200 hover:text-white transition-colors flex-1 cursor-pointer"
                 >
                   <Eye className="w-4 h-4 text-amber-400" />
                   <span>Preview Character Cards</span>
@@ -720,121 +739,237 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
         </div>
 
-        {/* Set Preview Modal */}
-        {isPreviewOpen && (
-          <div className="modal-backdrop" onClick={() => setIsPreviewOpen(false)}>
-            <div
-              className="glass-panel rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 animate-slide-in-up"
-              style={{ border: '1px solid rgba(245,158,11,0.3)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-start justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {currentTemplate.title}
-                  </h2>
-                  <p className="text-slate-400 text-sm mt-1">{currentTemplate.description}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPreviewOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        {/* Set Preview Modal Integration */}
+        <SetPreviewModal
+          template={previewingTemplate}
+          isOpen={Boolean(previewingTemplate)}
+          onClose={() => setPreviewingTemplate(null)}
+          onSelectSet={isHost ? (tpl) => {
+            handleHostChangeTemplate(tpl);
+            setPreviewingTemplate(null);
+            setIsChangeSetOpen(false);
+          } : undefined}
+          primaryActionLabel="Use This Set"
+        />
 
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-6">
-                {currentTemplate.cards.map((card) => (
-                  <div key={card.id} className="flex flex-col items-center gap-1.5">
-                    <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-900 border border-white/10">
-                      <Image src={card.imageUrl} alt={card.name} fill className="object-cover" unoptimized />
-                    </div>
-                    <span className="text-[11px] font-semibold text-slate-300 text-center leading-tight truncate w-full">
-                      {card.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsPreviewOpen(false)}
-                className="game-btn-primary w-full py-3.5 text-sm justify-center"
-              >
-                Done Previewing
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Change Set Switcher Modal (For Host) */}
+        {/* Enhanced Change Set Switcher Modal (For Host) */}
         {isChangeSetOpen && (
-          <div className="modal-backdrop" onClick={() => setIsChangeSetOpen(false)}>
+          <div
+            className="modal-backdrop z-50 fixed inset-0 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
+            onClick={() => setIsChangeSetOpen(false)}
+          >
             <div
-              className="glass-panel rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 animate-slide-in-up"
-              style={{ border: '1px solid rgba(139,92,246,0.3)' }}
+              className="glass-panel rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 sm:p-8 animate-slide-in-up shadow-2xl relative"
+              style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(15, 23, 42, 0.95)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-4 mb-6">
+              {/* Modal Header */}
+              <div className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-white/10 shrink-0">
                 <div>
-                  <h2 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     Select a Character Deck
                   </h2>
-                  <p className="text-slate-400 text-xs mt-1">
+                  <p className="text-slate-400 text-xs sm:text-sm mt-1">
                     Choose a deck for this room. Everyone in the lobby will see the change instantly.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsChangeSetOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                  className="p-2.5 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0 cursor-pointer"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+                  title="Close modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                {availableTemplates.map((tpl) => {
-                  const isSelected = currentTemplate.id === tpl.id;
-                  return (
-                    <div
-                      key={tpl.id}
-                      onClick={() => handleHostChangeTemplate(tpl)}
-                      className={`p-4 rounded-2xl cursor-pointer transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? 'border-2 border-amber-500 bg-amber-500/10 shadow-lg'
-                          : 'border border-white/10 bg-slate-900/60 hover:border-amber-500/40'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-extrabold text-white text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                          {tpl.title}
-                        </h4>
-                        {isSelected && (
-                          <span className="text-[10px] font-black uppercase text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">
-                            Selected
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-slate-400 text-xs line-clamp-2 mb-3">{tpl.description}</p>
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        {tpl.cards.length} Cards
-                      </span>
-                    </div>
-                  );
-                })}
+              {/* Search Bar */}
+              <div className="relative mb-3 shrink-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search sets by title, tag, or creator..."
+                  value={setSearchQuery}
+                  onChange={(e) => setSetSearchQuery(e.target.value)}
+                  className="w-full bg-slate-950/80 border border-white/15 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500/50"
+                />
+                {setSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSetSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsChangeSetOpen(false)}
-                className="py-3 px-4 rounded-2xl text-xs font-bold text-slate-400 hover:text-white bg-white/5 border border-white/10 w-full"
-              >
-                Cancel
-              </button>
+              {/* Tag Filters */}
+              {availableTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-white/10 shrink-0 overflow-x-auto">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTagFilter(null)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      selectedTagFilter === null
+                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                        : 'bg-white/5 text-slate-400 hover:text-white border border-white/10'
+                    }`}
+                  >
+                    All ({availableTemplates.length})
+                  </button>
+                  {availableTags.map((tag) => {
+                    const isActive = selectedTagFilter === tag;
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setSelectedTagFilter(isActive ? null : tag)}
+                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer font-mono ${
+                          isActive
+                            ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                            : 'bg-white/5 text-slate-400 hover:text-white border border-white/10'
+                        }`}
+                      >
+                        #{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Cards Grid */}
+              <div className="flex-1 overflow-y-auto pr-1 mb-4 min-h-[280px]">
+                {filteredTemplates.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <p className="text-sm font-bold text-slate-400">No character decks found</p>
+                    <p className="text-xs text-slate-500 mt-1">Try clearing your search or tag filters.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSetSearchQuery('');
+                        setSelectedTagFilter(null);
+                      }}
+                      className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 cursor-pointer"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {filteredTemplates.map((tpl) => {
+                      const isSelected = currentTemplate.id === tpl.id;
+                      const previewCards = (tpl.cards || []).slice(0, 4);
+
+                      return (
+                        <div
+                          key={tpl.id}
+                          className={`p-4 rounded-2xl transition-all flex flex-col justify-between gap-3 ${
+                            isSelected
+                              ? 'border-2 border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10'
+                              : 'border border-white/10 bg-slate-900/60 hover:border-amber-500/40'
+                          }`}
+                        >
+                          <div>
+                            {/* Header: Title & Selected Badge */}
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <div className="min-w-0">
+                                <h4 className="font-extrabold text-white text-base truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                                  {tpl.title}
+                                </h4>
+                                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                  <span>{getCreatorLabel(tpl)}</span>
+                                  <span>•</span>
+                                  <span className="font-semibold text-slate-300">{getCharacterCountLabel(tpl)}</span>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <span className="text-[10px] font-black uppercase text-amber-400 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                                  <Check className="w-3 h-3 stroke-[3]" /> Selected
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="text-slate-400 text-xs line-clamp-2 mb-3 leading-relaxed">
+                              {getTruncatedDescription(tpl.description || '', 100)}
+                            </p>
+
+                            {/* Mini Character Thumbnails (4-grid) */}
+                            <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-xl bg-slate-950 border border-white/10 aspect-[4/1] overflow-hidden mb-3">
+                              {previewCards.map((c) => (
+                                <div key={c.id} className="relative w-full h-full rounded-lg overflow-hidden bg-slate-900 border border-white/5">
+                                  <Image src={c.imageUrl} alt={c.name} fill className="object-cover object-top" unoptimized />
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Tags */}
+                            {tpl.tags && tpl.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-1">
+                                {tpl.tags.map((tag) => (
+                                  <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/10 font-mono">
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewingTemplate(tpl);
+                              }}
+                              className="px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-white/5 border border-white/10 flex items-center justify-center gap-1.5 flex-1 cursor-pointer transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Preview</span>
+                            </button>
+
+                            {isSelected ? (
+                              <button
+                                type="button"
+                                disabled
+                                className="px-3 py-2 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/20 border border-amber-500/30 flex items-center justify-center gap-1.5 flex-1 cursor-default opacity-80"
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                <span>Active</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleHostChangeTemplate(tpl);
+                                }}
+                                className="game-btn-primary px-3 py-2 text-xs font-bold justify-center rounded-xl flex items-center gap-1.5 flex-1 cursor-pointer"
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                <span>Use This Set</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Close */}
+              <div className="pt-3 border-t border-white/10 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsChangeSetOpen(false)}
+                  className="py-3 px-4 rounded-2xl text-xs font-bold text-slate-300 hover:text-white bg-white/5 border border-white/10 w-full cursor-pointer transition-colors"
+                >
+                  Close Deck Selector
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -913,7 +1048,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => setIsPreviewOpen(true)}
+              onClick={() => setPreviewingTemplate(currentTemplate)}
               className="text-left group flex items-center gap-1 text-slate-400 hover:text-amber-400 transition-colors text-[11px] font-semibold truncate cursor-pointer"
             >
               <span className="truncate">{currentTemplate.title}</span>
@@ -1266,12 +1401,6 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         onPlayAgain={() => setGameResult(null)}
       />
 
-      {/* Set Preview Drawer / Modal */}
-      <SetPreviewModal
-        template={currentTemplate}
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-      />
 
       {/* Exit Confirmation Modal */}
       {showExitConfirm && (
