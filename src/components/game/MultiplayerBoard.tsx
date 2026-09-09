@@ -789,7 +789,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 <button
                   type="button"
                   onClick={() => setPreviewingTemplate(currentTemplate)}
-                  className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-200 hover:text-white transition-colors flex-1 cursor-pointer"
+                  className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-200 hover:text-white transition-colors flex-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  title="Preview character cards in full grid"
+                  aria-label="Preview character cards"
                 >
                   <Eye className="w-4 h-4 text-amber-400" />
                   <span>Preview Character Cards</span>
@@ -799,7 +801,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsChangeSetOpen(true)}
-                    className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors flex-1"
+                    className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors flex-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    title="Select a different character deck for this room"
+                    aria-label="Change character deck"
                   >
                     <RefreshCw className="w-4 h-4" />
                     <span>Change Deck</span>

@@ -84,9 +84,10 @@ export function SetPreviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2.5 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0"
+            className="p-2.5 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
-            title="Close preview"
+            title="Close preview modal"
+            aria-label="Close preview modal"
           >
             <X className="w-5 h-5" />
           </button>
@@ -130,8 +131,10 @@ export function SetPreviewModal({
                 onSecondaryAction(template);
                 onClose();
               }}
-              className="py-3.5 px-5 rounded-2xl text-xs font-bold text-slate-200 hover:text-white transition-colors flex items-center justify-center gap-2"
+              className="py-3.5 px-5 rounded-2xl text-xs font-bold text-slate-200 hover:text-white transition-colors flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+              title={secondaryActionLabel}
+              aria-label={secondaryActionLabel}
             >
               <Play className="w-4 h-4 fill-current text-amber-400" />
               <span>{secondaryActionLabel}</span>
@@ -145,7 +148,9 @@ export function SetPreviewModal({
                 onSelectSet(template);
                 onClose();
               }}
-              className="game-btn-primary flex-1 py-3.5 text-sm justify-center rounded-2xl font-bold flex items-center gap-2"
+              className="game-btn-primary flex-1 py-3.5 text-sm justify-center rounded-2xl font-bold flex items-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              title={primaryActionLabel}
+              aria-label={primaryActionLabel}
             >
               <Check className="w-4 h-4 stroke-[3]" />
               <span>{primaryActionLabel}</span>
@@ -154,7 +159,9 @@ export function SetPreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="game-btn-primary flex-1 py-3.5 text-sm justify-center rounded-2xl font-bold"
+              className="game-btn-primary flex-1 py-3.5 text-sm justify-center rounded-2xl font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              title="Close preview"
+              aria-label="Close preview"
             >
               Close Preview
             </button>
