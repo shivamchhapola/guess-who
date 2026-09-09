@@ -61,12 +61,12 @@ export default function Home() {
               Pick a ready-made deck or upload custom photos. Play Guess Who online with zero friction.
             </p>
 
-            {/* ── TWO PRIMARY ENTRY PATHS ─────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left max-w-3xl mx-auto mb-12">
+            {/* ── THREE PRIMARY ENTRY PATHS ─────────────────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left max-w-5xl mx-auto mb-12">
               
-              {/* PATH 1: HOST A GAME */}
+              {/* CARD 1: HOST A GAME */}
               <div 
-                className="game-panel p-6 sm:p-8 rounded-3xl flex flex-col justify-between group transition-all"
+                className="game-panel p-6 sm:p-7 rounded-3xl flex flex-col justify-between group transition-all"
                 style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(15, 23, 42, 0.75)' }}
               >
                 <div>
@@ -80,24 +80,24 @@ export default function Home() {
                   <h2 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     Host a Game
                   </h2>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mb-6">
                     Create a private room, get a code, invite friends, and choose your favorite deck in the lobby.
                   </p>
                 </div>
 
                 <Link
                   href="/host"
-                  className="game-btn-purple text-base py-3.5 px-6 justify-center rounded-2xl w-full shadow-lg shadow-purple-500/10 flex items-center gap-2"
+                  className="game-btn-purple text-sm py-3.5 px-5 justify-center rounded-2xl w-full shadow-lg shadow-purple-500/10 flex items-center gap-2 font-bold"
                 >
-                  <Gamepad2 className="w-5 h-5" />
+                  <Gamepad2 className="w-4 h-4" />
                   <span>Host a Game</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  <ArrowRight className="w-4 h-4 ml-auto" />
                 </Link>
               </div>
 
-              {/* PATH 2: JOIN A GAME (Fast Path) */}
+              {/* CARD 2: JOIN A GAME WITH CODE */}
               <div 
-                className="game-panel p-6 sm:p-8 rounded-3xl flex flex-col justify-between group transition-all"
+                className="game-panel p-6 sm:p-7 rounded-3xl flex flex-col justify-between group transition-all"
                 style={{ border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(15, 23, 42, 0.75)' }}
               >
                 <div>
@@ -111,65 +111,66 @@ export default function Home() {
                   <h2 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     Join a Game
                   </h2>
-                  <p className="text-slate-400 text-sm leading-relaxed mb-4">
-                    Enter your 6-letter room code below to instantly jump into a match.
+                  <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                    Enter your 6-letter room code below to jump straight into your match.
                   </p>
                 </div>
 
-                <form onSubmit={handleJoinRoom} className="flex flex-col gap-3">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={roomCode}
-                      onChange={e => setRoomCode(e.target.value.toUpperCase())}
-                      placeholder="ROOM CODE"
-                      maxLength={6}
-                      className="flex-1 px-4 py-3.5 rounded-2xl text-center text-lg font-mono font-black tracking-widest uppercase focus:outline-none"
-                      style={{
-                        background: 'rgba(7,9,15,0.9)',
-                        border: '2px solid rgba(71,85,105,0.8)',
-                        color: '#f59e0b',
-                        caretColor: '#f59e0b',
-                      }}
-                      onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
-                      onBlur={e => (e.target.style.borderColor = 'rgba(71,85,105,0.8)')}
-                    />
-                    <button type="submit" className="game-btn-primary px-6 py-3.5 text-sm rounded-2xl shrink-0 flex items-center gap-1.5">
-                      <span>Join</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                <form onSubmit={handleJoinRoom} className="flex flex-col gap-2.5 mt-2">
+                  <input
+                    type="text"
+                    value={roomCode}
+                    onChange={e => setRoomCode(e.target.value.toUpperCase())}
+                    placeholder="ROOM CODE"
+                    maxLength={6}
+                    className="w-full px-4 py-3 rounded-2xl text-center text-base font-mono font-black tracking-widest uppercase focus:outline-none"
+                    style={{
+                      background: 'rgba(7,9,15,0.9)',
+                      border: '2px solid rgba(71,85,105,0.8)',
+                      color: '#f59e0b',
+                      caretColor: '#f59e0b',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.6)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(71,85,105,0.8)')}
+                  />
+                  <button type="submit" className="game-btn-primary w-full py-3.5 text-sm rounded-2xl justify-center flex items-center gap-2 cursor-pointer font-bold">
+                    <span>Join Room</span>
+                    <ArrowRight className="w-4 h-4 ml-auto" />
+                  </button>
                 </form>
               </div>
 
-            </div>
+              {/* CARD 3: JOIN PUBLIC LOBBY */}
+              <div 
+                className="game-panel p-6 sm:p-7 rounded-3xl flex flex-col justify-between group transition-all"
+                style={{ border: '1px solid rgba(6,182,212,0.3)', background: 'rgba(15, 23, 42, 0.75)' }}
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-transform group-hover:scale-110"
+                    style={{ background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.3)', color: '#22d3ee' }}>
+                    <Globe className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-cyan-400 block mb-1">
+                    Matchmaking
+                  </span>
+                  <h2 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    Public Lobbies
+                  </h2>
+                  <p className="text-slate-400 text-xs sm:text-sm leading-relaxed mb-6">
+                    Browse active public rooms hosted by other players looking for an opponent right now.
+                  </p>
+                </div>
 
-            {/* ── SUPPORTING NAVIGATION BAR ───────────────────────────── */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-white/10 max-w-3xl mx-auto">
-              <Link
-                href="/templates"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition-all"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <Eye className="w-4 h-4 text-amber-400" />
-                <span>Browse Sets</span>
-              </Link>
-              <Link
-                href="/create"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition-all"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <PlusCircle className="w-4 h-4 text-purple-400" />
-                <span>Create Custom Set</span>
-              </Link>
-              <Link
-                href="/lobbies"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white transition-all"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <Globe className="w-4 h-4 text-cyan-400" />
-                <span>Public Lobbies</span>
-              </Link>
+                <Link
+                  href="/lobbies"
+                  className="py-3.5 px-5 rounded-2xl text-sm font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all justify-center flex items-center gap-2 w-full shadow-lg shadow-cyan-500/10"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>Browse Lobbies</span>
+                  <ArrowRight className="w-4 h-4 ml-auto" />
+                </Link>
+              </div>
+
             </div>
           </div>
         </section>

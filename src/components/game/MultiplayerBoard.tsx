@@ -36,12 +36,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [inLobby, setInLobby] = useState<boolean>(true);
   const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
-  const [isHost] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`room_${roomCode}_role`) === 'host';
-    }
-    return false;
-  });
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+  const [isHost, setIsHost] = useState<boolean>(false);
   const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
   const [isChangeSetOpen, setIsChangeSetOpen] = useState<boolean>(false);
   const [setSearchQuery, setSetSearchQuery] = useState<string>('');
@@ -113,28 +109,22 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [inputPassword, setInputPassword] = useState<string>('');
   const [passError, setPassError] = useState<string | null>(null);
 
-  const [playerName, setPlayerName] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`room_${roomCode}_name`) || '';
-    }
-    return '';
-  });
-
-  const [hasSetIdentity, setHasSetIdentity] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return Boolean(sessionStorage.getItem(`room_${roomCode}_name`));
-    }
-    return false;
-  });
-
+  const [playerName, setPlayerName] = useState<string>('');
+  const [hasSetIdentity, setHasSetIdentity] = useState<boolean>(false);
   const [joinNickname, setJoinNickname] = useState<string>('');
   const [selectedAvatar, setSelectedAvatar] = useState<string>('🎮');
-  const [playerAvatar] = useState<string>(() => {
+  const [playerAvatar, setPlayerAvatar] = useState<string>('');
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`room_${roomCode}_avatar`) || '';
+      setIsHost(sessionStorage.getItem(`room_${roomCode}_role`) === 'host');
+      const name = sessionStorage.getItem(`room_${roomCode}_name`) || '';
+      setPlayerName(name);
+      setHasSetIdentity(Boolean(name));
+      setPlayerAvatar(sessionStorage.getItem(`room_${roomCode}_avatar`) || '');
     }
-    return '';
-  });
+    setIsMounted(true);
+  }, [roomCode]);
 
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [opponentSecretId, setOpponentSecretId] = useState<string | null>(null);
@@ -397,6 +387,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
   const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
   const standingCardsCount = currentTemplate.cards.length - flippedCardIds.length;
+
+  /* ── SSR Hydration Guard ─────────────────────────────────────── */
+  if (!isMounted) {
+    return (
+      <div className="w-full max-w-md mx-auto px-4 py-24 flex flex-col items-center justify-center text-center">
+        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <span className="text-xs font-bold text-slate-400">Loading room…</span>
+      </div>
+    );
+  }
 
   /* ── Player Identity / Join Setup Gate ───────────────────────── */
   if (!hasSetIdentity) {
