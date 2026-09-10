@@ -39,6 +39,44 @@ export interface QuestionLogItem {
   answer?: 'yes' | 'no';
 }
 
+export interface SharedPlayer {
+  id: string;
+  nickname: string;
+  avatar: string;
+  isHost: boolean;
+  isReady: boolean; // Has selected secret character for current round
+  connected: boolean;
+}
+
+export type GameStatus = 'setup' | 'selecting_character' | 'active' | 'finished';
+
+export type WinReason =
+  | 'correct_guess'
+  | 'wrong_guess'
+  | 'opponent_wrong_guess'
+  | 'surrender'
+  | 'disconnect'
+  | 'timeout';
+
+export interface SharedRoomState {
+  roomId: string;
+  hostPlayerId: string;
+  players: Record<string, SharedPlayer>;
+  selectedSetId: string;
+  gameStatus: GameStatus;
+  currentTurnPlayerId: string | null;
+  turnTimerSetting: number; // 0 (Off), 30, 60, 90, 120
+  turnStartedAt: number | null; // Epoch timestamp (ms)
+  winnerPlayerId: string | null;
+  winReason: WinReason | null;
+  gameRound: number;
+}
+
+export interface PrivatePlayerState {
+  secretCharacterId: string | null;
+  flippedCardIds: string[];
+}
+
 export interface LocalGameState {
   template: CardSetTemplate;
   secretCardId: string | null;
@@ -50,3 +88,4 @@ export interface LocalGameState {
   guessHistory: QuestionLogItem[];
   startTime: number;
 }
+

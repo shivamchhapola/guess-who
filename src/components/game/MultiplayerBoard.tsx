@@ -1,26 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CardSetTemplate, CharacterCard, QuestionLogItem } from '@/types/game';
+import { CardSetTemplate, CharacterCard, QuestionLogItem, SharedRoomState, SharedPlayer, GameStatus, WinReason } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
-import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
-import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { CardFlip } from './CardFlip';
 import { GuessModal } from './GuessModal';
 import { VictoryModal } from './VictoryModal';
 import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
-  ArrowLeft, Lock, RotateCcw, ChevronDown, ChevronUp, Users,
-  Play, RefreshCw, X, Sparkles, ArrowRight, Search,
+  ArrowLeft, ArrowRight, Lock, RotateCcw, ChevronDown, ChevronUp,
+  CheckCircle2, Clock, UserCheck, Loader2, Sparkles, Flag,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { SetPreviewModal } from '../SetPreviewModal';
-import { PlayerProfileSetup } from '../PlayerProfileSetup';
-import { matchesSearch, getCreatorLabel, getCharacterCountLabel, getTruncatedDescription } from '@/lib/setUtils';
-import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
 
 interface MultiplayerBoardProps {
   roomCode: string;
@@ -33,136 +26,77 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   template,
   requiredPassword,
 }) => {
-  const router = useRouter();
-  const [inLobby, setInLobby] = useState<boolean>(true);
-  const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
-  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
-  const [isMounted, setIsMounted] = useState<boolean>(false);
-  const [isHost, setIsHost] = useState<boolean>(false);
-  const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
-  const [isChangeSetOpen, setIsChangeSetOpen] = useState<boolean>(false);
-  const [setSearchQuery, setSetSearchQuery] = useState<string>('');
-  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
-  const [previewingTemplate, setPreviewingTemplate] = useState<CardSetTemplate | null>(null);
-  const [availableTemplates, setAvailableTemplates] = useState<CardSetTemplate[]>([
-    ...ALL_POPULAR_TEMPLATES,
-    CLASSIC_GUESS_WHO_TEMPLATE,
-  ]);
-
-  const availableTags = React.useMemo(() => {
-    const tagSet = new Set<string>();
-    availableTemplates.forEach((t) => {
-      (t.tags || []).forEach((tag) => tagSet.add(tag));
-    });
-    return Array.from(tagSet);
-  }, [availableTemplates]);
-
-  const filteredTemplates = React.useMemo(() => {
-    return availableTemplates.filter((t) => {
-      const queryMatch = matchesSearch(t, setSearchQuery);
-      const tagMatch = !selectedTagFilter || (t.tags || []).includes(selectedTagFilter);
-      return queryMatch && tagMatch;
-    });
-  }, [availableTemplates, setSearchQuery, selectedTagFilter]);
-
-  const supabase = createClient();
-
-  useEffect(() => {
-    async function fetchAllTemplates() {
-      try {
-        const { data: dbTemplates } = await supabase
-          .from('templates')
-          .select('*, cards(*)')
-          .eq('is_public', true)
-          .order('created_at', { ascending: false });
-
-        if (dbTemplates && dbTemplates.length > 0) {
-          const formatted: CardSetTemplate[] = dbTemplates.map((t) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || '',
-            creatorName: t.creator_name || 'Community Creator',
-            isPublic: t.is_public,
-            tags: t.tags || ['Custom'],
-            createdAt: t.created_at,
-            updatedAt: t.updated_at,
-            cards: (t.cards || []).map((c: { id: string; name: string; image_url: string; attributes: Record<string, unknown> }) => ({
-              id: c.id,
-              name: c.name,
-              imageUrl: c.image_url,
-              attributes: c.attributes || {},
-            })),
-          }));
-          setAvailableTemplates([...ALL_POPULAR_TEMPLATES, CLASSIC_GUESS_WHO_TEMPLATE, ...formatted]);
-        }
-      } catch (err) {
-        console.warn('Could not load remote templates for lobby:', err);
-      }
-    }
-    fetchAllTemplates();
-  }, [supabase]);
-
   const [playerSecretId, setPlayerSecretId] = useState<string | null>(null);
   const [flippedCardIds, setFlippedCardIds] = useState<string[]>([]);
   const [isSecretSelected, setIsSecretSelected] = useState<boolean>(false);
+  const [isOpponentReady, setIsOpponentReady] = useState<boolean>(false);
 
   const [isUnlocked, setIsUnlocked] = useState<boolean>(!requiredPassword);
   const [inputPassword, setInputPassword] = useState<string>('');
   const [passError, setPassError] = useState<string | null>(null);
 
-  const [playerName, setPlayerName] = useState<string>('');
-  const [presenceKey, setPresenceKey] = useState<string>(''); // full "https://avatar NickName" for channel
-  const [hasSetIdentity, setHasSetIdentity] = useState<boolean>(false);
-  const [joinNickname, setJoinNickname] = useState<string>('');
-  const [selectedAvatar, setSelectedAvatar] = useState<string>('🎮');
-  const [playerAvatar, setPlayerAvatar] = useState<string>('');
-
-  useEffect(() => {
+  const [playerName] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      setIsHost(sessionStorage.getItem(`room_${roomCode}_role`) === 'host');
-      const rawName = sessionStorage.getItem(`room_${roomCode}_name`) || '';
-      // rawName is the full presenceKey: "https://avatarUrl NickName"
-      setPresenceKey(rawName);
-      if (rawName.startsWith('https://')) {
-        const spaceIdx = rawName.indexOf(' ');
-        if (spaceIdx > 0) {
-          setPlayerAvatar(rawName.slice(0, spaceIdx));
-          setPlayerName(rawName.slice(spaceIdx + 1));
-        } else {
-          setPlayerName(rawName);
-        }
-      } else {
-        setPlayerName(rawName);
-        setPlayerAvatar(sessionStorage.getItem(`room_${roomCode}_avatar`) || '');
-      }
-      setHasSetIdentity(Boolean(rawName));
-      setJoinNickname(generateRandomName());
-      setSelectedAvatar(generateRandomAvatar());
+      return sessionStorage.getItem(`room_${roomCode}_name`) || `Player_${Math.floor(Math.random() * 1000)}`;
     }
-    setIsMounted(true);
-  }, [roomCode]);
+    return `Player_${Math.floor(Math.random() * 1000)}`;
+  });
+
+  const [isHost] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(`room_${roomCode}_role`) === 'host';
+    }
+    return false;
+  });
+
+  const [sharedRoomState, setSharedRoomState] = useState<SharedRoomState>(() => ({
+    roomId: roomCode,
+    hostPlayerId: isHost ? playerName : '',
+    players: {
+      [playerName]: {
+        id: playerName,
+        nickname: playerName,
+        avatar: '',
+        isHost,
+        isReady: false,
+        connected: true,
+      },
+    },
+    selectedSetId: template.id,
+    gameStatus: 'setup',
+    currentTurnPlayerId: null,
+    turnTimerSetting: 60,
+    turnStartedAt: null,
+    winnerPlayerId: null,
+    winReason: null,
+    gameRound: 1,
+  }));
 
   const [opponentName, setOpponentName] = useState<string | null>(null);
-  const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null);
   const [opponentSecretId, setOpponentSecretId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<QuestionLogItem[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [copiedCode, setCopiedCode] = useState<boolean>(false);
-  const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
 
   const [selectedGuessCard, setSelectedGuessCard] = useState<CharacterCard | null>(null);
   const [isGuessModalOpen, setIsGuessModalOpen] = useState<boolean>(false);
   const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
+  const [currentWinReason, setCurrentWinReason] = useState<WinReason | null>(null);
+  const [lastGuessedCard, setLastGuessedCard] = useState<CharacterCard | null>(null);
+  const [isSurrenderModalOpen, setIsSurrenderModalOpen] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [chatOpen, setChatOpen] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const lastTimeoutTurnRef = useRef<number | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const supabase = createClient();
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
 
   useEffect(() => {
     if (template && template.id) {
@@ -171,75 +105,170 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   }, [template]);
 
   useEffect(() => {
-    if (!isUnlocked || !hasSetIdentity || !presenceKey) return;
+    if (!isUnlocked) return;
 
     const channel = supabase.channel(`room:${roomCode}`, {
       config: {
-        presence: { key: presenceKey },
+        presence: { key: playerName },
       },
     });
-    channelRef.current = channel;
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
       const players = Object.keys(state);
-      setConnectedPlayers(players);
-      const otherKey = players.find((p) => p !== presenceKey);
-      if (otherKey) {
-        // presenceKey format: "https://avatar-url NickName" or just "NickName"
-        const spaceIdx = otherKey.indexOf(' ');
-        if (spaceIdx > 0 && otherKey.startsWith('https://')) {
-          setOpponentAvatar(otherKey.slice(0, spaceIdx));
-          setOpponentName(otherKey.slice(spaceIdx + 1));
-        } else {
-          setOpponentAvatar(null);
-          setOpponentName(otherKey);
-        }
-      } else {
-        setOpponentName(null);
-        setOpponentAvatar(null);
-      }
+      const other = players.find((p) => p !== playerName);
+      if (other) setOpponentName(other);
     });
 
     channel.on('broadcast', { event: 'game_event' }, ({ payload }) => {
-      if (payload.type === 'template_changed') {
-        setCurrentTemplate(payload.template);
-        soundFx.playSelect();
-        setPlayerSecretId(null);
-        setIsSecretSelected(false);
-        setFlippedCardIds([]);
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            id: Math.random().toString(),
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            question: `Host updated character deck to "${payload.template.title}"`,
-          },
-        ]);
-      } else if (payload.type === 'start_game') {
-        setInLobby(false);
-      } else if (payload.type === 'secret_selected') {
-        if (payload.sender !== playerName) {
-          setOpponentSecretId(payload.cardId);
+      if (payload.type === 'shared_state_sync') {
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        }
+      } else if (payload.type === 'template_changed') {
+        if (payload.template) {
+          setCurrentTemplate(payload.template);
+          setPlayerSecretId(null);
+          setIsSecretSelected(false);
+          setIsOpponentReady(false);
+          setFlippedCardIds([]);
+          setSharedRoomState((prev) => ({
+            ...prev,
+            selectedSetId: payload.template.id,
+          }));
           setChatMessages((prev) => [
             ...prev,
             {
               id: Math.random().toString(),
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               sender: 'system',
-              question: `${payload.sender} selected their secret card!`,
+              question: `Host changed character deck to "${payload.template.title}"`,
             },
           ]);
         }
+      } else if (payload.type === 'player_ready') {
+        if (payload.sender !== playerName) {
+          setIsOpponentReady(true);
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: Math.random().toString(),
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sender: 'system',
+              question: `${payload.sender} chosen their secret character!`,
+            },
+          ]);
+        }
+      } else if (payload.type === 'secret_selected') {
+        if (payload.sender !== playerName) {
+          setIsOpponentReady(true);
+          setOpponentSecretId(payload.cardId);
+        }
+      } else if (payload.type === 'turn_assigned') {
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        } else if (payload.currentTurnPlayerId) {
+          setSharedRoomState((prev) => ({
+            ...prev,
+            gameStatus: 'active',
+            currentTurnPlayerId: payload.currentTurnPlayerId,
+            turnStartedAt: Date.now(),
+          }));
+        }
+        soundFx.playSelect();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `Match started! ${payload.currentTurnPlayerId === playerName ? 'You go first!' : `${payload.currentTurnPlayerId} goes first!`}`,
+          },
+        ]);
+      } else if (payload.type === 'turn_changed') {
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        } else if (payload.currentTurnPlayerId) {
+          setSharedRoomState((prev) => ({
+            ...prev,
+            currentTurnPlayerId: payload.currentTurnPlayerId,
+            turnStartedAt: Date.now(),
+          }));
+        }
+        soundFx.playSelect();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: payload.currentTurnPlayerId === playerName ? '⚡ It is now YOUR turn!' : `Turn passed to ${payload.currentTurnPlayerId}.`,
+          },
+        ]);
       } else if (payload.type === 'chat_message') {
+        soundFx.playMessagePop();
         setChatMessages((prev) => [...prev, payload.item]);
       } else if (payload.type === 'declare_victory') {
+        if (payload.guessedCardId) {
+          const foundCard = currentTemplate.cards.find((c) => c.id === payload.guessedCardId);
+          if (foundCard) setLastGuessedCard(foundCard);
+        }
+
         if (payload.winner === playerName) {
           setGameResult('won');
+          setCurrentWinReason(payload.winReason || 'correct_guess');
         } else {
           setGameResult('lost');
+          if (payload.winReason === 'opponent_wrong_guess') {
+            setCurrentWinReason('wrong_guess');
+          } else {
+            setCurrentWinReason(payload.winReason || 'correct_guess');
+          }
         }
+      } else if (payload.type === 'new_round_started') {
+        soundFx.playSelect();
+        setPlayerSecretId(null);
+        setOpponentSecretId(null);
+        setIsSecretSelected(false);
+        setIsOpponentReady(false);
+        setFlippedCardIds([]);
+        setGameResult(null);
+        setCurrentWinReason(null);
+        setLastGuessedCard(null);
+
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        } else {
+          setSharedRoomState((prev) => ({
+            ...prev,
+            gameStatus: 'selecting_character',
+            currentTurnPlayerId: null,
+            turnStartedAt: null,
+            winnerPlayerId: null,
+            winReason: null,
+            gameRound: payload.gameRound || prev.gameRound + 1,
+          }));
+        }
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `🔄 Round ${payload.gameRound || ''} started! Choose your secret characters.`,
+          },
+        ]);
+      } else if (payload.type === 'play_again_requested') {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `🎮 ${payload.sender} requested to play again!`,
+          },
+        ]);
       }
     });
 
@@ -250,10 +279,92 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     });
 
     return () => {
-      channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity]);
+  }, [roomCode, playerName, isUnlocked]);
+
+  // Host random turn assignment when both players become ready
+  useEffect(() => {
+    if (isHost && isSecretSelected && isOpponentReady && !sharedRoomState.currentTurnPlayerId) {
+      const candidates = [playerName];
+      if (opponentName) candidates.push(opponentName);
+      const chosenStarter = candidates[Math.floor(Math.random() * candidates.length)];
+
+      const updatedState: SharedRoomState = {
+        ...sharedRoomState,
+        gameStatus: 'active',
+        currentTurnPlayerId: chosenStarter,
+        turnStartedAt: Date.now(),
+      };
+      setSharedRoomState(updatedState);
+
+      const channel = supabase.channel(`room:${roomCode}`);
+      channel.send({
+        type: 'broadcast',
+        event: 'game_event',
+        payload: {
+          type: 'turn_assigned',
+          currentTurnPlayerId: chosenStarter,
+          sharedState: updatedState,
+        },
+      });
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender: 'system',
+          question: `Match started! ${chosenStarter === playerName ? 'You go first!' : `${chosenStarter} goes first!`}`,
+        },
+      ]);
+    }
+  }, [isHost, isSecretSelected, isOpponentReady, sharedRoomState, playerName, opponentName, roomCode, supabase]);
+
+  const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
+    if (!isHost) return;
+    soundFx.playSelect();
+    setCurrentTemplate(newTemplate);
+    setPlayerSecretId(null);
+    setIsSecretSelected(false);
+    setFlippedCardIds([]);
+
+    const updatedSharedState: SharedRoomState = {
+      ...sharedRoomState,
+      selectedSetId: newTemplate.id,
+    };
+    setSharedRoomState(updatedSharedState);
+
+    // Broadcast template change to all connected clients
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'template_changed', template: newTemplate },
+    });
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'shared_state_sync', sharedState: updatedSharedState },
+    });
+
+    // Update Database using correct column 'code'
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(newTemplate.id);
+      await supabase
+        .from('game_rooms')
+        .update({
+          template_id: isUuid ? newTemplate.id : null,
+          state: {
+            selectedTemplateId: newTemplate.id,
+            sharedState: updatedSharedState,
+          },
+        })
+        .eq('code', roomCode);
+    } catch (err) {
+      console.warn('Failed to update room template in DB:', err);
+    }
+  };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,67 +376,33 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     }
   };
 
-  const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
-    soundFx.playSelect();
-    setCurrentTemplate(newTemplate);
-    setIsChangeSetOpen(false);
-    setPlayerSecretId(null);
-    setIsSecretSelected(false);
-    setFlippedCardIds([]);
-
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        sender: 'system',
-        question: `Host updated character deck to "${newTemplate.title}"`,
-      },
-    ]);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: { type: 'template_changed', template: newTemplate },
-    });
-
-    try {
-      const { error } = await supabase
-        .from('game_rooms')
-        .update({ template_id: newTemplate.id })
-        .eq('room_code', roomCode);
-
-      if (error) {
-        console.warn('Could not persist template change to Supabase game_rooms:', error);
-      }
-    } catch (err) {
-      console.warn('Failed to update room template in DB:', err);
-    }
-  };
-
-  const handleStartGame = () => {
-    soundFx.playSelect();
-    setInLobby(false);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: { type: 'start_game', startedBy: playerName },
-    });
-  };
-
   const handleSelectSecret = (cardId: string) => {
     setPlayerSecretId(cardId);
     setIsSecretSelected(true);
     soundFx.playSelect();
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    setSharedRoomState((prev) => ({
+      ...prev,
+      players: {
+        ...prev.players,
+        [playerName]: {
+          ...(prev.players[playerName] || {
+            id: playerName,
+            nickname: playerName,
+            avatar: '',
+            isHost,
+            connected: true,
+          }),
+          isReady: true,
+        },
+      },
+    }));
+
+    const channel = supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
-      payload: { type: 'secret_selected', sender: playerName, cardId },
+      payload: { type: 'player_ready', sender: playerName, isReady: true },
     });
   };
 
@@ -347,14 +424,13 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       sender: 'player',
       senderName: playerName,
       senderId: playerName,
-      question: chatInput.trim(),
+      question: chatInput,
     };
 
     setChatMessages((prev) => [...prev, item]);
     setChatInput('');
-    soundFx.playSelect();
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    const channel = supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
@@ -363,44 +439,130 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   };
 
   const handleCopyInviteLink = () => {
-    soundFx.playSelect();
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    navigator.clipboard.writeText(`${origin}/play/${roomCode}`);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
-
-  const handleCopyRoomCode = () => {
-    soundFx.playSelect();
-    navigator.clipboard.writeText(roomCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-
-  const handleConfirmLeave = () => {
-    soundFx.playSelect();
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem(`room_${roomCode}_role`);
-      sessionStorage.removeItem(`room_${roomCode}_name`);
-      sessionStorage.removeItem(`room_${roomCode}_avatar`);
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
     }
-    router.push(isHost ? '/host' : '/');
   };
+
+  const handleEndTurn = () => {
+    if (sharedRoomState.currentTurnPlayerId && sharedRoomState.currentTurnPlayerId !== playerName) {
+      return;
+    }
+    soundFx.playSelect();
+
+    const nextTurnPlayer = opponentName || 'Opponent';
+    const updatedState: SharedRoomState = {
+      ...sharedRoomState,
+      currentTurnPlayerId: nextTurnPlayer,
+      turnStartedAt: Date.now(),
+    };
+
+    setSharedRoomState(updatedState);
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'turn_changed',
+        currentTurnPlayerId: nextTurnPlayer,
+        sharedState: updatedState,
+      },
+    });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `Turn passed to ${nextTurnPlayer}.`,
+      },
+    ]);
+  };
+
+  const handleEndTurnRef = useRef(handleEndTurn);
+  useEffect(() => {
+    handleEndTurnRef.current = handleEndTurn;
+  });
+
+  // Turn timer countdown effect
+  useEffect(() => {
+    const timerSetting = sharedRoomState.turnTimerSetting;
+    const turnStarted = sharedRoomState.turnStartedAt;
+    const activePlayer = sharedRoomState.currentTurnPlayerId;
+    const isGameActive = sharedRoomState.gameStatus === 'active';
+
+    if (!isGameActive || !timerSetting || timerSetting <= 0 || !turnStarted || !activePlayer) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - turnStarted) / 1000);
+      const remaining = Math.max(0, timerSetting - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining === 0 && activePlayer === playerName && lastTimeoutTurnRef.current !== turnStarted) {
+        lastTimeoutTurnRef.current = turnStarted;
+        soundFx.playCardFlip(true);
+        handleEndTurnRef.current();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `⏰ Time's up! Turn automatically passed to ${opponentName || 'opponent'}.`,
+          },
+        ]);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [
+    sharedRoomState.turnTimerSetting,
+    sharedRoomState.turnStartedAt,
+    sharedRoomState.currentTurnPlayerId,
+    sharedRoomState.gameStatus,
+    playerName,
+    opponentName,
+  ]);
 
   const handleOpenGuessModal = (card: CharacterCard) => {
     setSelectedGuessCard(card);
     setIsGuessModalOpen(true);
   };
 
-  const handleConfirmGuess = (guessedCard: CharacterCard) => {
-    const isCorrect = opponentSecretCard ? guessedCard.id === opponentSecretCard.id : true;
+  const handleConfirmGuess = (card: CharacterCard) => {
+    setIsGuessModalOpen(false);
 
-    if (isCorrect) {
+    if (sharedRoomState.currentTurnPlayerId && sharedRoomState.currentTurnPlayerId !== playerName) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender: 'system',
+          question: `Cannot guess out of turn! Wait for your turn.`,
+        },
+      ]);
+      return;
+    }
+
+    setLastGuessedCard(card);
+    const isWinner = opponentSecretId ? card.id === opponentSecretId : true;
+
+    if (isWinner) {
       setGameResult('won');
-      soundFx.playVictory();
+      setCurrentWinReason('correct_guess');
     } else {
       setGameResult('lost');
-      soundFx.playDefeat();
+      setCurrentWinReason('wrong_guess');
     }
 
     const channel = supabase.channel(`room:${roomCode}`);
@@ -409,132 +571,124 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       event: 'game_event',
       payload: {
         type: 'declare_victory',
-        winner: isCorrect ? playerName : opponentName,
+        winner: isWinner ? playerName : (opponentName || 'Opponent'),
+        winReason: isWinner ? 'correct_guess' : 'opponent_wrong_guess',
+        guessedCardId: card.id,
       },
     });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: isWinner
+          ? `🎯 ${playerName} guessed "${card.name}" correctly and WON the match!`
+          : `❌ ${playerName} guessed "${card.name}" incorrectly and FORFEITED!`,
+      },
+    ]);
+  };
+
+  const handleSurrender = () => {
+    setIsSurrenderModalOpen(false);
+    soundFx.playDefeat();
+
+    setGameResult('lost');
+    setCurrentWinReason('surrender');
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'declare_victory',
+        winner: opponentName || 'Opponent',
+        winReason: 'surrender',
+      },
+    });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `🚩 ${playerName} surrendered the match.`,
+      },
+    ]);
+  };
+
+  const handlePlayAgain = () => {
+    soundFx.playSelect();
+    setGameResult(null);
+    setCurrentWinReason(null);
+    setLastGuessedCard(null);
+
+    setPlayerSecretId(null);
+    setOpponentSecretId(null);
+    setIsSecretSelected(false);
+    setIsOpponentReady(false);
+    setFlippedCardIds([]);
+
+    const nextRound = sharedRoomState.gameRound + 1;
+    const updatedState: SharedRoomState = {
+      ...sharedRoomState,
+      gameStatus: 'selecting_character',
+      currentTurnPlayerId: null,
+      turnStartedAt: null,
+      winnerPlayerId: null,
+      winReason: null,
+      gameRound: nextRound,
+      players: Object.fromEntries(
+        Object.entries(sharedRoomState.players).map(([id, p]) => [
+          id,
+          { ...p, isReady: false },
+        ])
+      ),
+    };
+
+    setSharedRoomState(updatedState);
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'new_round_started',
+        sharedState: updatedState,
+        gameRound: nextRound,
+      },
+    });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `🔄 Round ${nextRound} started! Choose your secret characters.`,
+      },
+    ]);
+
+    try {
+      supabase
+        .from('game_rooms')
+        .update({
+          status: 'selecting_character',
+          state: {
+            sharedState: updatedState,
+          },
+        })
+        .eq('code', roomCode);
+    } catch (err) {
+      console.warn('Failed to update DB on new round:', err);
+    }
   };
 
   const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
   const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
   const standingCardsCount = currentTemplate.cards.length - flippedCardIds.length;
-
-  /* ── SSR Hydration Guard ─────────────────────────────────────── */
-  if (!isMounted) {
-    return (
-      <div className="w-full max-w-md mx-auto px-4 py-24 flex flex-col items-center justify-center text-center">
-        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3" />
-        <span className="text-xs font-bold text-slate-400">Loading room…</span>
-      </div>
-    );
-  }
-
-  /* ── Player Identity / Join Setup Gate ───────────────────────── */
-  if (!hasSetIdentity) {
-    const handleJoinSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      soundFx.playSelect();
-
-      if (requiredPassword && inputPassword !== requiredPassword) {
-        setPassError('Incorrect room passcode.');
-        return;
-      }
-
-      const nicknameToUse = joinNickname.trim() || generateRandomName();
-      const avatarUrl = selectedAvatar.startsWith('https://') ? selectedAvatar : '';
-      const localPresenceKey = avatarUrl ? `${avatarUrl} ${nicknameToUse}` : nicknameToUse;
-
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem(`room_${roomCode}_name`, localPresenceKey);
-        if (avatarUrl) sessionStorage.setItem(`room_${roomCode}_avatar`, avatarUrl);
-      }
-
-      setPlayerAvatar(avatarUrl);
-      setPresenceKey(localPresenceKey);
-      setPlayerName(nicknameToUse);
-      setPassError(null);
-      setIsUnlocked(true);
-      setHasSetIdentity(true);
-    };
-
-    return (
-      <div className="w-full max-w-lg mx-auto px-4 py-12 sm:py-16">
-        <div
-          className="game-panel p-6 sm:p-8 rounded-3xl text-left shadow-2xl animate-slide-in-up"
-          style={{ border: '1px solid rgba(245,158,11,0.3)' }}
-        >
-          {/* Room Context Header */}
-          <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-0.5">
-                Joining Room
-              </span>
-              <h2 className="text-2xl font-black text-white font-mono tracking-wider">
-                #{roomCode}
-              </h2>
-            </div>
-            <div className="text-right">
-              <span className="text-[11px] font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1 rounded-full block mb-1">
-                {template.title}
-              </span>
-              <span className="text-[10px] text-slate-500 font-semibold block">
-                {template.cards.length} Characters
-              </span>
-            </div>
-          </div>
-
-          {/* Title */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Your Player Profile
-            </h1>
-            <p className="text-slate-400 text-xs mt-1">
-              Choose your nickname and avatar before entering the game room.
-            </p>
-          </div>
-
-          <form onSubmit={handleJoinSubmit} className="flex flex-col gap-6">
-            <PlayerProfileSetup
-              name={joinNickname}
-              avatar={selectedAvatar}
-              onNameChange={setJoinNickname}
-              onAvatarChange={setSelectedAvatar}
-              compact={false}
-            />
-
-            {/* Room Password Input (If Password Protected) */}
-            {requiredPassword && (
-              <div>
-                <label className="block text-xs font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5" />
-                  Room Passcode Required
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={inputPassword}
-                  onChange={(e) => setInputPassword(e.target.value)}
-                  placeholder="Enter room passcode"
-                  className="w-full px-4 py-3 rounded-2xl text-sm font-bold text-white bg-slate-950 border border-amber-500/40 focus:border-amber-400 focus:outline-none"
-                />
-                {passError && (
-                  <p className="text-rose-400 text-xs font-semibold mt-1.5">{passError}</p>
-                )}
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 font-bold flex items-center gap-2"
-            >
-              <Users className="w-5 h-5" />
-              <span>Enter Room</span>
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   /* ── Password Gate ─────────────────────────────────────────── */
   if (!isUnlocked) {
@@ -571,559 +725,6 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     );
   }
 
-  /* ── Room Lobby View (Pre-Game Context) ─────────────────────── */
-  if (inLobby) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-8">
-        
-        {/* Lobby Top Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl game-panel border border-white/10 shadow-xl">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playSelect();
-                setShowLeaveModal(true);
-              }}
-              className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
-              title={isHost ? 'Back to room setup' : 'Leave room'}
-              aria-label={isHost ? 'Back to room setup' : 'Leave room'}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-amber-400 block">
-                  GAME ROOM LOBBY
-                </span>
-                {isHost && (
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    Host
-                  </span>
-                )}
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white font-mono tracking-wider">
-                #{roomCode}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCopyRoomCode}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
-              style={{
-                background: copiedCode ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
-                border: copiedCode ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.09)',
-                color: copiedCode ? '#34d399' : '#e2e8f0',
-              }}
-              title="Copy room code"
-            >
-              {copiedCode ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4 text-amber-400" />}
-              <span>{copiedCode ? 'Code Copied!' : 'Copy Room Code'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 2-Column Composition */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Column: Players & Match Controls */}
-          <div className="lg:col-span-6 flex flex-col gap-6">
-            
-            {/* Players In Room (2-Player Capacity) */}
-            <div className="game-panel p-6 rounded-3xl border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-extrabold text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  <Users className="w-4 h-4 text-amber-400" />
-                  <span>PLAYERS</span>
-                </h3>
-                <span className="text-xs font-mono font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
-                  {opponentName ? '2 / 2' : '1 / 2'}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {/* Current Player Row */}
-                {/* Current Player Row */}
-                <div className="p-4 rounded-2xl bg-slate-950/80 border border-amber-500/30 flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {playerAvatar && playerAvatar.startsWith('http') ? (
-                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={playerAvatar} alt="Avatar" className="w-full h-full object-contain" />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xl shrink-0">
-                        {playerAvatar || (isHost ? '👑' : '🎮')}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-bold text-white truncate">
-                        {playerName}
-                      </span>
-                      <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 shrink-0">
-                        You
-                      </span>
-                    </div>
-                  </div>
-                  {isHost && (
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-                      HOST
-                    </span>
-                  )}
-                </div>
-
-
-                {/* Opponent Player Row / Empty Slot */}
-                {opponentName ? (
-                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-cyan-500/30 flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {opponentAvatar && opponentAvatar.startsWith('http') ? (
-                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 border border-white/10 flex items-center justify-center shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={opponentAvatar} alt="Opponent avatar" className="w-full h-full object-contain" />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xl shrink-0">
-                          👾
-                        </div>
-                      )}
-                      <span className="text-sm font-bold text-white truncate">
-                        {opponentName}
-                      </span>
-                    </div>
-                    {!isHost && (
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-                        HOST
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-slate-950/40 border border-dashed border-white/15 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-slate-900/60 border border-dashed border-slate-700 flex items-center justify-center text-slate-500 font-bold shrink-0">
-                        ○
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-bold text-slate-300 truncate">
-                          Waiting for opponent
-                        </span>
-                        <span className="text-xs text-slate-500 truncate">
-                          Share room code with your friend.
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Match Controls */}
-            {(() => {
-              const isReadyToStart = Boolean(opponentName) || connectedPlayers.length >= 2;
-              return (
-                <div className="game-panel p-6 rounded-3xl border border-white/10">
-                  <h3 className="text-lg font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    Pre-Game Status
-                  </h3>
-
-                  {isHost ? (
-                    <div className="flex flex-col gap-3">
-                      <p className="text-slate-400 text-xs leading-relaxed">
-                        {isReadyToStart ? (
-                          <span>
-                            Both players connected! Click <span className="text-amber-400 font-bold">Start Game</span> to begin character selection.
-                          </span>
-                        ) : (
-                          <span>
-                            Waiting for second player. Share room code <span className="font-mono text-amber-400 font-bold">#{roomCode}</span> with a friend to join.
-                          </span>
-                        )}
-                      </p>
-
-                      {isReadyToStart ? (
-                        <button
-                          type="button"
-                          onClick={handleStartGame}
-                          className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 font-bold flex items-center gap-2 mt-2 cursor-pointer transition-all hover:scale-[1.01]"
-                        >
-                          <Play className="w-5 h-5 fill-current shrink-0" />
-                          <span>Start Game</span>
-                          <ArrowRight className="w-4 h-4 ml-1" />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled
-                          className="w-full py-4 text-xs sm:text-sm font-bold rounded-2xl bg-white/5 border border-white/10 text-slate-500 flex items-center justify-center gap-2 mt-2 cursor-not-allowed opacity-75"
-                          title="Waiting for second player to join"
-                        >
-                          <div className="w-2 h-2 rounded-full bg-amber-400/60 animate-ping" />
-                          <span>Waiting for second player...</span>
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center gap-3 text-cyan-300 text-xs font-bold">
-                      <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-                      <span>
-                        {isReadyToStart
-                          ? 'Connected! Waiting for host to start the game…'
-                          : 'Waiting for host to start the game…'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-          </div>
-
-          {/* Right Column: Currently Selected Set & Host Controls */}
-          <div className="lg:col-span-6 flex flex-col gap-6">
-            <div className="game-panel p-6 rounded-3xl border border-amber-500/30 flex flex-col gap-5">
-              
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-0.5">
-                    Selected Deck
-                  </span>
-                  <h3 className="text-xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {currentTemplate.title}
-                  </h3>
-                </div>
-                <span className="text-xs font-bold text-slate-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
-                  {currentTemplate.cards.length} Cards
-                </span>
-              </div>
-
-              <p className="text-slate-400 text-xs font-normal leading-relaxed">
-                {currentTemplate.description || 'Guess Who character deck.'}
-              </p>
-
-              {/* 4-Card Artwork Preview Grid */}
-              <div className="grid grid-cols-4 gap-2 p-2 rounded-2xl bg-slate-950 border border-white/10 aspect-[3/1] overflow-hidden">
-                {currentTemplate.cards.slice(0, 4).map((c) => (
-                  <div key={c.id} className="relative w-full h-full rounded-xl overflow-hidden bg-slate-900 border border-white/5">
-                    <Image src={c.imageUrl} alt={c.name} fill className="object-cover object-top" unoptimized />
-                  </div>
-                ))}
-              </div>
-
-              {/* Set Action Controls */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setPreviewingTemplate(currentTemplate)}
-                  className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-slate-200 hover:text-white transition-colors flex-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  title="Preview character cards in full grid"
-                  aria-label="Preview character cards"
-                >
-                  <Eye className="w-4 h-4 text-amber-400" />
-                  <span>Preview Character Cards</span>
-                </button>
-
-                {isHost && (
-                  <button
-                    type="button"
-                    onClick={() => setIsChangeSetOpen(true)}
-                    className="py-3 px-4 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-colors flex-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                    title="Select a different character deck for this room"
-                    aria-label="Change character deck"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Change Deck</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-
-
-        {/* Enhanced Change Set Switcher Modal (For Host) */}
-        {isChangeSetOpen && (
-          <div
-            className="modal-backdrop z-50 fixed inset-0 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
-            onClick={() => setIsChangeSetOpen(false)}
-          >
-            <div
-              className="glass-panel rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6 sm:p-8 animate-slide-in-up shadow-2xl relative"
-              style={{ border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(15, 23, 42, 0.95)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="flex items-start justify-between gap-4 mb-4 pb-4 border-b border-white/10 shrink-0">
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    Select a Character Deck
-                  </h2>
-                  <p className="text-slate-400 text-xs sm:text-sm mt-1">
-                    Choose a deck for this room. Everyone in the lobby will see the change instantly.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsChangeSetOpen(false)}
-                  className="p-2.5 rounded-xl text-slate-400 hover:text-white transition-colors shrink-0 cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
-                  title="Close modal"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative mb-3 shrink-0">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search sets by title, tag, or creator..."
-                  value={setSearchQuery}
-                  onChange={(e) => setSetSearchQuery(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-white/15 rounded-2xl pl-10 pr-9 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500/50"
-                />
-                {setSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSetSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Tag Filters */}
-              {availableTags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-4 pb-3 border-b border-white/10 shrink-0 overflow-x-auto">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTagFilter(null)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                      selectedTagFilter === null
-                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                        : 'bg-white/5 text-slate-400 hover:text-white border border-white/10'
-                    }`}
-                  >
-                    All ({availableTemplates.length})
-                  </button>
-                  {availableTags.map((tag) => {
-                    const isActive = selectedTagFilter === tag;
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => setSelectedTagFilter(isActive ? null : tag)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer font-mono ${
-                          isActive
-                            ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                            : 'bg-white/5 text-slate-400 hover:text-white border border-white/10'
-                        }`}
-                      >
-                        #{tag}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Cards Grid */}
-              <div className="flex-1 overflow-y-auto pr-1 mb-4 min-h-[280px]">
-                {filteredTemplates.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <p className="text-sm font-bold text-slate-400">No character decks found</p>
-                    <p className="text-xs text-slate-500 mt-1">Try clearing your search or tag filters.</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSetSearchQuery('');
-                        setSelectedTagFilter(null);
-                      }}
-                      className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 cursor-pointer"
-                    >
-                      Reset Filters
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {filteredTemplates.map((tpl) => {
-                      const isSelected = currentTemplate.id === tpl.id;
-                      const previewCards = (tpl.cards || []).slice(0, 4);
-
-                      return (
-                        <div
-                          key={tpl.id}
-                          className={`p-4 rounded-2xl transition-all flex flex-col justify-between gap-3 ${
-                            isSelected
-                              ? 'border-2 border-amber-500 bg-amber-500/10 shadow-lg shadow-amber-500/10'
-                              : 'border border-white/10 bg-slate-900/60 hover:border-amber-500/40'
-                          }`}
-                        >
-                          <div>
-                            {/* Header: Title & Selected Badge */}
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <div className="min-w-0">
-                                <h4 className="font-extrabold text-white text-base truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                                  {tpl.title}
-                                </h4>
-                                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                                  <span>{getCreatorLabel(tpl)}</span>
-                                  <span>•</span>
-                                  <span className="font-semibold text-slate-300">{getCharacterCountLabel(tpl)}</span>
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <span className="text-[10px] font-black uppercase text-amber-400 bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
-                                  <Check className="w-3 h-3 stroke-[3]" /> Selected
-                                </span>
-                              )}
-                            </div>
-
-                            <p className="text-slate-400 text-xs line-clamp-2 mb-3 leading-relaxed">
-                              {getTruncatedDescription(tpl.description || '', 100)}
-                            </p>
-
-                            {/* Mini Character Thumbnails (4-grid) */}
-                            <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-xl bg-slate-950 border border-white/10 aspect-[4/1] overflow-hidden mb-3">
-                              {previewCards.map((c) => (
-                                <div key={c.id} className="relative w-full h-full rounded-lg overflow-hidden bg-slate-900 border border-white/5">
-                                  <Image src={c.imageUrl} alt={c.name} fill className="object-cover object-top" unoptimized />
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* Tags */}
-                            {tpl.tags && tpl.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-1">
-                                {tpl.tags.map((tag) => (
-                                  <span key={tag} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/5 text-slate-400 border border-white/10 font-mono">
-                                    #{tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewingTemplate(tpl);
-                              }}
-                              className="px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-white/5 border border-white/10 flex items-center justify-center gap-1.5 flex-1 cursor-pointer transition-colors"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-amber-400" />
-                              <span>Preview</span>
-                            </button>
-
-                            {isSelected ? (
-                              <button
-                                type="button"
-                                disabled
-                                className="px-3 py-2 rounded-xl text-xs font-bold text-amber-400 bg-amber-500/20 border border-amber-500/30 flex items-center justify-center gap-1.5 flex-1 cursor-default opacity-80"
-                              >
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>Active</span>
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleHostChangeTemplate(tpl);
-                                }}
-                                className="game-btn-primary px-3 py-2 text-xs font-bold justify-center rounded-xl flex items-center gap-1.5 flex-1 cursor-pointer"
-                              >
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>Use This Set</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer Close */}
-              <div className="pt-3 border-t border-white/10 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsChangeSetOpen(false)}
-                  className="py-3 px-4 rounded-2xl text-xs font-bold text-slate-300 hover:text-white bg-white/5 border border-white/10 w-full cursor-pointer transition-colors"
-                >
-                  Close Deck Selector
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Set Preview Modal Integration */}
-        <SetPreviewModal
-          template={previewingTemplate}
-          isOpen={Boolean(previewingTemplate)}
-          onClose={() => setPreviewingTemplate(null)}
-          onSelectSet={isHost && isChangeSetOpen ? (tpl) => {
-            handleHostChangeTemplate(tpl);
-            setPreviewingTemplate(null);
-            setIsChangeSetOpen(false);
-          } : undefined}
-          primaryActionLabel="Use This Set"
-        />
-
-        {/* Leave Confirmation Modal */}
-        {showLeaveModal && (
-          <div
-            className="modal-backdrop z-50 fixed inset-0 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
-            onClick={() => setShowLeaveModal(false)}
-          >
-            <div
-              className="game-panel p-6 sm:p-8 rounded-3xl max-w-md w-full border border-white/15 shadow-2xl text-left flex flex-col gap-5 animate-in zoom-in-95"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div>
-                <h3 className="text-xl font-extrabold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  {isHost ? 'Back to Room Setup?' : 'Leave Game Room?'}
-                </h3>
-                <p className="text-slate-300 text-xs sm:text-sm mt-1.5 leading-relaxed">
-                  Are you sure you want to leave room <span className="font-mono font-bold text-amber-400">#{roomCode}</span>? Leaving will disconnect you from the active lobby.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowLeaveModal(false)}
-                  className="flex-1 py-3 rounded-xl text-xs font-bold text-slate-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmLeave}
-                  className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 border border-rose-500/30 transition-all cursor-pointer shadow-lg shadow-rose-600/20"
-                >
-                  {isHost ? 'Leave & Setup' : 'Leave Room'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div>
-    );
-  }
-
   /* ── Main Game Board ───────────────────────────────────────── */
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
@@ -1134,49 +735,41 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
         {/* Left: back + room info */}
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={() => setShowExitConfirm(true)}
-            className="p-2 rounded-xl text-slate-300 hover:text-white transition-colors shrink-0 cursor-pointer"
+          <Link
+            href="/"
+            className="p-2 rounded-xl text-slate-300 hover:text-white transition-colors shrink-0"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
-            title="Leave Room"
+            title="Back to Home"
           >
             <ArrowLeft className="w-4 h-4" />
-          </button>
+          </Link>
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-base font-black tracking-widest text-amber-400 font-mono">#{roomCode}</span>
+              <span className="text-[10px] font-mono font-black text-amber-400 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+                Round {sharedRoomState.gameRound}
+              </span>
               <span className="hidden sm:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full items-center gap-1"
                 style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                 Live
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setPreviewingTemplate(currentTemplate)}
-              className="text-left group flex items-center gap-1 text-slate-400 hover:text-amber-400 transition-colors text-[11px] font-semibold truncate cursor-pointer"
-            >
-              <span className="truncate">{currentTemplate.title}</span>
-              <span className="text-slate-600">•</span>
-              <span className="shrink-0">{currentTemplate.cards.length} cards</span>
-              <Eye className="w-3 h-3 text-slate-500 group-hover:text-amber-400 ml-0.5 shrink-0" />
-            </button>
+            <p className="text-slate-500 text-[11px] font-semibold truncate">{currentTemplate.title} · {currentTemplate.cards.length} cards</p>
           </div>
         </div>
 
         {/* Right: secret card + invite + mute + chat toggle */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Secret card widget */}
+          {/* Secret card widget (Visible on Mobile & Desktop) */}
           {playerSecretCard && (
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
-              style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
-              <span className="text-[9px] font-black text-amber-400 uppercase tracking-wider">My secret</span>
-              <div className="relative w-6 h-6 rounded-md overflow-hidden shrink-0" style={{ border: '1px solid rgba(245,158,11,0.6)' }}>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 shrink-0">
+              <span className="hidden xs:inline text-[9px] font-black text-amber-400 uppercase tracking-wider">My Secret:</span>
+              <div className="relative w-5 h-5 sm:w-6 sm:h-6 rounded-md overflow-hidden shrink-0 border border-amber-500/50">
                 <Image src={playerSecretCard.imageUrl} alt={playerSecretCard.name} fill className="object-cover" unoptimized />
               </div>
-              <span className="text-xs font-bold text-white max-w-[80px] truncate">{playerSecretCard.name}</span>
+              <span className="text-xs font-bold text-white max-w-[70px] sm:max-w-[100px] truncate">{playerSecretCard.name}</span>
             </div>
           )}
 
@@ -1205,6 +798,19 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-amber-400" />}
           </button>
+
+          {/* Surrender Button */}
+          {sharedRoomState.gameStatus === 'active' && gameResult === null && (
+            <button
+              type="button"
+              onClick={() => setIsSurrenderModalOpen(true)}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+              title="Surrender match"
+            >
+              <Flag className="w-3.5 h-3.5 text-rose-400" />
+              <span className="hidden sm:inline">Surrender</span>
+            </button>
+          )}
 
           {/* Chat toggle (mobile) */}
           <button
@@ -1304,7 +910,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         </div>
       )}
 
-      {/* ── Secret Selection Overlay ─────────────────────────── */}
+      {/* ── Secret Selection & Readiness Gate ─────────────────── */}
       {!isSecretSelected ? (
         <div className="w-full game-panel p-5 sm:p-8 rounded-3xl mb-6 text-center flex flex-col items-center"
           style={{ border: '1px solid rgba(245,158,11,0.3)' }}>
@@ -1315,12 +921,33 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           <h3 className="text-xl sm:text-2xl font-black text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Choose Your Secret Character
           </h3>
-          <p className="text-slate-400 text-sm max-w-md mb-6">
+          <p className="text-slate-400 text-sm max-w-md mb-4">
             Pick one card — your opponent will try to guess which one it is!
           </p>
 
+          {/* Player Readiness Status Bar */}
+          <div className="flex items-center justify-center gap-4 mb-6 text-xs font-bold">
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950 border border-amber-500/30 text-amber-400">
+              <Clock className="w-3.5 h-3.5 animate-spin" />
+              <span>You: <strong>Selecting...</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950 border border-white/10 text-slate-400">
+              {isOpponentReady ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Opponent: <strong className="text-emerald-400">Ready ✓</strong></span>
+                </>
+              ) : (
+                <>
+                  <Clock className="w-3.5 h-3.5 text-slate-500 animate-pulse" />
+                  <span>Opponent: <strong className="text-slate-400">Selecting...</strong></span>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 w-full">
-            {template.cards.map((card) => (
+            {currentTemplate.cards.map((card) => (
               <CardFlip
                 key={card.id}
                 card={card}
@@ -1332,44 +959,155 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             ))}
           </div>
         </div>
+      ) : !isOpponentReady ? (
+        /* ── Waiting for Opponent Readiness Gate ─────────────── */
+        <div className="w-full game-panel p-8 rounded-3xl mb-6 text-center flex flex-col items-center animate-in fade-in"
+          style={{ border: '1px solid rgba(6,182,212,0.3)', background: 'rgba(7,12,24,0.95)' }}>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+            <Loader2 className="w-7 h-7 animate-spin" />
+          </div>
+          <h3 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            Waiting for Opponent Selection
+          </h3>
+          <p className="text-slate-300 text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
+            You have chosen your character! The match will unlock as soon as <span className="text-cyan-400 font-bold">{opponentName || 'your opponent'}</span> selects theirs.
+          </p>
+
+          <div className="flex items-center gap-3 bg-slate-950 p-4 rounded-2xl border border-white/10 max-w-sm w-full">
+            <div className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>You: Ready</span>
+            </div>
+            <div className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold">
+              <Clock className="w-4 h-4 animate-spin" />
+              <span>Opponent: Choosing</span>
+            </div>
+          </div>
+        </div>
       ) : (
-        /* ── Game in Progress ─────────────────────────────── */
+        /* ── Active Game in Progress ─────────────────────────────── */
         <div className="flex flex-col lg:flex-row gap-4 w-full">
 
           {/* Card Grid Column */}
           <div className="flex-1 min-w-0">
             {/* Status Bar */}
-            <div className="game-panel px-4 py-2.5 rounded-xl mb-4 flex items-center justify-between gap-3"
+            <div className="game-panel px-4 py-3 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3"
               style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black px-3 py-1 rounded-full"
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-black px-3 py-1.5 rounded-xl"
                   style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-                  {standingCardsCount} / {template.cards.length} Standing
+                  {standingCardsCount} / {currentTemplate.cards.length} Standing
                 </span>
-                {opponentName && (
-                  <span className="hidden sm:inline text-xs text-slate-400 font-semibold">
-                    VS <span className="text-white">{opponentName}</span>
+
+                {/* Turn Indicator Banner */}
+                {sharedRoomState.currentTurnPlayerId ? (
+                  sharedRoomState.currentTurnPlayerId === playerName ? (
+                    <span className="px-3.5 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 flex items-center gap-1.5 animate-pulse">
+                      ⚡ YOUR TURN
+                    </span>
+                  ) : (
+                    <span className="px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-900 border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                      <span>{opponentName || 'Opponent'}'s Turn</span>
+                    </span>
+                  )
+                ) : (
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 bg-white/5 border border-white/10">
+                    Assigning Turn...
+                  </span>
+                )}
+
+                {/* Turn Timer Badge */}
+                {sharedRoomState.turnTimerSetting > 0 && (
+                  <span
+                    className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      timeLeft === null
+                        ? 'bg-slate-900 text-slate-500 border border-slate-800'
+                        : timeLeft <= 5
+                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-bounce font-extrabold'
+                        : timeLeft <= 15
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse font-extrabold'
+                        : 'bg-slate-900 text-amber-400 border border-slate-700 font-bold'
+                    }`}
+                    title={`Turn timer: ${sharedRoomState.turnTimerSetting}s`}
+                  >
+                    <Clock className={`w-3.5 h-3.5 ${timeLeft !== null && timeLeft <= 10 ? 'animate-spin text-rose-400' : 'text-amber-400'}`} />
+                    <span>{timeLeft !== null ? `${timeLeft}s` : `${sharedRoomState.turnTimerSetting}s`}</span>
                   </span>
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playCardFlip(false);
-                  handleResetFlips();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-colors"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span className="hidden sm:inline">Reset</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {sharedRoomState.currentTurnPlayerId === playerName && (
+                  <button
+                    type="button"
+                    onClick={handleEndTurn}
+                    className="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+                    title="End your turn and pass to opponent"
+                  >
+                    <span>End Turn</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playCardFlip(false);
+                    handleResetFlips();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+              </div>
             </div>
+
+            {/* Turn Guidance Banner */}
+            {sharedRoomState.currentTurnPlayerId && (
+              sharedRoomState.currentTurnPlayerId === playerName ? (
+                <div className="mb-4 px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-300 text-xs font-bold shadow-md shadow-amber-500/5 animate-in fade-in">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="truncate">
+                      YOUR TURN — Ask a question or click "Guess" on a card when ready!
+                      {timeLeft !== null && (
+                        <strong className={`ml-1 font-mono ${timeLeft <= 10 ? 'text-rose-400 font-black animate-pulse' : 'text-amber-200'}`}>
+                          ({timeLeft}s left)
+                        </strong>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleEndTurn}
+                    className="px-3 py-1 rounded-xl text-[11px] font-black text-slate-950 bg-gradient-to-r from-amber-500 to-yellow-400 hover:scale-105 transition-all shrink-0 cursor-pointer"
+                  >
+                    Pass Turn →
+                  </button>
+                </div>
+              ) : (
+                <div className="mb-4 px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-between gap-3 text-slate-400 text-xs font-semibold animate-in fade-in">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Clock className="w-4 h-4 text-cyan-400 animate-spin shrink-0" />
+                    <span className="truncate">
+                      OPPONENT'S TURN — Waiting for <strong className="text-white">{opponentName || 'opponent'}</strong> to make a move...
+                      {timeLeft !== null && (
+                        <strong className={`ml-1 font-mono ${timeLeft <= 10 ? 'text-rose-400 font-black' : 'text-cyan-300'}`}>
+                          ({timeLeft}s left)
+                        </strong>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )
+            )}
 
             {/* Cards */}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-              {template.cards.map((card) => (
+              {currentTemplate.cards.map((card) => (
                 <CardFlip
                   key={card.id}
                   card={card}
@@ -1386,6 +1124,21 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           {/* Desktop Chat Sidebar (Bigger & Roomier) */}
           <div className="hidden lg:flex flex-col w-80 xl:w-96 2xl:w-[420px] game-panel p-5 rounded-3xl shrink-0 lg:sticky lg:top-4"
             style={{ border: '1px solid rgba(255,255,255,0.1)', height: 'fit-content', maxHeight: 'calc(100vh - 5rem)' }}>
+            
+            {/* Persistent Secret Character Widget */}
+            {playerSecretCard && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 shrink-0 shadow-lg shadow-amber-500/5">
+                <div className="relative w-12 h-14 rounded-xl overflow-hidden border border-amber-500/50 shrink-0 bg-slate-900 shadow-md">
+                  <Image src={playerSecretCard.imageUrl} alt={playerSecretCard.name} fill className="object-cover" unoptimized />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">Your Secret Character</span>
+                  <span className="text-sm font-extrabold text-white truncate">{playerSecretCard.name}</span>
+                  <span className="text-[10px] text-slate-400 font-semibold">Opponent is guessing this character</span>
+                </div>
+              </div>
+            )}
+
             {/* Chat Header */}
             <div className="flex items-center justify-between mb-4 pb-3 shrink-0"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -1504,42 +1257,41 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       <VictoryModal
         isOpen={gameResult !== null}
         isWon={gameResult === 'won'}
-        secretCard={opponentSecretCard}
-        onPlayAgain={() => setGameResult(null)}
+        winReason={currentWinReason}
+        winnerName={gameResult === 'won' ? playerName : (opponentName || 'Opponent')}
+        guessedCard={lastGuessedCard}
+        secretCard={playerSecretCard}
+        opponentSecretCard={opponentSecretCard}
+        onPlayAgain={handlePlayAgain}
       />
 
-
-      {/* Exit Confirmation Modal */}
-      {showExitConfirm && (
-        <div className="modal-backdrop" onClick={() => setShowExitConfirm(false)}>
-          <div
-            className="glass-panel p-6 sm:p-8 rounded-3xl max-w-sm w-full text-center animate-slide-in-up"
-            style={{ border: '1px solid rgba(244,63,94,0.3)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-4">
-              <ArrowLeft className="w-6 h-6" />
+      {/* Surrender Confirmation Modal */}
+      {isSurrenderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-lg">
+          <div className="glass-panel w-full max-w-md p-6 rounded-3xl text-center border border-rose-500/40 shadow-2xl shadow-rose-500/20 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-4">
+              <Flag className="w-7 h-7" />
             </div>
-            <h3 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Leave Game Room?
+            <h3 className="text-xl font-extrabold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Surrender Match?
             </h3>
-            <p className="text-slate-400 text-xs mb-6">
-              Are you sure you want to exit room <strong className="text-amber-400">#{roomCode}</strong>? Your active match progress will end.
+            <p className="text-slate-300 text-xs mb-6 leading-relaxed">
+              Are you sure you want to forfeit this round? Your opponent will be awarded an immediate victory.
             </p>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setShowExitConfirm(false)}
-                className="game-btn-secondary flex-1 py-2.5 text-xs font-bold"
+                onClick={() => setIsSurrenderModalOpen(false)}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-white/5 border border-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
               >
-                Stay in Room
+                Cancel
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/')}
-                className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition-colors flex-1 cursor-pointer"
+                onClick={handleSurrender}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-black bg-rose-500 hover:bg-rose-400 text-white shadow-lg shadow-rose-500/30 transition-all cursor-pointer"
               >
-                Leave Room
+                Yes, Surrender
               </button>
             </div>
           </div>
