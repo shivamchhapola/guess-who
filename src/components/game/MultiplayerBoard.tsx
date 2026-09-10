@@ -10,6 +10,7 @@ import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
   ArrowLeft, Lock, RotateCcw, ChevronDown, ChevronUp,
+  CheckCircle2, Clock, UserCheck, Loader2,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -28,6 +29,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [playerSecretId, setPlayerSecretId] = useState<string | null>(null);
   const [flippedCardIds, setFlippedCardIds] = useState<string[]>([]);
   const [isSecretSelected, setIsSecretSelected] = useState<boolean>(false);
+  const [isOpponentReady, setIsOpponentReady] = useState<boolean>(false);
 
   const [isUnlocked, setIsUnlocked] = useState<boolean>(!requiredPassword);
   const [inputPassword, setInputPassword] = useState<string>('');
@@ -123,6 +125,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           setCurrentTemplate(payload.template);
           setPlayerSecretId(null);
           setIsSecretSelected(false);
+          setIsOpponentReady(false);
           setFlippedCardIds([]);
           setSharedRoomState((prev) => ({
             ...prev,
@@ -138,18 +141,23 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             },
           ]);
         }
-      } else if (payload.type === 'secret_selected') {
+      } else if (payload.type === 'player_ready') {
         if (payload.sender !== playerName) {
-          setOpponentSecretId(payload.cardId);
+          setIsOpponentReady(true);
           setChatMessages((prev) => [
             ...prev,
             {
               id: Math.random().toString(),
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               sender: 'system',
-              question: `${payload.sender} selected their secret card!`,
+              question: `${payload.sender} chosen their secret character!`,
             },
           ]);
+        }
+      } else if (payload.type === 'secret_selected') {
+        if (payload.sender !== playerName) {
+          setIsOpponentReady(true);
+          setOpponentSecretId(payload.cardId);
         }
       } else if (payload.type === 'chat_message') {
         setChatMessages((prev) => [...prev, payload.item]);
@@ -233,11 +241,28 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setIsSecretSelected(true);
     soundFx.playSelect();
 
+    setSharedRoomState((prev) => ({
+      ...prev,
+      players: {
+        ...prev.players,
+        [playerName]: {
+          ...(prev.players[playerName] || {
+            id: playerName,
+            nickname: playerName,
+            avatar: '',
+            isHost,
+            connected: true,
+          }),
+          isReady: true,
+        },
+      },
+    }));
+
     const channel = supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
-      payload: { type: 'secret_selected', sender: playerName, cardId },
+      payload: { type: 'player_ready', sender: playerName, isReady: true },
     });
   };
 
@@ -516,7 +541,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         </div>
       )}
 
-      {/* ── Secret Selection Overlay ─────────────────────────── */}
+      {/* ── Secret Selection & Readiness Gate ─────────────────── */}
       {!isSecretSelected ? (
         <div className="w-full game-panel p-5 sm:p-8 rounded-3xl mb-6 text-center flex flex-col items-center"
           style={{ border: '1px solid rgba(245,158,11,0.3)' }}>
@@ -527,9 +552,30 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           <h3 className="text-xl sm:text-2xl font-black text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Choose Your Secret Character
           </h3>
-          <p className="text-slate-400 text-sm max-w-md mb-6">
+          <p className="text-slate-400 text-sm max-w-md mb-4">
             Pick one card — your opponent will try to guess which one it is!
           </p>
+
+          {/* Player Readiness Status Bar */}
+          <div className="flex items-center justify-center gap-4 mb-6 text-xs font-bold">
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950 border border-amber-500/30 text-amber-400">
+              <Clock className="w-3.5 h-3.5 animate-spin" />
+              <span>You: <strong>Selecting...</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-950 border border-white/10 text-slate-400">
+              {isOpponentReady ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Opponent: <strong className="text-emerald-400">Ready ✓</strong></span>
+                </>
+              ) : (
+                <>
+                  <Clock className="w-3.5 h-3.5 text-slate-500 animate-pulse" />
+                  <span>Opponent: <strong className="text-slate-400">Selecting...</strong></span>
+                </>
+              )}
+            </div>
+          </div>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 w-full">
             {currentTemplate.cards.map((card) => (
@@ -544,8 +590,33 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             ))}
           </div>
         </div>
+      ) : !isOpponentReady ? (
+        /* ── Waiting for Opponent Readiness Gate ─────────────── */
+        <div className="w-full game-panel p-8 rounded-3xl mb-6 text-center flex flex-col items-center animate-in fade-in"
+          style={{ border: '1px solid rgba(6,182,212,0.3)', background: 'rgba(7,12,24,0.95)' }}>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+            <Loader2 className="w-7 h-7 animate-spin" />
+          </div>
+          <h3 className="text-2xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            Waiting for Opponent Selection
+          </h3>
+          <p className="text-slate-300 text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
+            You have chosen your character! The match will unlock as soon as <span className="text-cyan-400 font-bold">{opponentName || 'your opponent'}</span> selects theirs.
+          </p>
+
+          <div className="flex items-center gap-3 bg-slate-950 p-4 rounded-2xl border border-white/10 max-w-sm w-full">
+            <div className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>You: Ready</span>
+            </div>
+            <div className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold">
+              <Clock className="w-4 h-4 animate-spin" />
+              <span>Opponent: Choosing</span>
+            </div>
+          </div>
+        </div>
       ) : (
-        /* ── Game in Progress ─────────────────────────────── */
+        /* ── Active Game in Progress ─────────────────────────────── */
         <div className="flex flex-col lg:flex-row gap-4 w-full">
 
           {/* Card Grid Column */}

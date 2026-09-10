@@ -13,8 +13,8 @@ Base Branch for Integration: `main`
 | **TASK 1** | Audit game/session state architecture | `feature/01-state-architecture-audit` | ✅ Completed |
 | **TASK 2** | Fix shared room/game state | `feature/02-authoritative-room-state` | ✅ Completed |
 | **TASK 3** | Fix set consistency (Host Authoritative Deck) | `feature/03-host-deck-consistency` | ✅ Completed |
-| **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ⏳ Pending Task 3 |
-| **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ⏳ Pending |
+| **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ✅ Completed |
+| **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ⏳ Pending Task 4 |
 | **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ⏳ Pending |
 | **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ⏳ Pending |
 | **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ⏳ Pending |
@@ -45,7 +45,10 @@ Base Branch for Integration: `main`
 - [x] Replaced static `template` references in `MultiplayerBoard.tsx` with dynamic `currentTemplate` state.
 
 ### TASK 4: Fix secret-character readiness
-- [ ] Both players must select secret character before game begins. Render readiness status (`Ready ✓` vs `Choosing...`) without exposing secret character IDs.
+- [x] Both players choose secret character before active game begins.
+- [x] Rendered dual readiness status badges (`You: Ready` vs `Opponent: Ready / Selecting...`).
+- [x] Fixed secret card security exposure by broadcasting `player_ready` without raw cardId.
+- [x] Built waiting overlay screen that holds active game board until opponent selection is ready.
 
 ### TASK 5: Fix game start & random first turn
 - [ ] Wait for both players to choose character. Host randomly picks starting player (`currentTurnPlayerId`). Synchronize to both clients.
