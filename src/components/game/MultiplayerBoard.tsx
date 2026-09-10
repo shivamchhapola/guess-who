@@ -535,15 +535,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
         {/* Right: secret card + invite + mute + chat toggle */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Secret card widget */}
+          {/* Secret card widget (Visible on Mobile & Desktop) */}
           {playerSecretCard && (
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
-              style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
-              <span className="text-[9px] font-black text-amber-400 uppercase tracking-wider">My secret</span>
-              <div className="relative w-6 h-6 rounded-md overflow-hidden shrink-0" style={{ border: '1px solid rgba(245,158,11,0.6)' }}>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 shrink-0">
+              <span className="hidden xs:inline text-[9px] font-black text-amber-400 uppercase tracking-wider">My Secret:</span>
+              <div className="relative w-5 h-5 sm:w-6 sm:h-6 rounded-md overflow-hidden shrink-0 border border-amber-500/50">
                 <Image src={playerSecretCard.imageUrl} alt={playerSecretCard.name} fill className="object-cover" unoptimized />
               </div>
-              <span className="text-xs font-bold text-white max-w-[80px] truncate">{playerSecretCard.name}</span>
+              <span className="text-xs font-bold text-white max-w-[70px] sm:max-w-[100px] truncate">{playerSecretCard.name}</span>
             </div>
           )}
 

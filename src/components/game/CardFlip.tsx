@@ -29,7 +29,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
   onMakeGuess,
 }) => {
   return (
-    <div className="relative group w-full aspect-[3/4.2] perspective-1000 select-none">
+    <div className="relative w-full aspect-[3/4.4] perspective-1000 select-none">
       {/* Secret Card Badge */}
       {isSecret && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-[9px] uppercase px-2 py-0.5 rounded-full shadow-xl flex items-center gap-0.5 ring-2 ring-slate-950 whitespace-nowrap">
@@ -47,8 +47,8 @@ export const CardFlip: React.FC<CardFlipProps> = ({
           if (isSelectable) {
             soundFx.playSelect();
             if (onSelectSecret) onSelectSecret(card.id);
-          } else if (!isFlippingDown) {
-            soundFx.playCardFlip(true);
+          } else {
+            soundFx.playCardFlip(!isFlippingDown);
             onToggleFlip(card.id);
           }
         }}
@@ -74,88 +74,21 @@ export const CardFlip: React.FC<CardFlipProps> = ({
               alt={card.name}
               fill
               sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 14vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover"
               unoptimized
             />
-
-            {/* Hover overlay with action buttons */}
-            {!isSelectable && (
-              <div
-                className="absolute inset-0 flex flex-col justify-end p-2 gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ background: 'linear-gradient(to top, rgba(7,9,15,0.92) 0%, rgba(7,9,15,0.4) 60%, transparent 100%)' }}
-              >
-                <div className="grid grid-cols-2 gap-1.5 w-full">
-                  {/* Cross Out button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      soundFx.playCardFlip(true);
-                      onToggleFlip(card.id);
-                    }}
-                    className="flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-xl font-black text-[10px] text-red-300 transition-all hover:scale-105 active:scale-95 shadow-md"
-                    style={{
-                      background: 'rgba(239,68,68,0.25)',
-                      border: '1px solid rgba(239,68,68,0.45)',
-                      backdropFilter: 'blur(4px)',
-                    }}
-                    title="Cross Out (Eliminate) this character"
-                  >
-                    <X className="w-3 h-3 shrink-0 stroke-[3]" />
-                    <span>Cross</span>
-                  </button>
-
-                  {/* Guess button */}
-                  {isGuessable && onMakeGuess && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        soundFx.playSelect();
-                        onMakeGuess(card);
-                      }}
-                      className="flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-xl font-black text-[10px] text-pink-200 transition-all hover:scale-105 active:scale-95 shadow-md"
-                      style={{
-                        background: 'rgba(236,72,153,0.3)',
-                        border: '1px solid rgba(236,72,153,0.5)',
-                        backdropFilter: 'blur(4px)',
-                      }}
-                      title="Guess this is opponent's secret character!"
-                    >
-                      <Target className="w-3 h-3 shrink-0 stroke-[2.5]" />
-                      <span>Guess</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Selectable overlay */}
-            {isSelectable && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  soundFx.playSelect();
-                  if (onSelectSecret) onSelectSecret(card.id);
-                }}
-                className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ background: 'rgba(245,158,11,0.35)', backdropFilter: 'blur(2px)' }}
-              >
-                <Sparkles className="w-6 h-6 text-amber-300 mb-1" />
-                <span className="text-xs font-black text-white uppercase tracking-wider">Select Card</span>
-              </button>
-            )}
           </div>
 
-          {/* Card Name Bar */}
+          {/* Card Name & Explicit Touch Buttons Footer */}
           <div
-            className="px-2 py-1.5 text-center shrink-0"
-            style={{ background: 'rgba(7,9,15,0.95)' }}
+            className="px-1.5 py-1.5 text-center shrink-0 flex flex-col gap-1"
+            style={{ background: 'rgba(7,9,15,0.95)', borderTop: '1px solid rgba(255,255,255,0.08)' }}
           >
             <p className="font-extrabold text-slate-100 text-[11px] sm:text-xs truncate tracking-tight">
               {card.name}
             </p>
+
+            {/* Selectable Choice Button */}
             {isSelectable && (
               <button
                 type="button"
@@ -164,22 +97,44 @@ export const CardFlip: React.FC<CardFlipProps> = ({
                   soundFx.playSelect();
                   if (onSelectSecret) onSelectSecret(card.id);
                 }}
-                className="mt-1 w-full py-0.5 rounded-md font-black text-[10px] text-slate-950 transition-all hover:scale-[1.03]"
+                className="w-full py-1 rounded-lg font-black text-[10px] text-slate-950 transition-transform active:scale-95 shadow-md flex items-center justify-center gap-1 cursor-pointer"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}
               >
-                Choose
+                <Sparkles className="w-3 h-3 stroke-[2.5]" />
+                <span>Choose</span>
+              </button>
+            )}
+
+            {/* Active Gameplay Guess Button */}
+            {!isSelectable && isGuessable && onMakeGuess && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  soundFx.playSelect();
+                  onMakeGuess(card);
+                }}
+                className="w-full py-1 rounded-lg font-black text-[10px] text-pink-200 transition-transform active:scale-95 shadow-md flex items-center justify-center gap-1 cursor-pointer"
+                style={{
+                  background: 'rgba(236,72,153,0.3)',
+                  border: '1px solid rgba(236,72,153,0.5)',
+                }}
+                title="Make a final guess on this character"
+              >
+                <Target className="w-3 h-3 shrink-0 stroke-[2.5]" />
+                <span>Guess</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* ── BACK OF CARD (Crossed Out) ─────────────────── */}
+        {/* ── BACK OF CARD (Crossed Out / Eliminated) ─────────────────── */}
         <div
-          className="absolute inset-0 w-full h-full rounded-2xl border flex flex-col items-center justify-between p-2.5 rotate-y-180 backface-hidden"
+          className="absolute inset-0 w-full h-full rounded-2xl border flex flex-col items-center justify-between p-2 rotate-y-180 backface-hidden cursor-pointer"
           style={{
             background: 'rgba(10,12,22,0.97)',
-            borderColor: 'rgba(239,68,68,0.3)',
-            backgroundImage: 'radial-gradient(ellipse at 50% 40%, rgba(239,68,68,0.15) 0%, transparent 75%)',
+            borderColor: 'rgba(239,68,68,0.35)',
+            backgroundImage: 'radial-gradient(ellipse at 50% 40%, rgba(239,68,68,0.18) 0%, transparent 75%)',
           }}
           onClick={(e) => {
             e.stopPropagation();
@@ -187,9 +142,9 @@ export const CardFlip: React.FC<CardFlipProps> = ({
             onToggleFlip(card.id);
           }}
         >
-          <div className="flex items-center gap-1 text-[9px] font-black text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider mt-1">
+          <div className="flex items-center gap-1 text-[9px] font-black text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider mt-1.5">
             <X className="w-2.5 h-2.5 stroke-[3]" />
-            <span>CROSSED OUT</span>
+            <span>ELIMINATED</span>
           </div>
 
           <span className="text-[11px] font-bold text-slate-500 line-through truncate max-w-full px-1 text-center">
@@ -203,15 +158,15 @@ export const CardFlip: React.FC<CardFlipProps> = ({
               soundFx.playCardFlip(false);
               onToggleFlip(card.id);
             }}
-            className="w-full py-1.5 rounded-xl font-black text-[10px] text-cyan-300 transition-all hover:scale-[1.03] flex items-center justify-center gap-1 shadow-md"
+            className="w-full py-1.5 rounded-xl font-black text-[10px] text-cyan-300 transition-all hover:scale-[1.03] flex items-center justify-center gap-1 shadow-md cursor-pointer"
             style={{
               background: 'rgba(6,182,212,0.12)',
               border: '1px solid rgba(6,182,212,0.3)',
             }}
-            title="Restore card to standing position"
+            title="Restore character card"
           >
             <RotateCcw className="w-3 h-3 shrink-0" />
-            <span>Uncross</span>
+            <span>Restore</span>
           </button>
         </div>
       </motion.div>

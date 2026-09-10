@@ -17,8 +17,8 @@ Base Branch for Integration: `main`
 | **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ✅ Completed |
 | **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ✅ Completed |
 | **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ✅ Completed |
-| **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ⏳ Pending Task 7 |
-| **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ⏳ Pending |
+| **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ✅ Completed |
+| **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ⏳ Pending Task 8 |
 | **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ⏳ Pending |
 | **TASK 11** | Fix all win/lose/result scenarios | `feature/11-win-loss-scenarios-fix` | ⏳ Pending |
 | **TASK 12** | Fix replay/new-round architecture | `feature/12-replay-lobby-architecture` | ⏳ Pending |
@@ -67,7 +67,10 @@ Base Branch for Integration: `main`
 - [x] Safe card elimination toggle and explicit final guess action trigger (`GuessModal`).
 
 ### TASK 8: Redesign MOBILE gameplay interactions
-- [ ] Remove hover dependencies. Card tap directly flips/eliminates card. Dedicated "Guess" button trigger.
+- [x] Redesigned `CardFlip.tsx` to remove hover dependencies (`group-hover`).
+- [x] Direct card tap toggles card elimination (flips down/up).
+- [x] Added explicit, touch-friendly "Guess" button on card footer for deliberate final guesses.
+- [x] Made top header secret character badge visible on mobile screens.
 
 ### TASK 9: Implement turn messaging & visual state
 - [ ] Prominent turn indicators ("YOUR TURN" / "OPPONENT'S TURN"), turn badges, directional cues, and state-driven game log messages.
