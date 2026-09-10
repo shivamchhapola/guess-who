@@ -8,7 +8,7 @@ const getAvatarUrl = (seed: string, style: string = 'avataaars') => {
 export const CLASSIC_GUESS_WHO_TEMPLATE: CardSetTemplate = {
   id: 'classic-24',
   title: 'Classic Characters (24 Grid)',
-  description: 'The original 24 classic Guess Who characters.',
+  description: 'The original Guess Who characters.',
   creatorName: 'GuessWhoMaker Core',
   isPublic: true,
   tags: ['Classic', '24 Cards', 'Standard', 'Popular'],

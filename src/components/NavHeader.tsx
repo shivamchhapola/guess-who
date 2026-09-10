@@ -14,8 +14,8 @@ export function NavHeader({ activePage }: NavHeaderProps) {
 
   const navLinks = [
     { href: '/templates', label: 'Browse Sets', icon: Tv, page: 'templates' },
-    { href: '/lobbies',   label: 'Join Lobby',  icon: Users, page: 'lobbies' },
-    { href: '/host',      label: 'Host Game',   icon: Gamepad2, page: 'host' },
+    { href: '/lobbies', label: 'Join Lobby', icon: Users, page: 'lobbies' },
+    { href: '/host', label: 'Host Game', icon: Gamepad2, page: 'host' },
   ];
 
   return (
@@ -42,11 +42,8 @@ export function NavHeader({ activePage }: NavHeaderProps) {
             >
               <Gamepad2 className="w-5 h-5" />
             </div>
-            <span className="text-xl font-black tracking-tight text-white hidden sm:block" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              GuessWho<span style={{ color: '#f59e0b' }}>Party!</span>
-            </span>
-            <span className="text-lg font-black tracking-tight text-white sm:hidden" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              GWP<span style={{ color: '#f59e0b' }}>!</span>
+            <span className="text-lg font-black tracking-tight text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Guess<span style={{ color: '#f59e0b' }}>Whooo?</span>
             </span>
           </Link>
 
