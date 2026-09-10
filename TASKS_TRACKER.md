@@ -1,0 +1,102 @@
+# GuessWhooo? - Authoritative Gameplay Engine & Architecture Roadmap
+
+This tracker documents the 14-task architectural redesign, gameplay state management pass, turn engine, mobile UX overhaul, timer state, and win/loss scenario resolution.
+
+---
+
+## 🌿 Git Branching Strategy & Sub-Branches
+
+Base Branch for Integration: `main`
+
+| Task ID | Task Description | Target Branch Name | Status |
+| :--- | :--- | :--- | :--- |
+| **TASK 1** | Audit game/session state architecture | `feature/01-state-architecture-audit` | ✅ Completed |
+| **TASK 2** | Fix shared room/game state | `feature/02-authoritative-room-state` | ✅ Completed |
+| **TASK 3** | Fix set consistency (Host Authoritative Deck) | `feature/03-host-deck-consistency` | ✅ Completed |
+| **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ✅ Completed |
+| **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ✅ Completed |
+| **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ✅ Completed |
+| **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ✅ Completed |
+| **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ✅ Completed |
+| **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ✅ Completed |
+| **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ✅ Completed |
+| **TASK 11** | Fix all win/lose/result scenarios | `feature/11-win-loss-scenarios-fix` | ✅ Completed |
+| **TASK 12** | Fix replay/new-round architecture | `feature/12-replay-lobby-architecture` | ✅ Completed |
+| **TASK 13** | Add game-state graphics and animations | `feature/13-game-state-graphics` | ✅ Completed |
+| **TASK 14** | Final responsive & accessibility pass | `feature/14-responsive-accessibility-pass` | ✅ Completed |
+
+---
+
+## 📋 Task Breakdown Details
+
+### TASK 1: Audit game/session state architecture
+- [x] Inspect existing implementation (`MultiplayerBoard.tsx`, `[roomCode]/page.tsx`, `host/page.tsx`, Supabase schema).
+- [x] Document all sources of truth, state synchronization mechanisms, security gaps, and root causes of set/turn/replay bugs.
+
+### TASK 2: Fix shared room/game state
+- [x] Defined authoritative shared state model (`SharedRoomState`, `SharedPlayer`, `GameStatus`, `WinReason`) in `src/types/game.ts`.
+- [x] Updated host room creation payload (`src/app/host/page.tsx`) to inject structured `sharedState`.
+- [x] Integrated `sharedRoomState` hook & `shared_state_sync` broadcast listener in `MultiplayerBoard.tsx`.
+
+### TASK 3: Fix set consistency
+- [x] Fixed DB update column query bug (`.eq('code', roomCode)`) for template changes.
+- [x] Host-selected set updates DB `game_rooms` and broadcasts `template_changed` + `shared_state_sync`.
+- [x] Guests automatically load and lock to host's authoritative `selectedSetId`.
+- [x] Replaced static `template` references in `MultiplayerBoard.tsx` with dynamic `currentTemplate` state.
+
+### TASK 4: Fix secret-character readiness
+- [x] Both players choose secret character before active game begins.
+- [x] Rendered dual readiness status badges (`You: Ready` vs `Opponent: Ready / Selecting...`).
+- [x] Fixed secret card security exposure by broadcasting `player_ready` without raw cardId.
+- [x] Built waiting overlay screen that holds active game board until opponent selection is ready.
+
+### TASK 5: Fix game start & random first turn
+- [x] Implemented host random starting player assignment (`Math.random()`) when both players become ready.
+- [x] Synchronized `currentTurnPlayerId` in shared state & broadcasted `turn_assigned` event.
+- [x] Rendered prominent turn status badges ("⚡ YOUR TURN" vs "⏳ OPPONENT'S TURN") on active gameplay HUD.
+
+### TASK 6: Fix turn/action state machine
+- [x] Implemented `handleEndTurn` action that passes `currentTurnPlayerId` to opponent & resets turn timestamp.
+- [x] Added `turn_changed` broadcast handler with system log messages.
+- [x] Enforced active turn checks on final guess declarations and turn actions in application state.
+- [x] Rendered interactive **"End Turn"** button on active player HUD status bar.
+
+### TASK 7: Fix desktop gameplay interaction
+- [x] Added persistent, prominent "Your Secret Character" card widget to desktop HUD sidebar.
+- [x] Retained header status secret card badge so selected character is never forgotten during play.
+- [x] Safe card elimination toggle and explicit final guess action trigger (`GuessModal`).
+
+### TASK 8: Redesign MOBILE gameplay interactions
+- [x] Redesigned `CardFlip.tsx` to remove hover dependencies (`group-hover`).
+- [x] Direct card tap toggles card elimination (flips down/up).
+- [x] Added explicit, touch-friendly "Guess" button on card footer for deliberate final guesses.
+- [x] Made top header secret character badge visible on mobile screens.
+
+### TASK 9: Implement turn messaging & visual state
+- [x] Implemented state-driven Turn Guidance Banners above card grid ("YOUR TURN" vs "OPPONENT'S TURN").
+- [x] Integrated state-based system notifications in chat log for turn transitions and game events.
+- [x] Enhanced turn badges with directional icons and pass turn CTA buttons.
+
+### TASK 10: Implement turn timer setting & timer state
+- [x] Room lobby setting selector for turn timer (Off, 30s, 60s, 90s, 120s) added to Host Page.
+- [x] Synced `turnTimerSetting` and `turnStartedAt` into shared room state payload.
+- [x] Implemented real-time countdown timer in MultiplayerBoard with color-coded warning states and automatic turn passing on timeout.
+
+### TASK 11: Fix all win/lose/result scenarios
+- [x] Handled explicit `winReason` (`correct_guess`, `wrong_guess`, `opponent_wrong_guess`, `surrender`, `disconnect`, `timeout`).
+- [x] Redesigned `VictoryModal.tsx` to display context-aware headers, detailed scenario explanations, and side-by-side card reveal (Your Character vs Opponent's Character).
+- [x] Added Surrender CTA button in HUD header bar with confirmation modal dialog.
+
+### TASK 12: Fix replay/new-round architecture
+- [x] Implemented rematch engine: clicking "Play Again" broadcasts `new_round_started` and returns both players to room lobby setup.
+- [x] Automatically increments `gameRound` counter (`gameRound + 1`) and resets player readiness, flipped cards, and secret selections.
+- [x] Displays active round badge in HUD header (`Round #2`) and logs rematch notifications in room chat.
+
+### TASK 13: Add game-state graphics and animations
+- [x] Integrated Web Audio synth sound FX suite (`playCardFlip`, `playSelect`, `playVictory`, `playDefeat`, `playMessagePop`).
+- [x] Added state change micro-animations (`framer-motion` 3D card flips, pulsing turn indicators, timer warning badges, modal entry zoom).
+
+### TASK 14: Final responsive & accessibility pass
+- [x] Audited ARIA labels, roles (`role="dialog"`, `role="button"`), keyboard navigation (Tab focus rings, Space/Enter/Escape key bindings), and screen-reader hints across components.
+- [x] Verified minimum 44x44px touch targets on mobile viewports (cards, quick questions, HUD buttons, modal CTAs).
+- [x] Passed full Next.js production build (`npm run build`) and strict TypeScript checks (`npx tsc --noEmit`) with 0 errors.

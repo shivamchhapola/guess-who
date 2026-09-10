@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { soundFx } from '@/lib/audio';
 import { PlayerProfileSetup } from '@/components/PlayerProfileSetup';
+import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
 
 function generateRandomCode(length: number = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -23,8 +24,6 @@ function generateRandomCode(length: number = 6): string {
   }
   return code;
 }
-
-import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
 
 function HostRoomContent() {
   const searchParams = useSearchParams();
@@ -112,6 +111,9 @@ function HostRoomContent() {
 
     let upperCode = (roomCode || generateRandomCode(6)).toUpperCase();
     const finalHostName = trimmedName;
+    const hostPresenceKey = selectedAvatar && selectedAvatar.startsWith('https://')
+      ? `${selectedAvatar} ${finalHostName}`
+      : finalHostName;
 
     try {
       const { data: existing } = await supabase
@@ -127,7 +129,7 @@ function HostRoomContent() {
 
       const roomPayload = {
         code: upperCode,
-        host_id: finalHostName,
+        host_id: hostPresenceKey,
         template_id: selectedTemplateId,
         password_hash: hasPassword ? password.trim() : null,
         is_public: isPublic,
@@ -147,10 +149,6 @@ function HostRoomContent() {
       }
 
       if (typeof window !== 'undefined') {
-        // presenceKey format: "https://avatarUrl NickName" — same as joiner, so opponent can extract avatar
-        const hostPresenceKey = selectedAvatar && selectedAvatar.startsWith('https://')
-          ? `${selectedAvatar} ${finalHostName}`
-          : finalHostName;
         sessionStorage.setItem(`room_${upperCode}_role`, 'host');
         sessionStorage.setItem(`room_${upperCode}_name`, hostPresenceKey);
         sessionStorage.setItem(`room_${upperCode}_avatar`, selectedAvatar);
@@ -158,7 +156,7 @@ function HostRoomContent() {
         sessionStorage.setItem(`room_${upperCode}_timer`, String(turnTimerSetting));
       }
 
-      router.push(`/play/${upperCode}?template=${encodeURIComponent(selectedTemplateId)}`);
+      router.push(`/play/${upperCode}?template=${selectedTemplateId}`);
     } catch (err) {
       console.error('Error launching room:', err);
       setErrorMessage('Could not launch room. Please try again.');
