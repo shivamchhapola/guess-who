@@ -83,6 +83,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [chatOpen, setChatOpen] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const lastTimeoutTurnRef = useRef<number | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
@@ -422,6 +424,56 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     ]);
   };
 
+  const handleEndTurnRef = useRef(handleEndTurn);
+  useEffect(() => {
+    handleEndTurnRef.current = handleEndTurn;
+  });
+
+  // Turn timer countdown effect
+  useEffect(() => {
+    const timerSetting = sharedRoomState.turnTimerSetting;
+    const turnStarted = sharedRoomState.turnStartedAt;
+    const activePlayer = sharedRoomState.currentTurnPlayerId;
+    const isGameActive = sharedRoomState.gameStatus === 'active';
+
+    if (!isGameActive || !timerSetting || timerSetting <= 0 || !turnStarted || !activePlayer) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - turnStarted) / 1000);
+      const remaining = Math.max(0, timerSetting - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining === 0 && activePlayer === playerName && lastTimeoutTurnRef.current !== turnStarted) {
+        lastTimeoutTurnRef.current = turnStarted;
+        soundFx.playCardFlip(true);
+        handleEndTurnRef.current();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `⏰ Time's up! Turn automatically passed to ${opponentName || 'opponent'}.`,
+          },
+        ]);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [
+    sharedRoomState.turnTimerSetting,
+    sharedRoomState.turnStartedAt,
+    sharedRoomState.currentTurnPlayerId,
+    sharedRoomState.gameStatus,
+    playerName,
+    opponentName,
+  ]);
+
   const handleOpenGuessModal = (card: CharacterCard) => {
     setSelectedGuessCard(card);
     setIsGuessModalOpen(true);
@@ -753,7 +805,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             {/* Status Bar */}
             <div className="game-panel px-4 py-3 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3"
               style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs font-black px-3 py-1.5 rounded-xl"
                   style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
                   {standingCardsCount} / {currentTemplate.cards.length} Standing
@@ -774,6 +826,25 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 ) : (
                   <span className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 bg-white/5 border border-white/10">
                     Assigning Turn...
+                  </span>
+                )}
+
+                {/* Turn Timer Badge */}
+                {sharedRoomState.turnTimerSetting > 0 && (
+                  <span
+                    className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      timeLeft === null
+                        ? 'bg-slate-900 text-slate-500 border border-slate-800'
+                        : timeLeft <= 5
+                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-bounce font-extrabold'
+                        : timeLeft <= 15
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse font-extrabold'
+                        : 'bg-slate-900 text-amber-400 border border-slate-700 font-bold'
+                    }`}
+                    title={`Turn timer: ${sharedRoomState.turnTimerSetting}s`}
+                  >
+                    <Clock className={`w-3.5 h-3.5 ${timeLeft !== null && timeLeft <= 10 ? 'animate-spin text-rose-400' : 'text-amber-400'}`} />
+                    <span>{timeLeft !== null ? `${timeLeft}s` : `${sharedRoomState.turnTimerSetting}s`}</span>
                   </span>
                 )}
               </div>
@@ -812,7 +883,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 <div className="mb-4 px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-300 text-xs font-bold shadow-md shadow-amber-500/5 animate-in fade-in">
                   <div className="flex items-center gap-2 min-w-0">
                     <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span className="truncate">YOUR TURN — Ask a question or click "Guess" on a card when ready!</span>
+                    <span className="truncate">
+                      YOUR TURN — Ask a question or click "Guess" on a card when ready!
+                      {timeLeft !== null && (
+                        <strong className={`ml-1 font-mono ${timeLeft <= 10 ? 'text-rose-400 font-black animate-pulse' : 'text-amber-200'}`}>
+                          ({timeLeft}s left)
+                        </strong>
+                      )}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -826,7 +904,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 <div className="mb-4 px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-between gap-3 text-slate-400 text-xs font-semibold animate-in fade-in">
                   <div className="flex items-center gap-2 min-w-0">
                     <Clock className="w-4 h-4 text-cyan-400 animate-spin shrink-0" />
-                    <span className="truncate">OPPONENT'S TURN — Waiting for <strong className="text-white">{opponentName || 'opponent'}</strong> to make a move...</span>
+                    <span className="truncate">
+                      OPPONENT'S TURN — Waiting for <strong className="text-white">{opponentName || 'opponent'}</strong> to make a move...
+                      {timeLeft !== null && (
+                        <strong className={`ml-1 font-mono ${timeLeft <= 10 ? 'text-rose-400 font-black' : 'text-cyan-300'}`}>
+                          ({timeLeft}s left)
+                        </strong>
+                      )}
+                    </span>
                   </div>
                 </div>
               )

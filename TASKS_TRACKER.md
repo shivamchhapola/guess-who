@@ -78,7 +78,9 @@ Base Branch for Integration: `main`
 - [x] Enhanced turn badges with directional icons and pass turn CTA buttons.
 
 ### TASK 10: Implement turn timer setting & timer state
-- [ ] Room lobby setting for turn timer (Off, 30s, 60s, 90s, 120s). Sync `turnTimerSetting` and `turnStartedAt` in shared state.
+- [x] Room lobby setting selector for turn timer (Off, 30s, 60s, 90s, 120s) added to Host Page.
+- [x] Synced `turnTimerSetting` and `turnStartedAt` into shared room state payload.
+- [x] Implemented real-time countdown timer in MultiplayerBoard with color-coded warning states and automatic turn passing on timeout.
 
 ### TASK 11: Fix all win/lose/result scenarios
 - [ ] Handle all end-game outcomes (Correct Guess, Wrong Final Guess, Opponent Wrong Guess, Surrender, Disconnection, Timeout) with explicit win/loss reasons.

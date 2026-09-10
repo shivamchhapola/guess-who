@@ -13,6 +13,7 @@ import {
   Check,
   Copy,
   User,
+  Clock,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -45,6 +46,7 @@ export default function HostRoomPage() {
   const [hasPassword, setHasPassword] = useState<boolean>(false);
   const [password, setPassword] = useState<string>('');
   const [isPublic, setIsPublic] = useState<boolean>(true);
+  const [turnTimerSetting, setTurnTimerSetting] = useState<number>(60);
 
   const [hostName, setHostName] = useState<string>('Host Player');
   const [selectedAvatar, setSelectedAvatar] = useState<string>('👑');
@@ -188,7 +190,7 @@ export default function HostRoomPage() {
             selectedSetId: selectedTemplateId,
             gameStatus: 'setup',
             currentTurnPlayerId: null,
-            turnTimerSetting: 60,
+            turnTimerSetting: turnTimerSetting,
             turnStartedAt: null,
             winnerPlayerId: null,
             winReason: null,
@@ -376,7 +378,7 @@ export default function HostRoomPage() {
                   <span className="text-amber-500 font-extrabold">3.</span> Room Settings
                 </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start mb-4">
                   {/* Public Lobby Card */}
                   <div
                     onClick={() => {
@@ -439,6 +441,45 @@ export default function HostRoomPage() {
                         />
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Turn Timer Selector */}
+                <div className="p-4 rounded-2xl border border-white/10 bg-slate-900/60 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-400" />
+                      <h3 className="text-sm font-bold text-white">Turn Timer</h3>
+                    </div>
+                    <span className="text-xs font-bold text-amber-400">
+                      {turnTimerSetting === 0 ? 'Disabled (∞)' : `${turnTimerSetting}s per turn`}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-normal">Limit time available for each player's turn</p>
+                  <div className="grid grid-cols-5 gap-2 pt-1">
+                    {[
+                      { label: 'Off', val: 0 },
+                      { label: '30s', val: 30 },
+                      { label: '60s', val: 60 },
+                      { label: '90s', val: 90 },
+                      { label: '120s', val: 120 },
+                    ].map((opt) => (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => {
+                          soundFx.playSelect();
+                          setTurnTimerSetting(opt.val);
+                        }}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border ${
+                          turnTimerSetting === opt.val
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20 font-black'
+                            : 'bg-slate-950/80 text-slate-300 border-white/10 hover:border-slate-600'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </section>
@@ -527,6 +568,13 @@ export default function HostRoomPage() {
                     <span className="text-slate-400">Password</span>
                     <span className={`font-semibold ${hasPassword ? 'text-amber-400' : 'text-slate-500'}`}>
                       {hasPassword ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-400">Turn Timer</span>
+                    <span className="font-semibold text-amber-400">
+                      {turnTimerSetting === 0 ? 'Off (No limit)' : `${turnTimerSetting}s`}
                     </span>
                   </div>
                 </div>
