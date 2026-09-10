@@ -82,6 +82,30 @@ class SoundEffectsManager {
     osc.stop(now + 0.15);
   }
 
+  // Play subtle pop for chat messages
+  public playMessagePop(): void {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    const now = ctx.currentTime;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(450, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.04);
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.05);
+  }
+
   // Play victory fanfare chime
   public playVictory(): void {
     if (this.isMuted) return;

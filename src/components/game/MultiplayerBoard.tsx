@@ -206,6 +206,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           },
         ]);
       } else if (payload.type === 'chat_message') {
+        soundFx.playMessagePop();
         setChatMessages((prev) => [...prev, payload.item]);
       } else if (payload.type === 'declare_victory') {
         if (payload.guessedCardId) {

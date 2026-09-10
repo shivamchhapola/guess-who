@@ -19,11 +19,11 @@ Base Branch for Integration: `main`
 | **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ✅ Completed |
 | **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ✅ Completed |
 | **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ✅ Completed |
-| **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ⏳ Pending Task 9 |
-| **TASK 11** | Fix all win/lose/result scenarios | `feature/11-win-loss-scenarios-fix` | ⏳ Pending |
-| **TASK 12** | Fix replay/new-round architecture | `feature/12-replay-lobby-architecture` | ⏳ Pending |
-| **TASK 13** | Add game-state graphics and animations | `feature/13-game-state-graphics` | ⏳ Pending |
-| **TASK 14** | Final responsive & accessibility pass | `feature/14-responsive-accessibility-pass` | ⏳ Pending |
+| **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ✅ Completed |
+| **TASK 11** | Fix all win/lose/result scenarios | `feature/11-win-loss-scenarios-fix` | ✅ Completed |
+| **TASK 12** | Fix replay/new-round architecture | `feature/12-replay-lobby-architecture` | ✅ Completed |
+| **TASK 13** | Add game-state graphics and animations | `feature/13-game-state-graphics` | ✅ Completed |
+| **TASK 14** | Final responsive & accessibility pass | `feature/14-responsive-accessibility-pass` | ✅ Completed |
 
 ---
 
@@ -93,7 +93,10 @@ Base Branch for Integration: `main`
 - [x] Displays active round badge in HUD header (`Round #2`) and logs rematch notifications in room chat.
 
 ### TASK 13: Add game-state graphics and animations
-- [ ] Add visual state feedback, turn badges, sound FX, and micro-animations for state changes without cluttering UX.
+- [x] Integrated Web Audio synth sound FX suite (`playCardFlip`, `playSelect`, `playVictory`, `playDefeat`, `playMessagePop`).
+- [x] Added state change micro-animations (`framer-motion` 3D card flips, pulsing turn indicators, timer warning badges, modal entry zoom).
 
 ### TASK 14: Final responsive & accessibility pass
-- [ ] Audit touch targets, keyboard navigation, contrast, ARIA labels, and viewports across desktop, tablet, and mobile.
+- [x] Audited ARIA labels, roles (`role="dialog"`, `role="button"`), keyboard navigation (Tab focus rings, Space/Enter/Escape key bindings), and screen-reader hints across components.
+- [x] Verified minimum 44x44px touch targets on mobile viewports (cards, quick questions, HUD buttons, modal CTAs).
+- [x] Passed full Next.js production build (`npm run build`) and strict TypeScript checks (`npx tsc --noEmit`) with 0 errors.
