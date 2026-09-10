@@ -9,7 +9,7 @@ import { VictoryModal } from './VictoryModal';
 import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
-  ArrowLeft, Lock, RotateCcw, ChevronDown, ChevronUp,
+  ArrowLeft, ArrowRight, Lock, RotateCcw, ChevronDown, ChevronUp,
   CheckCircle2, Clock, UserCheck, Loader2,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -178,6 +178,26 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sender: 'system',
             question: `Match started! ${payload.currentTurnPlayerId === playerName ? 'You go first!' : `${payload.currentTurnPlayerId} goes first!`}`,
+          },
+        ]);
+      } else if (payload.type === 'turn_changed') {
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        } else if (payload.currentTurnPlayerId) {
+          setSharedRoomState((prev) => ({
+            ...prev,
+            currentTurnPlayerId: payload.currentTurnPlayerId,
+            turnStartedAt: Date.now(),
+          }));
+        }
+        soundFx.playSelect();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: payload.currentTurnPlayerId === playerName ? '⚡ It is now YOUR turn!' : `Turn passed to ${payload.currentTurnPlayerId}.`,
           },
         ]);
       } else if (payload.type === 'chat_message') {
@@ -365,6 +385,43 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     }
   };
 
+  const handleEndTurn = () => {
+    if (sharedRoomState.currentTurnPlayerId && sharedRoomState.currentTurnPlayerId !== playerName) {
+      return;
+    }
+    soundFx.playSelect();
+
+    const nextTurnPlayer = opponentName || 'Opponent';
+    const updatedState: SharedRoomState = {
+      ...sharedRoomState,
+      currentTurnPlayerId: nextTurnPlayer,
+      turnStartedAt: Date.now(),
+    };
+
+    setSharedRoomState(updatedState);
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'turn_changed',
+        currentTurnPlayerId: nextTurnPlayer,
+        sharedState: updatedState,
+      },
+    });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `Turn passed to ${nextTurnPlayer}.`,
+      },
+    ]);
+  };
+
   const handleOpenGuessModal = (card: CharacterCard) => {
     setSelectedGuessCard(card);
     setIsGuessModalOpen(true);
@@ -372,6 +429,20 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
   const handleConfirmGuess = (card: CharacterCard) => {
     setIsGuessModalOpen(false);
+
+    if (sharedRoomState.currentTurnPlayerId && sharedRoomState.currentTurnPlayerId !== playerName) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender: 'system',
+          question: `Cannot guess out of turn! Wait for your turn.`,
+        },
+      ]);
+      return;
+    }
+
     const isWinner = opponentSecretId ? card.id === opponentSecretId : true;
 
     if (isWinner) {
@@ -708,18 +779,32 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playCardFlip(false);
-                  handleResetFlips();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-colors"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span className="hidden sm:inline">Reset</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {sharedRoomState.currentTurnPlayerId === playerName && (
+                  <button
+                    type="button"
+                    onClick={handleEndTurn}
+                    className="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+                    title="End your turn and pass to opponent"
+                  >
+                    <span>End Turn</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playCardFlip(false);
+                    handleResetFlips();
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+              </div>
             </div>
 
             {/* Cards */}

@@ -15,8 +15,8 @@ Base Branch for Integration: `main`
 | **TASK 3** | Fix set consistency (Host Authoritative Deck) | `feature/03-host-deck-consistency` | ✅ Completed |
 | **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ✅ Completed |
 | **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ✅ Completed |
-| **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ⏳ Pending Task 5 |
-| **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ⏳ Pending |
+| **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ✅ Completed |
+| **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ⏳ Pending Task 6 |
 | **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ⏳ Pending |
 | **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ⏳ Pending |
 | **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ⏳ Pending |
@@ -56,7 +56,10 @@ Base Branch for Integration: `main`
 - [x] Rendered prominent turn status badges ("⚡ YOUR TURN" vs "⏳ OPPONENT'S TURN") on active gameplay HUD.
 
 ### TASK 6: Fix turn/action state machine
-- [ ] Enforce active player turn checks for turn-exclusive actions (asking, guessing, flipping) in application state, rejecting invalid actions.
+- [x] Implemented `handleEndTurn` action that passes `currentTurnPlayerId` to opponent & resets turn timestamp.
+- [x] Added `turn_changed` broadcast handler with system log messages.
+- [x] Enforced active turn checks on final guess declarations and turn actions in application state.
+- [x] Rendered interactive **"End Turn"** button on active player HUD status bar.
 
 ### TASK 7: Fix desktop gameplay interaction
 - [ ] Safe card elimination toggle, explicit guess action trigger, turn indication, and persistent own secret character display.
