@@ -224,6 +224,50 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             setCurrentWinReason(payload.winReason || 'correct_guess');
           }
         }
+      } else if (payload.type === 'new_round_started') {
+        soundFx.playSelect();
+        setPlayerSecretId(null);
+        setOpponentSecretId(null);
+        setIsSecretSelected(false);
+        setIsOpponentReady(false);
+        setFlippedCardIds([]);
+        setGameResult(null);
+        setCurrentWinReason(null);
+        setLastGuessedCard(null);
+
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        } else {
+          setSharedRoomState((prev) => ({
+            ...prev,
+            gameStatus: 'selecting_character',
+            currentTurnPlayerId: null,
+            turnStartedAt: null,
+            winnerPlayerId: null,
+            winReason: null,
+            gameRound: payload.gameRound || prev.gameRound + 1,
+          }));
+        }
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `🔄 Round ${payload.gameRound || ''} started! Choose your secret characters.`,
+          },
+        ]);
+      } else if (payload.type === 'play_again_requested') {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `🎮 ${payload.sender} requested to play again!`,
+          },
+        ]);
       }
     });
 
@@ -574,6 +618,73 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     ]);
   };
 
+  const handlePlayAgain = () => {
+    soundFx.playSelect();
+    setGameResult(null);
+    setCurrentWinReason(null);
+    setLastGuessedCard(null);
+
+    setPlayerSecretId(null);
+    setOpponentSecretId(null);
+    setIsSecretSelected(false);
+    setIsOpponentReady(false);
+    setFlippedCardIds([]);
+
+    const nextRound = sharedRoomState.gameRound + 1;
+    const updatedState: SharedRoomState = {
+      ...sharedRoomState,
+      gameStatus: 'selecting_character',
+      currentTurnPlayerId: null,
+      turnStartedAt: null,
+      winnerPlayerId: null,
+      winReason: null,
+      gameRound: nextRound,
+      players: Object.fromEntries(
+        Object.entries(sharedRoomState.players).map(([id, p]) => [
+          id,
+          { ...p, isReady: false },
+        ])
+      ),
+    };
+
+    setSharedRoomState(updatedState);
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'new_round_started',
+        sharedState: updatedState,
+        gameRound: nextRound,
+      },
+    });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `🔄 Round ${nextRound} started! Choose your secret characters.`,
+      },
+    ]);
+
+    try {
+      supabase
+        .from('game_rooms')
+        .update({
+          status: 'selecting_character',
+          state: {
+            sharedState: updatedState,
+          },
+        })
+        .eq('code', roomCode);
+    } catch (err) {
+      console.warn('Failed to update DB on new round:', err);
+    }
+  };
+
   const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
   const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
   const standingCardsCount = currentTemplate.cards.length - flippedCardIds.length;
@@ -635,6 +746,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-base font-black tracking-widest text-amber-400 font-mono">#{roomCode}</span>
+              <span className="text-[10px] font-mono font-black text-amber-400 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+                Round {sharedRoomState.gameRound}
+              </span>
               <span className="hidden sm:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full items-center gap-1"
                 style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
@@ -1147,11 +1261,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         guessedCard={lastGuessedCard}
         secretCard={playerSecretCard}
         opponentSecretCard={opponentSecretCard}
-        onPlayAgain={() => {
-          setGameResult(null);
-          setCurrentWinReason(null);
-          setLastGuessedCard(null);
-        }}
+        onPlayAgain={handlePlayAgain}
       />
 
       {/* Surrender Confirmation Modal */}

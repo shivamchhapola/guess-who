@@ -88,7 +88,9 @@ Base Branch for Integration: `main`
 - [x] Added Surrender CTA button in HUD header bar with confirmation modal dialog.
 
 ### TASK 12: Fix replay/new-round architecture
-- [ ] Replay returns to room setup/lobby. Host can adjust set/timer settings before starting round `gameRound + 1`.
+- [x] Implemented rematch engine: clicking "Play Again" broadcasts `new_round_started` and returns both players to room lobby setup.
+- [x] Automatically increments `gameRound` counter (`gameRound + 1`) and resets player readiness, flipped cards, and secret selections.
+- [x] Displays active round badge in HUD header (`Round #2`) and logs rematch notifications in room chat.
 
 ### TASK 13: Add game-state graphics and animations
 - [ ] Add visual state feedback, turn badges, sound FX, and micro-animations for state changes without cluttering UX.
