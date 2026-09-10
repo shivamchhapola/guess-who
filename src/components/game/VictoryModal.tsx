@@ -45,77 +45,47 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
   if (!isOpen) return null;
 
-  let title = isWon ? 'VICTORY!' : 'GAME OVER';
-  let description = isWon
-    ? 'Fantastic deduction! You won the match.'
-    : 'Better luck next time!';
-  let IconComponent = isWon ? Trophy : Frown;
-
-  if (isWon) {
-    switch (winReason) {
-      case 'correct_guess':
-        title = 'VICTORY! YOU GUESSED IT!';
-        description = `Fantastic deduction! You correctly identified your opponent's secret character${guessedCard ? ` (${guessedCard.name})` : ''}.`;
-        break;
-      case 'opponent_wrong_guess':
-        title = 'VICTORY BY FORFEIT!';
-        description = `Your opponent made an incorrect final guess and forfeited the match!`;
-        break;
-      case 'surrender':
-        title = 'VICTORY BY SURRENDER!';
-        description = `Your opponent surrendered the match. You win!`;
-        IconComponent = Trophy;
-        break;
-      case 'disconnect':
-        title = 'VICTORY BY DISCONNECT!';
-        description = `Your opponent disconnected from the match. You win!`;
-        IconComponent = WifiOff;
-        break;
-      case 'timeout':
-        title = 'VICTORY BY TIMEOUT!';
-        description = `Your opponent ran out of match time. You win!`;
-        IconComponent = Clock;
-        break;
-      default:
-        title = 'VICTORY! YOU WON!';
-        description = 'Congratulations on winning the match!';
-        break;
+  const getScenarioText = () => {
+    if (isWon) {
+      switch (winReason) {
+        case 'correct_guess':
+          return `Awesome deduction! You correctly guessed the secret character!`;
+        case 'opponent_wrong_guess':
+          return `Your opponent made an incorrect final guess, giving you the victory!`;
+        case 'surrender':
+          return `Your opponent surrendered the match!`;
+        case 'timeout':
+          return `Your opponent ran out of time on their turn!`;
+        case 'disconnect':
+          return `Your opponent disconnected from the match.`;
+        default:
+          return `Victory! You won the match!`;
+      }
+    } else {
+      switch (winReason) {
+        case 'correct_guess':
+          return `${winnerName || 'Opponent'} correctly guessed your secret character.`;
+        case 'wrong_guess':
+          return `You guessed incorrectly! The guess was not their secret character.`;
+        case 'surrender':
+          return `You surrendered the match.`;
+        case 'timeout':
+          return `You ran out of time on your turn.`;
+        case 'disconnect':
+          return `You were disconnected from the match.`;
+        default:
+          return `Game over. Better luck next match!`;
+      }
     }
-  } else {
-    switch (winReason) {
-      case 'wrong_guess':
-        title = 'INCORRECT GUESS — DEFEAT';
-        description = `You guessed "${guessedCard?.name || 'a character'}", but that was NOT your opponent's secret character! In Guess Who, an incorrect final guess results in an immediate loss.`;
-        IconComponent = Frown;
-        break;
-      case 'correct_guess':
-        title = 'GAME OVER — DEFEAT';
-        description = `Your opponent correctly identified your secret character!`;
-        IconComponent = Frown;
-        break;
-      case 'surrender':
-        title = 'MATCH FORFEITED';
-        description = `You surrendered the match.`;
-        IconComponent = Flag;
-        break;
-      case 'disconnect':
-        title = 'DISCONNECTED';
-        description = `Match ended due to network disconnection.`;
-        IconComponent = WifiOff;
-        break;
-      case 'timeout':
-        title = 'TIME OUT — DEFEAT';
-        description = `You ran out of match time!`;
-        IconComponent = Clock;
-        break;
-      default:
-        title = 'GAME OVER';
-        description = 'Better luck in the next round!';
-        break;
-    }
-  }
+  };
 
-  const targetCard = opponentSecretCard || (isWon && guessedCard ? guessedCard : null);
+  const getHeaderBadgeIcon = () => {
+    if (isWon) return <Trophy className="w-10 h-10 animate-bounce text-amber-300" />;
+    if (winReason === 'surrender') return <Flag className="w-10 h-10 text-rose-400" />;
+    if (winReason === 'timeout') return <Clock className="w-10 h-10 text-amber-400" />;
+    if (winReason === 'disconnect') return <WifiOff className="w-10 h-10 text-rose-400" />;
+    return <Frown className="w-10 h-10 text-rose-400" />;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-lg">
@@ -134,45 +104,32 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               : 'bg-rose-500/20 border border-rose-500/40 text-rose-400'
           }`}
         >
-          <IconComponent className={`w-10 h-10 ${isWon ? 'animate-bounce' : ''}`} />
+          {getHeaderBadgeIcon()}
         </div>
 
-        <h2 className="text-2xl sm:text-3xl font-black text-slate-100 mb-2 leading-tight">
-          {title}
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-100 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          {isWon ? (
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
+              VICTORY! YOU WIN!
+            </span>
+          ) : (
+            <span className="text-rose-400">GAME OVER</span>
+          )}
         </h2>
 
-        <p className="text-slate-300 text-xs sm:text-sm max-w-sm mb-6 leading-relaxed">
-          {description}
+        <p className="text-slate-300 text-xs sm:text-sm max-w-sm mb-6 font-medium">
+          {getScenarioText()}
         </p>
 
-        {/* Revealed Secret Cards Display */}
-        <div className="grid grid-cols-2 gap-3 w-full mb-6 max-w-sm">
-          {/* Opponent's Secret Character */}
-          {targetCard && (
-            <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-cyan-500/30">
-              <span className="text-[10px] font-black text-cyan-400 uppercase tracking-wider mb-1.5 truncate max-w-full">
-                Opponent's Character
-              </span>
-              <div className="relative w-20 h-24 rounded-xl overflow-hidden border border-cyan-500/40 mb-1 bg-slate-950">
-                <Image
-                  src={targetCard.imageUrl}
-                  alt={targetCard.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-              <span className="font-bold text-white text-xs truncate max-w-full">{targetCard.name}</span>
-            </div>
-          )}
-
-          {/* Your Secret Character */}
+        {/* Side-by-side Card Reveal */}
+        <div className="grid grid-cols-2 gap-3 w-full mb-6">
+          {/* Your Secret Card */}
           {secretCard && (
             <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-amber-500/30">
-              <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-1.5 truncate max-w-full">
-                Your Character
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-2">
+                Your Secret
               </span>
-              <div className="relative w-20 h-24 rounded-xl overflow-hidden border border-amber-500/40 mb-1 bg-slate-950">
+              <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border border-amber-500/40 mb-1.5 bg-slate-950">
                 <Image
                   src={secretCard.imageUrl}
                   alt={secretCard.name}
@@ -181,7 +138,30 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
                   unoptimized
                 />
               </div>
-              <span className="font-bold text-white text-xs truncate max-w-full">{secretCard.name}</span>
+              <span className="font-extrabold text-slate-200 text-xs sm:text-sm truncate w-full text-center">
+                {secretCard.name}
+              </span>
+            </div>
+          )}
+
+          {/* Opponent Secret Card */}
+          {opponentSecretCard && (
+            <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-cyan-500/30">
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-2">
+                Opponent's Secret
+              </span>
+              <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border border-cyan-500/40 mb-1.5 bg-slate-950">
+                <Image
+                  src={opponentSecretCard.imageUrl}
+                  alt={opponentSecretCard.name}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              <span className="font-extrabold text-slate-200 text-xs sm:text-sm truncate w-full text-center">
+                {opponentSecretCard.name}
+              </span>
             </div>
           )}
         </div>
@@ -190,17 +170,17 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
           <Link
             href="/"
-            className="w-full sm:flex-1 py-3 px-5 rounded-xl glass-card font-semibold text-slate-300 hover:text-white flex items-center justify-center gap-2 transition-colors border border-white/10"
+            className="w-full sm:flex-1 py-3.5 px-5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-white/10 font-bold text-slate-300 hover:text-white flex items-center justify-center gap-2 transition-colors text-xs"
           >
             <Home className="w-4 h-4" />
-            <span>Home</span>
+            <span>Main Menu</span>
           </Link>
           <button
             type="button"
             onClick={onPlayAgain}
-            className="w-full sm:flex-1 py-3 px-5 rounded-xl font-bold text-white gradient-btn flex items-center justify-center gap-2 shadow-lg transition-all hover:scale-105"
+            className="w-full sm:flex-1 py-3.5 px-5 rounded-2xl font-extrabold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] text-xs"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4 stroke-[2.5]" />
             <span>Play Again</span>
           </button>
         </div>
@@ -208,3 +188,4 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
     </div>
   );
 };
+

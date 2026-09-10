@@ -35,7 +35,7 @@ function HostRoomContent() {
   const [hasPassword, setHasPassword] = useState<boolean>(false);
   const [password, setPassword] = useState<string>('');
   const [isPublic, setIsPublic] = useState<boolean>(true);
-  const [turnTimerSetting, setTurnTimerSetting] = useState<number>(60);
+  const [turnTimerSetting, setTurnTimerSetting] = useState<number>(60); // 0 (off), 30, 60, 90, 120
 
   const [hostName, setHostName] = useState<string>('');
   const [selectedAvatar, setSelectedAvatar] = useState<string>('');
@@ -133,33 +133,13 @@ function HostRoomContent() {
         template_id: selectedTemplateId,
         password_hash: hasPassword ? password.trim() : null,
         is_public: isPublic,
+        turn_timer_seconds: turnTimerSetting,
         status: 'waiting',
         state: {
           hostName: finalHostName,
           selectedAvatar,
           selectedTemplateId,
-          sharedState: {
-            roomId: upperCode,
-            hostPlayerId: hostPresenceKey,
-            players: {
-              [hostPresenceKey]: {
-                id: hostPresenceKey,
-                nickname: finalHostName,
-                avatar: selectedAvatar,
-                isHost: true,
-                isReady: false,
-                connected: true,
-              },
-            },
-            selectedSetId: selectedTemplateId,
-            gameStatus: 'setup',
-            currentTurnPlayerId: null,
-            turnTimerSetting: turnTimerSetting,
-            turnStartedAt: null,
-            winnerPlayerId: null,
-            winReason: null,
-            gameRound: 1,
-          },
+          turnTimerSetting,
         },
       };
 
@@ -173,6 +153,7 @@ function HostRoomContent() {
         sessionStorage.setItem(`room_${upperCode}_name`, hostPresenceKey);
         sessionStorage.setItem(`room_${upperCode}_avatar`, selectedAvatar);
         sessionStorage.setItem(`room_${upperCode}_template`, selectedTemplateId);
+        sessionStorage.setItem(`room_${upperCode}_timer`, String(turnTimerSetting));
       }
 
       router.push(`/play/${upperCode}?template=${selectedTemplateId}`);
@@ -183,6 +164,7 @@ function HostRoomContent() {
       setLoading(false);
     }
   };
+
 
   return (
     <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -318,36 +300,30 @@ function HostRoomContent() {
               <div className="w-full p-4 rounded-2xl border border-white/10 bg-slate-950/60 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <Clock className="w-4 h-4 text-amber-400" />
+                    <Clock className="w-4 h-4 text-emerald-400" />
                     <h3 className="text-sm font-bold text-white">Turn Timer</h3>
                   </div>
-                  <span className="text-xs font-bold text-amber-400">
-                    {turnTimerSetting === 0 ? 'Disabled (∞)' : `${turnTimerSetting}s per turn`}
+                  <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                    {turnTimerSetting === 0 ? 'Off' : `${turnTimerSetting}s per turn`}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 pl-6">Limit time available for each player's turn</p>
-                <div className="grid grid-cols-5 gap-2 pt-1 pl-6">
-                  {[
-                    { label: 'Off', val: 0 },
-                    { label: '30s', val: 30 },
-                    { label: '60s', val: 60 },
-                    { label: '90s', val: 90 },
-                    { label: '120s', val: 120 },
-                  ].map((opt) => (
+                <p className="text-xs text-slate-400 pl-6">Set a maximum time limit for each player's turn</p>
+                <div className="grid grid-cols-5 gap-2 pl-6 pt-1">
+                  {[0, 30, 60, 90, 120].map((seconds) => (
                     <button
-                      key={opt.val}
+                      key={seconds}
                       type="button"
                       onClick={() => {
                         soundFx.playSelect();
-                        setTurnTimerSetting(opt.val);
+                        setTurnTimerSetting(seconds);
                       }}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold transition-all border ${
-                        turnTimerSetting === opt.val
-                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20 font-black'
-                          : 'bg-slate-900/80 text-slate-300 border-white/10 hover:border-slate-600'
+                      className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                        turnTimerSetting === seconds
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-sm'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
                       }`}
                     >
-                      {opt.label}
+                      {seconds === 0 ? 'Off' : `${seconds}s`}
                     </button>
                   ))}
                 </div>

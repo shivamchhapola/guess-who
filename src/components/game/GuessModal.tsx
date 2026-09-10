@@ -8,25 +8,22 @@ import Image from 'next/image';
 interface GuessModalProps {
   card: CharacterCard | null;
   isOpen: boolean;
-  onClose: () => void;
-  onConfirmGuess: (card: CharacterCard) => void;
+  onClose?: () => void;
+  onCancel?: () => void;
+  onConfirmGuess?: (card: CharacterCard) => void;
+  onConfirm?: (card: CharacterCard) => void;
 }
 
 export const GuessModal: React.FC<GuessModalProps> = ({
   card,
   isOpen,
   onClose,
+  onCancel,
   onConfirmGuess,
+  onConfirm,
 }) => {
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const handleClose = onCancel || onClose || (() => {});
+  const handleConfirm = onConfirm || onConfirmGuess || (() => {});
 
   if (!isOpen || !card) return null;
 
@@ -46,8 +43,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           </div>
           <button
             type="button"
-            aria-label="Close modal"
-            onClick={onClose}
+            onClick={handleClose}
             className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -81,14 +77,14 @@ export const GuessModal: React.FC<GuessModalProps> = ({
         <div className="flex items-center gap-3 w-full">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="flex-1 py-3 px-4 rounded-xl glass-card font-semibold text-slate-300 hover:text-white transition-colors"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={() => onConfirmGuess(card)}
+            onClick={() => handleConfirm(card)}
             className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 font-bold text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-105"
           >
             Confirm Guess
