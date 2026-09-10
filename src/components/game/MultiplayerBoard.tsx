@@ -10,7 +10,7 @@ import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
   ArrowLeft, ArrowRight, Lock, RotateCcw, ChevronDown, ChevronUp,
-  CheckCircle2, Clock, UserCheck, Loader2,
+  CheckCircle2, Clock, UserCheck, Loader2, Sparkles,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -805,6 +805,32 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Turn Guidance Banner */}
+            {sharedRoomState.currentTurnPlayerId && (
+              sharedRoomState.currentTurnPlayerId === playerName ? (
+                <div className="mb-4 px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-300 text-xs font-bold shadow-md shadow-amber-500/5 animate-in fade-in">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="truncate">YOUR TURN — Ask a question or click "Guess" on a card when ready!</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleEndTurn}
+                    className="px-3 py-1 rounded-xl text-[11px] font-black text-slate-950 bg-gradient-to-r from-amber-500 to-yellow-400 hover:scale-105 transition-all shrink-0 cursor-pointer"
+                  >
+                    Pass Turn →
+                  </button>
+                </div>
+              ) : (
+                <div className="mb-4 px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 flex items-center justify-between gap-3 text-slate-400 text-xs font-semibold animate-in fade-in">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Clock className="w-4 h-4 text-cyan-400 animate-spin shrink-0" />
+                    <span className="truncate">OPPONENT'S TURN — Waiting for <strong className="text-white">{opponentName || 'opponent'}</strong> to make a move...</span>
+                  </div>
+                </div>
+              )
+            )}
 
             {/* Cards */}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">

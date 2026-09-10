@@ -18,8 +18,8 @@ Base Branch for Integration: `main`
 | **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ✅ Completed |
 | **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ✅ Completed |
 | **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ✅ Completed |
-| **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ⏳ Pending Task 8 |
-| **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ⏳ Pending |
+| **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ✅ Completed |
+| **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ⏳ Pending Task 9 |
 | **TASK 11** | Fix all win/lose/result scenarios | `feature/11-win-loss-scenarios-fix` | ⏳ Pending |
 | **TASK 12** | Fix replay/new-round architecture | `feature/12-replay-lobby-architecture` | ⏳ Pending |
 | **TASK 13** | Add game-state graphics and animations | `feature/13-game-state-graphics` | ⏳ Pending |
@@ -73,7 +73,9 @@ Base Branch for Integration: `main`
 - [x] Made top header secret character badge visible on mobile screens.
 
 ### TASK 9: Implement turn messaging & visual state
-- [ ] Prominent turn indicators ("YOUR TURN" / "OPPONENT'S TURN"), turn badges, directional cues, and state-driven game log messages.
+- [x] Implemented state-driven Turn Guidance Banners above card grid ("YOUR TURN" vs "OPPONENT'S TURN").
+- [x] Integrated state-based system notifications in chat log for turn transitions and game events.
+- [x] Enhanced turn badges with directional icons and pass turn CTA buttons.
 
 ### TASK 10: Implement turn timer setting & timer state
 - [ ] Room lobby setting for turn timer (Off, 30s, 60s, 90s, 120s). Sync `turnTimerSetting` and `turnStartedAt` in shared state.
