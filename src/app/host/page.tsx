@@ -172,6 +172,28 @@ export default function HostRoomPage() {
         state: {
           hostName: finalHostName,
           selectedTemplateId,
+          sharedState: {
+            roomId: upperCode,
+            hostPlayerId: finalHostName,
+            players: {
+              [finalHostName]: {
+                id: finalHostName,
+                nickname: hostName.trim() || 'Host Player',
+                avatar: selectedAvatar,
+                isHost: true,
+                isReady: false,
+                connected: true,
+              },
+            },
+            selectedSetId: selectedTemplateId,
+            gameStatus: 'setup',
+            currentTurnPlayerId: null,
+            turnTimerSetting: 60,
+            turnStartedAt: null,
+            winnerPlayerId: null,
+            winReason: null,
+            gameRound: 1,
+          },
         },
       };
 

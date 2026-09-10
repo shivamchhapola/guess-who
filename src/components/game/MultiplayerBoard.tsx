@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CardSetTemplate, CharacterCard, QuestionLogItem } from '@/types/game';
+import { CardSetTemplate, CharacterCard, QuestionLogItem, SharedRoomState, SharedPlayer, GameStatus, WinReason } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
 import { CardFlip } from './CardFlip';
 import { GuessModal } from './GuessModal';
@@ -40,6 +40,36 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     return `Player_${Math.floor(Math.random() * 1000)}`;
   });
 
+  const [isHost] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(`room_${roomCode}_role`) === 'host';
+    }
+    return false;
+  });
+
+  const [sharedRoomState, setSharedRoomState] = useState<SharedRoomState>(() => ({
+    roomId: roomCode,
+    hostPlayerId: isHost ? playerName : '',
+    players: {
+      [playerName]: {
+        id: playerName,
+        nickname: playerName,
+        avatar: '',
+        isHost,
+        isReady: false,
+        connected: true,
+      },
+    },
+    selectedSetId: template.id,
+    gameStatus: 'setup',
+    currentTurnPlayerId: null,
+    turnTimerSetting: 60,
+    turnStartedAt: null,
+    winnerPlayerId: null,
+    winReason: null,
+    gameRound: 1,
+  }));
+
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [opponentSecretId, setOpponentSecretId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<QuestionLogItem[]>([]);
@@ -76,7 +106,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     });
 
     channel.on('broadcast', { event: 'game_event' }, ({ payload }) => {
-      if (payload.type === 'secret_selected') {
+      if (payload.type === 'shared_state_sync') {
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        }
+      } else if (payload.type === 'secret_selected') {
         if (payload.sender !== playerName) {
           setOpponentSecretId(payload.cardId);
           setChatMessages((prev) => [
