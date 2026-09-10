@@ -826,6 +826,21 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           {/* Desktop Chat Sidebar (Bigger & Roomier) */}
           <div className="hidden lg:flex flex-col w-80 xl:w-96 2xl:w-[420px] game-panel p-5 rounded-3xl shrink-0 lg:sticky lg:top-4"
             style={{ border: '1px solid rgba(255,255,255,0.1)', height: 'fit-content', maxHeight: 'calc(100vh - 5rem)' }}>
+            
+            {/* Persistent Secret Character Widget */}
+            {playerSecretCard && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 shrink-0 shadow-lg shadow-amber-500/5">
+                <div className="relative w-12 h-14 rounded-xl overflow-hidden border border-amber-500/50 shrink-0 bg-slate-900 shadow-md">
+                  <Image src={playerSecretCard.imageUrl} alt={playerSecretCard.name} fill className="object-cover" unoptimized />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">Your Secret Character</span>
+                  <span className="text-sm font-extrabold text-white truncate">{playerSecretCard.name}</span>
+                  <span className="text-[10px] text-slate-400 font-semibold">Opponent is guessing this character</span>
+                </div>
+              </div>
+            )}
+
             {/* Chat Header */}
             <div className="flex items-center justify-between mb-4 pb-3 shrink-0"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>

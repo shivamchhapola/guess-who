@@ -16,8 +16,8 @@ Base Branch for Integration: `main`
 | **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ✅ Completed |
 | **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ✅ Completed |
 | **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ✅ Completed |
-| **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ⏳ Pending Task 6 |
-| **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ⏳ Pending |
+| **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ✅ Completed |
+| **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ⏳ Pending Task 7 |
 | **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ⏳ Pending |
 | **TASK 10** | Implement turn timer setting & timer state | `feature/10-configurable-turn-timers` | ⏳ Pending |
 | **TASK 11** | Fix all win/lose/result scenarios | `feature/11-win-loss-scenarios-fix` | ⏳ Pending |
@@ -62,7 +62,9 @@ Base Branch for Integration: `main`
 - [x] Rendered interactive **"End Turn"** button on active player HUD status bar.
 
 ### TASK 7: Fix desktop gameplay interaction
-- [ ] Safe card elimination toggle, explicit guess action trigger, turn indication, and persistent own secret character display.
+- [x] Added persistent, prominent "Your Secret Character" card widget to desktop HUD sidebar.
+- [x] Retained header status secret card badge so selected character is never forgotten during play.
+- [x] Safe card elimination toggle and explicit final guess action trigger (`GuessModal`).
 
 ### TASK 8: Redesign MOBILE gameplay interactions
 - [ ] Remove hover dependencies. Card tap directly flips/eliminates card. Dedicated "Guess" button trigger.
