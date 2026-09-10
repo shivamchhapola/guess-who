@@ -39,15 +39,6 @@ export interface QuestionLogItem {
   answer?: 'yes' | 'no';
 }
 
-export interface SharedPlayer {
-  id: string;
-  nickname: string;
-  avatar: string;
-  isHost: boolean;
-  isReady: boolean; // Has selected secret character for current round
-  connected: boolean;
-}
-
 export type GameStatus = 'setup' | 'selecting_character' | 'active' | 'finished';
 
 export type WinReason =
@@ -57,40 +48,6 @@ export type WinReason =
   | 'surrender'
   | 'disconnect'
   | 'timeout';
-
-export interface SharedRoomState {
-  roomId: string;
-  hostPlayerId: string;
-  players: Record<string, SharedPlayer>;
-  selectedSetId: string;
-  gameStatus: GameStatus;
-  currentTurnPlayerId: string | null;
-  turnTimerSetting: number; // 0 (Off), 30, 60, 90, 120
-  turnStartedAt: number | null; // Epoch timestamp (ms)
-  winnerPlayerId: string | null;
-  winReason: WinReason | null;
-  gameRound: number;
-}
-
-export interface PrivatePlayerState {
-  secretCharacterId: string | null;
-  flippedCardIds: string[];
-}
-
-export interface LocalGameState {
-  template: CardSetTemplate;
-  secretCardId: string | null;
-  opponentSecretCardId: string | null;
-  flippedCardIds: string[]; // Set of card IDs flipped down by player
-  isSecretSelected: boolean;
-  turn: 'player' | 'opponent';
-  status: 'selecting_secret' | 'in_progress' | 'won' | 'lost';
-  guessHistory: QuestionLogItem[];
-  startTime: number;
-}
-
-export type GameStatus = 'setup' | 'selecting_character' | 'active' | 'finished';
-export type WinReason = 'correct_guess' | 'wrong_guess' | 'opponent_wrong_guess' | 'surrender' | 'disconnect' | 'timeout';
 
 export interface SharedPlayer {
   id: string;
@@ -106,7 +63,7 @@ export interface SharedRoomState {
   hostId: string;
   guestId: string | null;
   selectedSetId: string;
-  turnTimerSetting: number; // 0, 30, 60, 90, 120
+  turnTimerSetting: number;
   currentTurnPlayerId: string | null;
   turnStartedAt: number | null;
   winnerId: string | null;
@@ -115,3 +72,14 @@ export interface SharedRoomState {
   players: Record<string, SharedPlayer>;
 }
 
+export interface LocalGameState {
+  template: CardSetTemplate;
+  secretCardId: string | null;
+  opponentSecretCardId: string | null;
+  flippedCardIds: string[];
+  isSecretSelected: boolean;
+  turn: 'player' | 'opponent';
+  status: 'selecting_secret' | 'in_progress' | 'won' | 'lost';
+  guessHistory: QuestionLogItem[];
+  startTime: number;
+}

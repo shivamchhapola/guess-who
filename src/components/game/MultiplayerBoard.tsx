@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { CardSetTemplate, CharacterCard, QuestionLogItem, GameStatus, WinReason, SharedRoomState } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
+import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
+import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { CardFlip } from './CardFlip';
 import { GuessModal } from './GuessModal';
 import { VictoryModal } from './VictoryModal';
@@ -189,13 +191,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
   /* ── Realtime Supabase Channel Subscriptions ────────────────────── */
   useEffect(() => {
-    if (!isUnlocked) return;
+    if (!isUnlocked || !hasSetIdentity || !presenceKey) return;
 
     const channel = supabase.channel(`room:${roomCode}`, {
       config: {
-        presence: { key: playerName },
+        presence: { key: presenceKey },
       },
     });
+    channelRef.current = channel;
 
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState();
@@ -257,7 +260,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             id: Math.random().toString(),
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sender: 'system',
-            question: `Match started! ${payload.currentTurnPlayerId === playerName ? 'You go first!' : `${payload.currentTurnPlayerId} goes first!`}`,
+            question: `Host updated character deck to "${payload.template.title}"`,
           },
         ]);
       } else if (payload.type === 'start_character_selection') {
@@ -302,7 +305,6 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           },
         ]);
       } else if (payload.type === 'chat_message') {
-        soundFx.playMessagePop();
         setChatMessages((prev) => [...prev, payload.item]);
         soundFx.playMessagePop();
       } else if (payload.type === 'declare_victory') {
@@ -339,6 +341,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     });
 
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
   }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, availableTemplates, currentTemplate.id]);
@@ -364,34 +367,31 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
   /* ── Host Deck Switcher ─────────────────────────────────────────── */
   const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
-    if (!isHost) return;
     soundFx.playSelect();
     setCurrentTemplate(newTemplate);
+    setIsChangeSetOpen(false);
     setPlayerSecretId(null);
     setIsMyReady(false);
     setIsOpponentReady(false);
     setFlippedCardIds([]);
 
-    const updatedSharedState: SharedRoomState = {
-      ...sharedRoomState,
-      selectedSetId: newTemplate.id,
-    };
-    setSharedRoomState(updatedSharedState);
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `Host updated character deck to "${newTemplate.title}"`,
+      },
+    ]);
 
-    // Broadcast template change to all connected clients
-    const channel = supabase.channel(`room:${roomCode}`);
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'template_changed', template: newTemplate },
     });
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: { type: 'shared_state_sync', sharedState: updatedSharedState },
-    });
 
-    // Update Database using correct column 'code'
     try {
       await supabase
         .from('game_rooms')
@@ -466,24 +466,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setCurrentTurnPlayerId(nextPlayer);
     setTurnStartedAt(now);
 
-    setSharedRoomState((prev) => ({
-      ...prev,
-      players: {
-        ...prev.players,
-        [playerName]: {
-          ...(prev.players[playerName] || {
-            id: playerName,
-            nickname: playerName,
-            avatar: '',
-            isHost,
-            connected: true,
-          }),
-          isReady: true,
-        },
-      },
-    }));
-
-    const channel = supabase.channel(`room:${roomCode}`);
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
@@ -584,13 +567,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       sender: 'player',
       senderName: playerName,
       senderId: playerName,
-      question: chatInput,
+      question: chatInput.trim(),
     };
 
     setChatMessages((prev) => [...prev, item]);
     setChatInput('');
+    soundFx.playSelect();
 
-    const channel = supabase.channel(`room:${roomCode}`);
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
       type: 'broadcast',
       event: 'game_event',
@@ -601,87 +585,20 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Clipboard Actions ───────────────────────────────────────────── */
   const handleCopyRoomCode = () => {
     soundFx.playSelect();
-
-    const nextTurnPlayer = opponentName || 'Opponent';
-    const updatedState: SharedRoomState = {
-      ...sharedRoomState,
-      currentTurnPlayerId: nextTurnPlayer,
-      turnStartedAt: Date.now(),
-    };
-
-    setSharedRoomState(updatedState);
-
-    const channel = supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'turn_changed',
-        currentTurnPlayerId: nextTurnPlayer,
-        sharedState: updatedState,
-      },
-    });
-
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        sender: 'system',
-        question: `Turn passed to ${nextTurnPlayer}.`,
-      },
-    ]);
+    navigator.clipboard.writeText(roomCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const handleEndTurnRef = useRef(handleEndTurn);
-  useEffect(() => {
-    handleEndTurnRef.current = handleEndTurn;
-  });
-
-  // Turn timer countdown effect
-  useEffect(() => {
-    const timerSetting = sharedRoomState.turnTimerSetting;
-    const turnStarted = sharedRoomState.turnStartedAt;
-    const activePlayer = sharedRoomState.currentTurnPlayerId;
-    const isGameActive = sharedRoomState.gameStatus === 'active';
-
-    if (!isGameActive || !timerSetting || timerSetting <= 0 || !turnStarted || !activePlayer) {
-      setTimeLeft(null);
-      return;
+  const handleConfirmLeave = () => {
+    soundFx.playSelect();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(`room_${roomCode}_role`);
+      sessionStorage.removeItem(`room_${roomCode}_name`);
+      sessionStorage.removeItem(`room_${roomCode}_avatar`);
     }
-
-    const updateTimer = () => {
-      const elapsed = Math.floor((Date.now() - turnStarted) / 1000);
-      const remaining = Math.max(0, timerSetting - elapsed);
-      setTimeLeft(remaining);
-
-      if (remaining === 0 && activePlayer === playerName && lastTimeoutTurnRef.current !== turnStarted) {
-        lastTimeoutTurnRef.current = turnStarted;
-        soundFx.playCardFlip(true);
-        handleEndTurnRef.current();
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            id: Math.random().toString(),
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            sender: 'system',
-            question: `⏰ Time's up! Turn automatically passed to ${opponentName || 'opponent'}.`,
-          },
-        ]);
-      }
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [
-    sharedRoomState.turnTimerSetting,
-    sharedRoomState.turnStartedAt,
-    sharedRoomState.currentTurnPlayerId,
-    sharedRoomState.gameStatus,
-    playerName,
-    opponentName,
-  ]);
+    router.push(isHost ? '/host' : '/');
+  };
 
   const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
   const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
@@ -704,44 +621,26 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       e.preventDefault();
       soundFx.playSelect();
 
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        sender: 'system',
-        question: `🚩 ${playerName} surrendered the match.`,
-      },
-    ]);
-  };
+      if (requiredPassword && inputPassword !== requiredPassword) {
+        setPassError('Incorrect room passcode.');
+        return;
+      }
 
-  const handlePlayAgain = () => {
-    soundFx.playSelect();
-    setGameResult(null);
-    setCurrentWinReason(null);
-    setLastGuessedCard(null);
+      const nicknameToUse = joinNickname.trim() || generateRandomName();
+      const avatarUrl = selectedAvatar.startsWith('https://') ? selectedAvatar : '';
+      const localPresenceKey = avatarUrl ? `${avatarUrl} ${nicknameToUse}` : nicknameToUse;
 
-    setPlayerSecretId(null);
-    setOpponentSecretId(null);
-    setIsSecretSelected(false);
-    setIsOpponentReady(false);
-    setFlippedCardIds([]);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`room_${roomCode}_name`, localPresenceKey);
+        if (avatarUrl) sessionStorage.setItem(`room_${roomCode}_avatar`, avatarUrl);
+      }
 
-    const nextRound = sharedRoomState.gameRound + 1;
-    const updatedState: SharedRoomState = {
-      ...sharedRoomState,
-      gameStatus: 'selecting_character',
-      currentTurnPlayerId: null,
-      turnStartedAt: null,
-      winnerPlayerId: null,
-      winReason: null,
-      gameRound: nextRound,
-      players: Object.fromEntries(
-        Object.entries(sharedRoomState.players).map(([id, p]) => [
-          id,
-          { ...p, isReady: false },
-        ])
-      ),
+      setPlayerAvatar(avatarUrl);
+      setPresenceKey(localPresenceKey);
+      setPlayerName(nicknameToUse);
+      setPassError(null);
+      setIsUnlocked(true);
+      setHasSetIdentity(true);
     };
 
     return (
@@ -778,15 +677,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             </p>
           </div>
 
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        sender: 'system',
-        question: `🔄 Round ${nextRound} started! Choose your secret characters.`,
-      },
-    ]);
+          <form onSubmit={handleJoinSubmit} className="flex flex-col gap-6">
+            <PlayerProfileSetup
+              name={joinNickname}
+              avatar={selectedAvatar}
+              onNameChange={setJoinNickname}
+              onAvatarChange={setSelectedAvatar}
+              compact={false}
+            />
 
             {requiredPassword && (
               <div>
