@@ -89,6 +89,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
+
+  useEffect(() => {
+    if (template && template.id) {
+      setCurrentTemplate(template);
+    }
+  }, [template]);
+
   useEffect(() => {
     if (!isUnlocked) return;
 
@@ -109,6 +117,26 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       if (payload.type === 'shared_state_sync') {
         if (payload.sharedState) {
           setSharedRoomState(payload.sharedState);
+        }
+      } else if (payload.type === 'template_changed') {
+        if (payload.template) {
+          setCurrentTemplate(payload.template);
+          setPlayerSecretId(null);
+          setIsSecretSelected(false);
+          setFlippedCardIds([]);
+          setSharedRoomState((prev) => ({
+            ...prev,
+            selectedSetId: payload.template.id,
+          }));
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: Math.random().toString(),
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sender: 'system',
+              question: `Host changed character deck to "${payload.template.title}"`,
+            },
+          ]);
         }
       } else if (payload.type === 'secret_selected') {
         if (payload.sender !== playerName) {
@@ -144,6 +172,51 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       supabase.removeChannel(channel);
     };
   }, [roomCode, playerName, isUnlocked]);
+
+  const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
+    if (!isHost) return;
+    soundFx.playSelect();
+    setCurrentTemplate(newTemplate);
+    setPlayerSecretId(null);
+    setIsSecretSelected(false);
+    setFlippedCardIds([]);
+
+    const updatedSharedState: SharedRoomState = {
+      ...sharedRoomState,
+      selectedSetId: newTemplate.id,
+    };
+    setSharedRoomState(updatedSharedState);
+
+    // Broadcast template change to all connected clients
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'template_changed', template: newTemplate },
+    });
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'shared_state_sync', sharedState: updatedSharedState },
+    });
+
+    // Update Database using correct column 'code'
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(newTemplate.id);
+      await supabase
+        .from('game_rooms')
+        .update({
+          template_id: isUuid ? newTemplate.id : null,
+          state: {
+            selectedTemplateId: newTemplate.id,
+            sharedState: updatedSharedState,
+          },
+        })
+        .eq('code', roomCode);
+    } catch (err) {
+      console.warn('Failed to update room template in DB:', err);
+    }
+  };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,9 +307,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     });
   };
 
-  const playerSecretCard = template.cards.find((c) => c.id === playerSecretId) || null;
-  const opponentSecretCard = template.cards.find((c) => c.id === opponentSecretId) || null;
-  const standingCardsCount = template.cards.length - flippedCardIds.length;
+  const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
+  const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
+  const standingCardsCount = currentTemplate.cards.length - flippedCardIds.length;
 
   /* ── Password Gate ─────────────────────────────────────────── */
   if (!isUnlocked) {
@@ -301,7 +374,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 Live
               </span>
             </div>
-            <p className="text-slate-500 text-[11px] font-semibold truncate">{template.title} · {template.cards.length} cards</p>
+            <p className="text-slate-500 text-[11px] font-semibold truncate">{currentTemplate.title} · {currentTemplate.cards.length} cards</p>
           </div>
         </div>
 
@@ -459,7 +532,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           </p>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 w-full">
-            {template.cards.map((card) => (
+            {currentTemplate.cards.map((card) => (
               <CardFlip
                 key={card.id}
                 card={card}
@@ -483,7 +556,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black px-3 py-1 rounded-full"
                   style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-                  {standingCardsCount} / {template.cards.length} Standing
+                  {standingCardsCount} / {currentTemplate.cards.length} Standing
                 </span>
                 {opponentName && (
                   <span className="hidden sm:inline text-xs text-slate-400 font-semibold">
@@ -508,7 +581,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
             {/* Cards */}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-              {template.cards.map((card) => (
+              {currentTemplate.cards.map((card) => (
                 <CardFlip
                   key={card.id}
                   card={card}

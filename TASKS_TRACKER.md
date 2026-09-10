@@ -12,8 +12,8 @@ Base Branch for Integration: `main`
 | :--- | :--- | :--- | :--- |
 | **TASK 1** | Audit game/session state architecture | `feature/01-state-architecture-audit` | ✅ Completed |
 | **TASK 2** | Fix shared room/game state | `feature/02-authoritative-room-state` | ✅ Completed |
-| **TASK 3** | Fix set consistency (Host Authoritative Deck) | `feature/03-host-deck-consistency` | ⏳ Pending Task 2 |
-| **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ⏳ Pending |
+| **TASK 3** | Fix set consistency (Host Authoritative Deck) | `feature/03-host-deck-consistency` | ✅ Completed |
+| **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ⏳ Pending Task 3 |
 | **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ⏳ Pending |
 | **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ⏳ Pending |
 | **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ⏳ Pending |
@@ -39,7 +39,10 @@ Base Branch for Integration: `main`
 - [x] Integrated `sharedRoomState` hook & `shared_state_sync` broadcast listener in `MultiplayerBoard.tsx`.
 
 ### TASK 3: Fix set consistency
-- [ ] Ensure host-selected set is the ONLY active game set. Store `selectedSetId` in shared room state. Both clients load identical deck.
+- [x] Fixed DB update column query bug (`.eq('code', roomCode)`) for template changes.
+- [x] Host-selected set updates DB `game_rooms` and broadcasts `template_changed` + `shared_state_sync`.
+- [x] Guests automatically load and lock to host's authoritative `selectedSetId`.
+- [x] Replaced static `template` references in `MultiplayerBoard.tsx` with dynamic `currentTemplate` state.
 
 ### TASK 4: Fix secret-character readiness
 - [ ] Both players must select secret character before game begins. Render readiness status (`Ready ✓` vs `Choosing...`) without exposing secret character IDs.
