@@ -83,7 +83,9 @@ Base Branch for Integration: `main`
 - [x] Implemented real-time countdown timer in MultiplayerBoard with color-coded warning states and automatic turn passing on timeout.
 
 ### TASK 11: Fix all win/lose/result scenarios
-- [ ] Handle all end-game outcomes (Correct Guess, Wrong Final Guess, Opponent Wrong Guess, Surrender, Disconnection, Timeout) with explicit win/loss reasons.
+- [x] Handled explicit `winReason` (`correct_guess`, `wrong_guess`, `opponent_wrong_guess`, `surrender`, `disconnect`, `timeout`).
+- [x] Redesigned `VictoryModal.tsx` to display context-aware headers, detailed scenario explanations, and side-by-side card reveal (Your Character vs Opponent's Character).
+- [x] Added Surrender CTA button in HUD header bar with confirmation modal dialog.
 
 ### TASK 12: Fix replay/new-round architecture
 - [ ] Replay returns to room setup/lobby. Host can adjust set/timer settings before starting round `gameRound + 1`.

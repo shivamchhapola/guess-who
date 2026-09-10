@@ -10,7 +10,7 @@ import { soundFx } from '@/lib/audio';
 import {
   Eye, Volume2, VolumeX, MessageSquare, Send, Copy, Check,
   ArrowLeft, ArrowRight, Lock, RotateCcw, ChevronDown, ChevronUp,
-  CheckCircle2, Clock, UserCheck, Loader2, Sparkles,
+  CheckCircle2, Clock, UserCheck, Loader2, Sparkles, Flag,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -81,6 +81,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [selectedGuessCard, setSelectedGuessCard] = useState<CharacterCard | null>(null);
   const [isGuessModalOpen, setIsGuessModalOpen] = useState<boolean>(false);
   const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
+  const [currentWinReason, setCurrentWinReason] = useState<WinReason | null>(null);
+  const [lastGuessedCard, setLastGuessedCard] = useState<CharacterCard | null>(null);
+  const [isSurrenderModalOpen, setIsSurrenderModalOpen] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -205,10 +208,21 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       } else if (payload.type === 'chat_message') {
         setChatMessages((prev) => [...prev, payload.item]);
       } else if (payload.type === 'declare_victory') {
+        if (payload.guessedCardId) {
+          const foundCard = currentTemplate.cards.find((c) => c.id === payload.guessedCardId);
+          if (foundCard) setLastGuessedCard(foundCard);
+        }
+
         if (payload.winner === playerName) {
           setGameResult('won');
+          setCurrentWinReason(payload.winReason || 'correct_guess');
         } else {
           setGameResult('lost');
+          if (payload.winReason === 'opponent_wrong_guess') {
+            setCurrentWinReason('wrong_guess');
+          } else {
+            setCurrentWinReason(payload.winReason || 'correct_guess');
+          }
         }
       }
     });
@@ -495,12 +509,15 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       return;
     }
 
+    setLastGuessedCard(card);
     const isWinner = opponentSecretId ? card.id === opponentSecretId : true;
 
     if (isWinner) {
       setGameResult('won');
+      setCurrentWinReason('correct_guess');
     } else {
       setGameResult('lost');
+      setCurrentWinReason('wrong_guess');
     }
 
     const channel = supabase.channel(`room:${roomCode}`);
@@ -509,9 +526,52 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       event: 'game_event',
       payload: {
         type: 'declare_victory',
-        winner: isWinner ? playerName : opponentName || 'Opponent',
+        winner: isWinner ? playerName : (opponentName || 'Opponent'),
+        winReason: isWinner ? 'correct_guess' : 'opponent_wrong_guess',
+        guessedCardId: card.id,
       },
     });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: isWinner
+          ? `🎯 ${playerName} guessed "${card.name}" correctly and WON the match!`
+          : `❌ ${playerName} guessed "${card.name}" incorrectly and FORFEITED!`,
+      },
+    ]);
+  };
+
+  const handleSurrender = () => {
+    setIsSurrenderModalOpen(false);
+    soundFx.playDefeat();
+
+    setGameResult('lost');
+    setCurrentWinReason('surrender');
+
+    const channel = supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'declare_victory',
+        winner: opponentName || 'Opponent',
+        winReason: 'surrender',
+      },
+    });
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `🚩 ${playerName} surrendered the match.`,
+      },
+    ]);
   };
 
   const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
@@ -623,6 +683,19 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           >
             {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-amber-400" />}
           </button>
+
+          {/* Surrender Button */}
+          {sharedRoomState.gameStatus === 'active' && gameResult === null && (
+            <button
+              type="button"
+              onClick={() => setIsSurrenderModalOpen(true)}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 cursor-pointer"
+              title="Surrender match"
+            >
+              <Flag className="w-3.5 h-3.5 text-rose-400" />
+              <span className="hidden sm:inline">Surrender</span>
+            </button>
+          )}
 
           {/* Chat toggle (mobile) */}
           <button
@@ -1069,9 +1142,50 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       <VictoryModal
         isOpen={gameResult !== null}
         isWon={gameResult === 'won'}
-        secretCard={opponentSecretCard}
-        onPlayAgain={() => setGameResult(null)}
+        winReason={currentWinReason}
+        winnerName={gameResult === 'won' ? playerName : (opponentName || 'Opponent')}
+        guessedCard={lastGuessedCard}
+        secretCard={playerSecretCard}
+        opponentSecretCard={opponentSecretCard}
+        onPlayAgain={() => {
+          setGameResult(null);
+          setCurrentWinReason(null);
+          setLastGuessedCard(null);
+        }}
       />
+
+      {/* Surrender Confirmation Modal */}
+      {isSurrenderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-lg">
+          <div className="glass-panel w-full max-w-md p-6 rounded-3xl text-center border border-rose-500/40 shadow-2xl shadow-rose-500/20 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-4">
+              <Flag className="w-7 h-7" />
+            </div>
+            <h3 className="text-xl font-extrabold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Surrender Match?
+            </h3>
+            <p className="text-slate-300 text-xs mb-6 leading-relaxed">
+              Are you sure you want to forfeit this round? Your opponent will be awarded an immediate victory.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsSurrenderModalOpen(false)}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-white/5 border border-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSurrender}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-black bg-rose-500 hover:bg-rose-400 text-white shadow-lg shadow-rose-500/30 transition-all cursor-pointer"
+              >
+                Yes, Surrender
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
