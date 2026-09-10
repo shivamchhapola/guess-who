@@ -12,7 +12,7 @@ import { soundFx } from '@/lib/audio';
 import {
   Eye, MessageSquare, Send, Copy, Check,
   ArrowLeft, Lock, RotateCcw, Users,
-  Play, RefreshCw, X, Search, Clock, Flag, ArrowRight,
+  Play, RefreshCw, X, Search, Clock, Flag, ArrowRight, Sparkles,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -73,6 +73,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
   const [showSurrenderModal, setShowSurrenderModal] = useState<boolean>(false);
+  const [showMobileSecretModal, setShowMobileSecretModal] = useState<boolean>(false);
 
   /* ── Authoritative 14-Task Shared Room State ─────────────────────── */
   const [gameStatus, setGameStatus] = useState<GameStatus>('setup'); // 'setup' | 'selecting_character' | 'active' | 'finished'
@@ -313,7 +314,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         setWinReason(payload.winReason);
         if (payload.secretCardId) setOpponentSecretId(payload.secretCardId);
       } else if (payload.type === 'new_round_started') {
-        setGameStatus('selecting_character');
+        setGameStatus('setup'); // Return to lobby for settings / deck changes before starting next match
         setPlayerSecretId(null);
         setOpponentSecretId(null);
         setIsMyReady(false);
@@ -328,7 +329,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             id: Math.random().toString(),
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             sender: 'system',
-            question: `Round ${payload.gameRound || 'New'} started! Select your secret characters.`,
+            question: `Returned to lobby for Round ${payload.gameRound || 'New'}. Host can change settings or deck before starting!`,
           },
         ]);
       }
@@ -427,14 +428,10 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       event: 'game_event',
       payload: { type: 'player_ready', sender: playerName },
     });
-
-    if (isOpponentReady || (isHost && connectedPlayers.length >= 2)) {
-      handleStartActiveMatch();
-    }
   };
 
   /* ── Host Launches Active Match with Random First Turn ───────────── */
-  const handleStartActiveMatch = () => {
+  const handleStartActiveMatch = useCallback(() => {
     const oppName = opponentName || 'Opponent';
     const startingPlayer = Math.random() < 0.5 ? playerName : oppName;
     const now = Date.now();
@@ -453,7 +450,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         turnStartedAt: now,
       },
     });
-  };
+  }, [opponentName, playerName, roomCode, supabase]);
+
+  /* ── Host Auto-Start Active Match Listener ───────────────────────── */
+  useEffect(() => {
+    if (isHost && gameStatus === 'selecting_character' && isMyReady && isOpponentReady) {
+      handleStartActiveMatch();
+    }
+  }, [isHost, gameStatus, isMyReady, isOpponentReady, handleStartActiveMatch]);
 
   /* ── Pass Turn Action ───────────────────────────────────────────── */
   const handleEndTurn = (reason?: 'timeout') => {
@@ -535,7 +539,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Rematch / Play Again Action ─────────────────────────────────── */
   const handlePlayAgain = () => {
     const nextRound = gameRound + 1;
-    setGameStatus('selecting_character');
+    setGameStatus('setup'); // Return to lobby for settings / deck changes before starting next match
     setPlayerSecretId(null);
     setOpponentSecretId(null);
     setIsMyReady(false);
@@ -935,7 +939,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             </div>
           </div>
 
-          {/* Right Column: Selected Deck */}
+          {/* Right Column: Selected Deck & Host Controls */}
           <div className="lg:col-span-6 flex flex-col gap-6">
             <div className="game-panel p-6 rounded-3xl border border-amber-500/30 flex flex-col gap-5">
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -977,6 +981,53 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Host Turn Timer Setting Switcher in Lobby */}
+            {isHost && (
+              <div className="game-panel p-6 rounded-3xl border border-white/10 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    <h3 className="text-sm font-bold text-white">Turn Timer Setting</h3>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                    {turnTimerSetting === 0 ? 'Off' : `${turnTimerSetting}s`}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">Host can change time limit per turn before starting match:</p>
+                <div className="grid grid-cols-5 gap-2 pt-1">
+                  {[0, 30, 60, 90, 120].map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playSelect();
+                        setTurnTimerSetting(sec);
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.setItem(`room_${roomCode}_timer`, String(sec));
+                        }
+                        const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+                        channel.send({
+                          type: 'broadcast',
+                          event: 'game_event',
+                          payload: {
+                            type: 'shared_state_sync',
+                            state: { turnTimerSetting: sec },
+                          },
+                        });
+                      }}
+                      className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                        turnTimerSetting === sec
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {sec === 0 ? 'Off' : `${sec}s`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1152,6 +1203,19 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           </div>
         </div>
 
+        {/* Mobile Secret Character Modal Trigger */}
+        {playerSecretCard && (
+          <button
+            type="button"
+            onClick={() => setShowMobileSecretModal(true)}
+            className="lg:hidden px-3 py-1.5 rounded-xl text-amber-300 bg-amber-500/10 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5"
+            title="View your secret character"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>My Secret</span>
+          </button>
+        )}
+
         {/* Turn Countdown Timer */}
         {turnTimerSetting > 0 && (
           <div className={`px-4 py-1.5 rounded-full text-xs font-mono font-extrabold flex items-center gap-1.5 border transition-all ${
@@ -1311,6 +1375,35 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Mobile Secret Character Modal */}
+      {showMobileSecretModal && playerSecretCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in"
+          onClick={() => setShowMobileSecretModal(false)}
+        >
+          <div
+            className="game-panel p-6 rounded-3xl max-w-xs w-full border border-amber-500/40 text-center flex flex-col items-center shadow-2xl animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-2">
+              YOUR SECRET CHARACTER
+            </span>
+            <div className="relative w-28 h-36 rounded-2xl overflow-hidden border-2 border-amber-400 mb-3 bg-slate-950">
+              <Image src={playerSecretCard.imageUrl} alt={playerSecretCard.name} fill className="object-cover" unoptimized />
+            </div>
+            <h3 className="text-xl font-black text-white mb-1">{playerSecretCard.name}</h3>
+            <p className="text-xs text-slate-400 mb-4">Keep this character safe from your opponent!</p>
+            <button
+              type="button"
+              onClick={() => setShowMobileSecretModal(false)}
+              className="w-full py-2.5 rounded-xl font-bold text-xs bg-white/10 text-white hover:bg-white/20 border border-white/10"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Final Guess Modal */}
       {isGuessModalOpen && selectedGuessCard && (
