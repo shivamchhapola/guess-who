@@ -159,6 +159,27 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           setIsOpponentReady(true);
           setOpponentSecretId(payload.cardId);
         }
+      } else if (payload.type === 'turn_assigned') {
+        if (payload.sharedState) {
+          setSharedRoomState(payload.sharedState);
+        } else if (payload.currentTurnPlayerId) {
+          setSharedRoomState((prev) => ({
+            ...prev,
+            gameStatus: 'active',
+            currentTurnPlayerId: payload.currentTurnPlayerId,
+            turnStartedAt: Date.now(),
+          }));
+        }
+        soundFx.playSelect();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `Match started! ${payload.currentTurnPlayerId === playerName ? 'You go first!' : `${payload.currentTurnPlayerId} goes first!`}`,
+          },
+        ]);
       } else if (payload.type === 'chat_message') {
         setChatMessages((prev) => [...prev, payload.item]);
       } else if (payload.type === 'declare_victory') {
@@ -180,6 +201,44 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       supabase.removeChannel(channel);
     };
   }, [roomCode, playerName, isUnlocked]);
+
+  // Host random turn assignment when both players become ready
+  useEffect(() => {
+    if (isHost && isSecretSelected && isOpponentReady && !sharedRoomState.currentTurnPlayerId) {
+      const candidates = [playerName];
+      if (opponentName) candidates.push(opponentName);
+      const chosenStarter = candidates[Math.floor(Math.random() * candidates.length)];
+
+      const updatedState: SharedRoomState = {
+        ...sharedRoomState,
+        gameStatus: 'active',
+        currentTurnPlayerId: chosenStarter,
+        turnStartedAt: Date.now(),
+      };
+      setSharedRoomState(updatedState);
+
+      const channel = supabase.channel(`room:${roomCode}`);
+      channel.send({
+        type: 'broadcast',
+        event: 'game_event',
+        payload: {
+          type: 'turn_assigned',
+          currentTurnPlayerId: chosenStarter,
+          sharedState: updatedState,
+        },
+      });
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sender: 'system',
+          question: `Match started! ${chosenStarter === playerName ? 'You go first!' : `${chosenStarter} goes first!`}`,
+        },
+      ]);
+    }
+  }, [isHost, isSecretSelected, isOpponentReady, sharedRoomState, playerName, opponentName, roomCode, supabase]);
 
   const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
     if (!isHost) return;
@@ -622,16 +681,29 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           {/* Card Grid Column */}
           <div className="flex-1 min-w-0">
             {/* Status Bar */}
-            <div className="game-panel px-4 py-2.5 rounded-xl mb-4 flex items-center justify-between gap-3"
+            <div className="game-panel px-4 py-3 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3"
               style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black px-3 py-1 rounded-full"
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-black px-3 py-1.5 rounded-xl"
                   style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
                   {standingCardsCount} / {currentTemplate.cards.length} Standing
                 </span>
-                {opponentName && (
-                  <span className="hidden sm:inline text-xs text-slate-400 font-semibold">
-                    VS <span className="text-white">{opponentName}</span>
+
+                {/* Turn Indicator Banner */}
+                {sharedRoomState.currentTurnPlayerId ? (
+                  sharedRoomState.currentTurnPlayerId === playerName ? (
+                    <span className="px-3.5 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 flex items-center gap-1.5 animate-pulse">
+                      ⚡ YOUR TURN
+                    </span>
+                  ) : (
+                    <span className="px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-900 border border-slate-700 text-slate-300 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                      <span>{opponentName || 'Opponent'}'s Turn</span>
+                    </span>
+                  )
+                ) : (
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 bg-white/5 border border-white/10">
+                    Assigning Turn...
                   </span>
                 )}
               </div>

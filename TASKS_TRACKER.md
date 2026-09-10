@@ -14,8 +14,8 @@ Base Branch for Integration: `main`
 | **TASK 2** | Fix shared room/game state | `feature/02-authoritative-room-state` | ✅ Completed |
 | **TASK 3** | Fix set consistency (Host Authoritative Deck) | `feature/03-host-deck-consistency` | ✅ Completed |
 | **TASK 4** | Fix secret-character readiness gate | `feature/04-readiness-start-gate` | ✅ Completed |
-| **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ⏳ Pending Task 4 |
-| **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ⏳ Pending |
+| **TASK 5** | Fix game start & random first turn | `feature/05-game-start-random-turn` | ✅ Completed |
+| **TASK 6** | Fix turn/action state machine | `feature/06-turn-action-state-machine` | ⏳ Pending Task 5 |
 | **TASK 7** | Fix desktop gameplay interaction | `feature/07-desktop-gameplay-ux` | ⏳ Pending |
 | **TASK 8** | Redesign MOBILE gameplay interactions | `feature/08-mobile-touch-interactions` | ⏳ Pending |
 | **TASK 9** | Implement turn messaging & visual state | `feature/09-turn-messaging-visual-state` | ⏳ Pending |
@@ -51,7 +51,9 @@ Base Branch for Integration: `main`
 - [x] Built waiting overlay screen that holds active game board until opponent selection is ready.
 
 ### TASK 5: Fix game start & random first turn
-- [ ] Wait for both players to choose character. Host randomly picks starting player (`currentTurnPlayerId`). Synchronize to both clients.
+- [x] Implemented host random starting player assignment (`Math.random()`) when both players become ready.
+- [x] Synchronized `currentTurnPlayerId` in shared state & broadcasted `turn_assigned` event.
+- [x] Rendered prominent turn status badges ("⚡ YOUR TURN" vs "⏳ OPPONENT'S TURN") on active gameplay HUD.
 
 ### TASK 6: Fix turn/action state machine
 - [ ] Enforce active player turn checks for turn-exclusive actions (asking, guessing, flipping) in application state, rejecting invalid actions.
