@@ -1,19 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { CardSetTemplate, CharacterCard, QuestionLogItem, WinReason } from '@/types/game';
-import { createClient } from '@/lib/supabase/client';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { CardSetTemplate, CharacterCard } from '@/types/game';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
-import { CardFlip } from './CardFlip';
 import { GuessModal } from './GuessModal';
 import { VictoryModal } from './VictoryModal';
 import { RoomPasswordGate } from './RoomPasswordGate';
 import { JoinIdentityGate } from './JoinIdentityGate';
 import { soundFx } from '@/lib/audio';
-import {
-  RotateCcw, WifiOff,
-} from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { SetPreviewModal } from '../SetPreviewModal';
 import { matchesSearch } from '@/lib/setUtils';
@@ -21,10 +17,11 @@ import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
 
 import { useMultiplayerRoom } from '@/hooks/useMultiplayerRoom';
 import { PreGameLobbyView } from './PreGameLobbyView';
-import { GameChatLog } from './GameChatLog';
-import { GameHeaderBar } from './GameHeaderBar';
 import { CharacterSelectionBanner } from './CharacterSelectionBanner';
+import { ActiveGameView } from './ActiveGameView';
 import { DeckChangeModal } from './DeckChangeModal';
+import { SurrenderModal } from './SurrenderModal';
+import { LeaveRoomModal } from './LeaveRoomModal';
 
 interface MultiplayerBoardProps {
   roomCode: string;
@@ -38,9 +35,8 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   requiredPassword,
 }) => {
   const router = useRouter();
-  const supabase = createClient();
 
-  /* ── Core Local & Room Identity State ───────────────────────────── */
+  /* ── Identity & Security Gate State ────────────────────────────── */
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [isHost, setIsHost] = useState<boolean>(false);
   const [playerName, setPlayerName] = useState<string>('');
@@ -50,23 +46,20 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [selectedAvatar, setSelectedAvatar] = useState<string>('🎮');
   const [playerAvatar, setPlayerAvatar] = useState<string>('');
 
-  /* ── Password Security Gate ─────────────────────────────────────── */
   const [isUnlocked, setIsUnlocked] = useState<boolean>(!requiredPassword);
   const [inputPassword, setInputPassword] = useState<string>('');
   const [passError, setPassError] = useState<string | null>(null);
 
-  /* ── Template & Set Selection State ────────────────────────────── */
+  /* ── Template & UI State ────────────────────────────────────────── */
   const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
   const [isChangeSetOpen, setIsChangeSetOpen] = useState<boolean>(false);
   const [setSearchQuery, setSetSearchQuery] = useState<string>('');
-  const [selectedTagFilter] = useState<string | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<CardSetTemplate | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<CardSetTemplate[]>([
     ...ALL_POPULAR_TEMPLATES,
     CLASSIC_GUESS_WHO_TEMPLATE,
   ]);
 
-  /* ── Modals & UI Controls ───────────────────────────────────────── */
   const [selectedGuessCard, setSelectedGuessCard] = useState<CharacterCard | null>(null);
   const [isGuessModalOpen, setIsGuessModalOpen] = useState<boolean>(false);
   const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
@@ -74,9 +67,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(() => soundFx.getMutedState());
 
-  const hasLaunchedRef = useRef<boolean>(false);
-
-  /* ── Room WebSocket & State Management Custom Hook ─────────────── */
+  /* ── Room Custom Hook ────────────────────────────────────────────── */
   const room = useMultiplayerRoom({
     roomCode,
     isUnlocked,
@@ -86,50 +77,48 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     playerAvatar,
     isHost,
     initialTemplate: currentTemplate,
+    onTemplateChangedByHost: (newTpl) => setCurrentTemplate(newTpl),
   });
 
   const {
+    supabase,
     opponentName,
     opponentAvatar,
     disconnectSeconds,
     gameStatus,
-    setGameStatus,
     turnTimerSetting,
     setTurnTimerSetting,
     currentTurnPlayerId,
     setCurrentTurnPlayerId,
     setTurnStartedAt,
     winnerId,
-    setWinnerId,
     winReason,
-    setWinReason,
-    gameRound,
-    setGameRound,
     isMyReady,
     setIsMyReady,
     isOpponentReady,
-    setIsOpponentReady,
     playerSecretId,
     updatePlayerSecretId,
     opponentSecretId,
-    setOpponentSecretId,
     flippedCardIds,
     updateFlippedCardIds,
     chatMessages,
-    setChatMessages,
-    channelRef,
     localTurnStartAnchorRef,
     syncRoomStateToDb,
+    handleStartActiveMatch,
+    handleHostChangeTemplate,
+    handleHostStartGame,
+    handleSelectSecretCard,
+    handleToggleFlip,
+    handleConfirmGuess,
+    handleSurrender,
+    handlePlayAgain,
+    handleSendChatMessage,
   } = room;
 
   /* ── Filtered Templates ─────────────────────────────────────────── */
   const filteredTemplates = useMemo(() => {
-    return availableTemplates.filter((t) => {
-      const queryMatch = matchesSearch(t, setSearchQuery);
-      const tagMatch = !selectedTagFilter || (t.tags || []).includes(selectedTagFilter);
-      return queryMatch && tagMatch;
-    });
-  }, [availableTemplates, setSearchQuery, selectedTagFilter]);
+    return availableTemplates.filter((t) => matchesSearch(t, setSearchQuery));
+  }, [availableTemplates, setSearchQuery]);
 
   /* ── Hydration & Session Identity Setup ──────────────────────────── */
   useEffect(() => {
@@ -140,9 +129,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         setPresenceKey(rawName);
 
         const savedTimer = sessionStorage.getItem(`room_${roomCode}_timer`);
-        if (savedTimer) {
-          setTurnTimerSetting(Number(savedTimer));
-        }
+        if (savedTimer) setTurnTimerSetting(Number(savedTimer));
 
         const savedSecret = sessionStorage.getItem(`room_${roomCode}_secret`);
         if (savedSecret) {
@@ -154,9 +141,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         if (savedFlips) {
           try {
             const parsed = JSON.parse(savedFlips);
-            if (Array.isArray(parsed)) {
-              updateFlippedCardIds(parsed);
-            }
+            if (Array.isArray(parsed)) updateFlippedCardIds(parsed);
           } catch {
             // Ignore parse errors
           }
@@ -182,7 +167,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     }
   }, [roomCode, setTurnTimerSetting, updateFlippedCardIds, updatePlayerSecretId, setIsMyReady]);
 
-  /* ── Fetch DB Templates ─────────────────────────────────────────── */
+  /* ── Fetch Remote DB Templates for Lobby Selection ───────────────── */
   useEffect(() => {
     async function fetchAllTemplates() {
       try {
@@ -218,7 +203,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     fetchAllTemplates();
   }, [supabase]);
 
-  /* ── Turn Timer Real-time Countdown ─────────────────────────────── */
+  /* ── Turn Timer Countdown Clock ─────────────────────────────────── */
   const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
 
   const handleEndTurn = useCallback((reason?: 'timeout') => {
@@ -232,29 +217,15 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setTurnStartedAt(now);
     localTurnStartAnchorRef.current = now;
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'turn_changed',
-        nextTurnPlayerId: nextPlayer,
-        turnStartedAt: now,
-        reason,
-      },
-    });
-
     syncRoomStateToDb({
       status: 'active',
       currentTurnPlayerId: nextPlayer,
       turnStartedAt: now,
     });
-  }, [currentTurnPlayerId, opponentName, playerName, roomCode, supabase, syncRoomStateToDb, setCurrentTurnPlayerId, setTurnStartedAt, channelRef, localTurnStartAnchorRef]);
+  }, [currentTurnPlayerId, opponentName, playerName, syncRoomStateToDb, setCurrentTurnPlayerId, setTurnStartedAt, localTurnStartAnchorRef]);
 
   useEffect(() => {
-    if (gameStatus !== 'active' || !turnTimerSetting || turnTimerSetting === 0) {
-      return;
-    }
+    if (gameStatus !== 'active' || !turnTimerSetting || turnTimerSetting === 0) return;
 
     if (localTurnStartAnchorRef.current === 0) {
       localTurnStartAnchorRef.current = Date.now();
@@ -274,38 +245,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     return () => clearInterval(interval);
   }, [gameStatus, turnTimerSetting, currentTurnPlayerId, playerName, handleEndTurn, localTurnStartAnchorRef]);
 
-  /* ── Host Launch Active Match ────────────────────────────────────── */
-  const handleStartActiveMatch = useCallback(() => {
-    if (hasLaunchedRef.current) return;
-    hasLaunchedRef.current = true;
-
-    const oppName = opponentName || 'Opponent';
-    const startingPlayer = Math.random() < 0.5 ? playerName : oppName;
-    const now = Date.now();
-
-    setGameStatus('active');
-    setCurrentTurnPlayerId(startingPlayer);
-    setTurnStartedAt(now);
-    localTurnStartAnchorRef.current = now;
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'game_started',
-        startingPlayerId: startingPlayer,
-        turnStartedAt: now,
-      },
-    });
-
-    syncRoomStateToDb({
-      status: 'active',
-      currentTurnPlayerId: startingPlayer,
-      turnStartedAt: now,
-    });
-  }, [opponentName, playerName, roomCode, supabase, syncRoomStateToDb, setGameStatus, setCurrentTurnPlayerId, setTurnStartedAt, channelRef, localTurnStartAnchorRef]);
-
+  /* ── Auto-Start Active Match When Both Ready ─────────────────────── */
   useEffect(() => {
     if (isHost && gameStatus === 'selecting_character' && isMyReady && isOpponentReady) {
       queueMicrotask(() => {
@@ -314,201 +254,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     }
   }, [isHost, gameStatus, isMyReady, isOpponentReady, handleStartActiveMatch]);
 
-  /* ── Host Deck Switcher ─────────────────────────────────────────── */
-  const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
-    soundFx.playSelect();
-    setCurrentTemplate(newTemplate);
-    setIsChangeSetOpen(false);
-    updatePlayerSecretId(null);
-    setIsMyReady(false);
-    setIsOpponentReady(false);
-    updateFlippedCardIds([]);
-    hasLaunchedRef.current = false;
-
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        sender: 'system',
-        question: `Host updated character deck to "${newTemplate.title}"`,
-      },
-    ]);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: { type: 'template_changed', template: newTemplate },
-    });
-
-    syncRoomStateToDb({
-      status: 'setup',
-      selectedSetId: newTemplate.id,
-    });
-
-    try {
-      await supabase
-        .from('game_rooms')
-        .update({ template_id: newTemplate.id })
-        .eq('code', roomCode);
-    } catch (err) {
-      console.warn('Failed to update room template in DB:', err);
-    }
-  };
-
-  /* ── Host Triggers Character Selection Phase ─────────────────────── */
-  const handleHostStartGame = () => {
-    soundFx.playSelect();
-    setGameStatus('selecting_character');
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: { type: 'start_character_selection', startedBy: playerName },
-    });
-
-    syncRoomStateToDb({
-      status: 'selecting_character',
-    });
-  };
-
-  /* ── Secret Character Selection ─────────────────────────────────── */
-  const handleSelectSecretCard = (cardId: string) => {
-    soundFx.playSelect();
-    updatePlayerSecretId(cardId);
-    setIsMyReady(true);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: { type: 'player_ready', sender: playerName },
-    });
-  };
-
-  /* ── Toggle Card Elimination ─────────────────────────────────────── */
-  const handleToggleFlip = (cardId: string) => {
-    updateFlippedCardIds((prev) =>
-      prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
-    );
-  };
-
-  /* ── Final Guess Confirmation ────────────────────────────────────── */
-  const handleConfirmGuess = (guessedCard: CharacterCard) => {
-    setIsGuessModalOpen(false);
-    const isCorrect = opponentSecretCard ? guessedCard.id === opponentSecretCard.id : true;
-    const winningPlayer = isCorrect ? playerName : (opponentName || 'Opponent');
-    const reason: WinReason = isCorrect ? 'correct_guess' : 'wrong_guess';
-
-    setGameStatus('finished');
-    setWinnerId(winningPlayer);
-    setWinReason(reason);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'declare_victory',
-        winnerId: winningPlayer,
-        winReason: reason,
-        secretCardId: playerSecretId,
-      },
-    });
-
-    syncRoomStateToDb({
-      status: 'finished',
-      winnerId: winningPlayer,
-      winReason: reason,
-    });
-  };
-
-  /* ── Surrender Match Action ──────────────────────────────────────── */
-  const handleSurrender = () => {
-    setShowSurrenderModal(false);
-    const winningPlayer = opponentName || 'Opponent';
-
-    setGameStatus('finished');
-    setWinnerId(winningPlayer);
-    setWinReason('surrender');
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'declare_victory',
-        winnerId: winningPlayer,
-        winReason: 'surrender',
-        secretCardId: playerSecretId,
-      },
-    });
-
-    syncRoomStateToDb({
-      status: 'finished',
-      winnerId: winningPlayer,
-      winReason: 'surrender',
-    });
-  };
-
-  /* ── Rematch / Play Again Action ─────────────────────────────────── */
-  const handlePlayAgain = () => {
-    const nextRound = gameRound + 1;
-    setGameStatus('setup');
-    updatePlayerSecretId(null);
-    setOpponentSecretId(null);
-    setIsMyReady(false);
-    setIsOpponentReady(false);
-    updateFlippedCardIds([]);
-    hasLaunchedRef.current = false;
-    setWinnerId(null);
-    setWinReason(null);
-    setGameRound(nextRound);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'new_round_started',
-        gameRound: nextRound,
-      },
-    });
-
-    syncRoomStateToDb({
-      status: 'setup',
-      gameRound: nextRound,
-      currentTurnPlayerId: null,
-      turnStartedAt: null,
-      winnerId: null,
-      winReason: null,
-    });
-  };
-
-  /* ── Send Chat Message Handler ───────────────────────────────────── */
-  const handleSendChatMessage = (messageText: string) => {
-    const item: QuestionLogItem = {
-      id: Math.random().toString(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      sender: 'player',
-      senderName: playerName,
-      senderId: playerName,
-      question: messageText,
-    };
-
-    setChatMessages((prev) => [...prev, item]);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: { type: 'chat_message', item },
-    });
-  };
-
-  /* ── Clipboard & Leave Actions ───────────────────────────────────── */
+  /* ── Clipboard & Navigation Handlers ────────────────────────────── */
   const handleCopyRoomCode = () => {
     soundFx.playSelect();
     navigator.clipboard.writeText(roomCode);
@@ -528,7 +274,6 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
   const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
   const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
-  const standingCardsCount = currentTemplate.cards.length - flippedCardIds.length;
 
   /* ── SSR Hydration Guard ────────────────────────────────────────── */
   if (!isMounted) {
@@ -654,70 +399,28 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
       {/* ── 3. Active Gameplay & Finished Match Layout ─────────────── */}
       {(gameStatus === 'active' || gameStatus === 'finished') && (
-        <>
-          {/* Header Bar */}
-          <GameHeaderBar
-            roomCode={roomCode}
-            currentTemplate={currentTemplate}
-            playerSecretCard={playerSecretCard}
-            currentTurnPlayerId={currentTurnPlayerId}
-            presenceKey={playerName}
-            secondsRemaining={secondsRemaining}
-            isMuted={isMuted}
-            onToggleMute={() => setIsMuted(soundFx.toggleMute())}
-            onOpenSurrenderModal={() => setShowSurrenderModal(true)}
-            onOpenLeaveModal={() => setShowLeaveModal(true)}
-          />
-
-          {/* Cards Grid & Chat Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full flex-1">
-            {/* Left: 24-Card Elimination Grid (3 Cols on lg) */}
-            <div className="lg:col-span-3 flex flex-col">
-              {/* Standing Counter */}
-              <div className="px-4 py-2 rounded-xl mb-3 bg-slate-900/60 border border-slate-800 flex items-center justify-between text-xs">
-                <span className="font-bold text-amber-400">
-                  {standingCardsCount} / {currentTemplate.cards.length} Cards Standing
-                </span>
-                <button
-                  type="button"
-                  onClick={() => updateFlippedCardIds([])}
-                  className="flex items-center gap-1 text-slate-400 hover:text-white transition-colors"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Reset Board</span>
-                </button>
-              </div>
-
-              {/* Cards Grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 sm:gap-3 w-full">
-                {currentTemplate.cards.map((card) => (
-                  <CardFlip
-                    key={card.id}
-                    card={card}
-                    isFlippingDown={flippedCardIds.includes(card.id)}
-                    isSecret={card.id === playerSecretId}
-                    isGuessable={gameStatus === 'active' && currentTurnPlayerId === playerName}
-                    onToggleFlip={handleToggleFlip}
-                    onMakeGuess={(c) => {
-                      setSelectedGuessCard(c);
-                      setIsGuessModalOpen(true);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Right: Match Chat & Question Log (1 Col on lg) */}
-            <div className="lg:col-span-1">
-              <GameChatLog
-                chatMessages={chatMessages}
-                presenceKey={playerName}
-                onSendChatMessage={handleSendChatMessage}
-                disabled={gameStatus === 'finished'}
-              />
-            </div>
-          </div>
-        </>
+        <ActiveGameView
+          roomCode={roomCode}
+          currentTemplate={currentTemplate}
+          playerSecretCard={playerSecretCard}
+          currentTurnPlayerId={currentTurnPlayerId}
+          presenceKey={playerName}
+          secondsRemaining={secondsRemaining}
+          isMuted={isMuted}
+          flippedCardIds={flippedCardIds}
+          chatMessages={chatMessages}
+          gameStatus={gameStatus}
+          onToggleMute={() => setIsMuted(soundFx.toggleMute())}
+          onOpenSurrenderModal={() => setShowSurrenderModal(true)}
+          onOpenLeaveModal={() => setShowLeaveModal(true)}
+          onResetFlips={() => updateFlippedCardIds([])}
+          onToggleFlip={handleToggleFlip}
+          onMakeGuess={(c) => {
+            setSelectedGuessCard(c);
+            setIsGuessModalOpen(true);
+          }}
+          onSendChatMessage={handleSendChatMessage}
+        />
       )}
 
       {/* ── Modals & Overlays ──────────────────────────────────────── */}
@@ -727,7 +430,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         availableTemplates={filteredTemplates}
         searchQuery={setSearchQuery}
         onSearchChange={setSetSearchQuery}
-        onSelectTemplate={handleHostChangeTemplate}
+        onSelectTemplate={(newTpl) => {
+          setCurrentTemplate(newTpl);
+          handleHostChangeTemplate(newTpl);
+          setIsChangeSetOpen(false);
+        }}
         onPreviewTemplate={(tpl) => setPreviewingTemplate(tpl)}
       />
 
@@ -751,57 +458,17 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         onPlayAgain={handlePlayAgain}
       />
 
-      {/* Surrender Confirmation Modal */}
-      {showSurrenderModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="game-panel w-full max-w-sm rounded-3xl p-6 text-center border border-rose-500/40 shadow-2xl">
-            <h3 className="text-xl font-black text-white mb-2">Surrender Match?</h3>
-            <p className="text-slate-400 text-xs mb-6">Your opponent will be declared the match winner immediately.</p>
-            <div className="flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowSurrenderModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSurrender}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-600/30"
-              >
-                Confirm Surrender
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SurrenderModal
+        isOpen={showSurrenderModal}
+        onClose={() => setShowSurrenderModal(false)}
+        onConfirmSurrender={handleSurrender}
+      />
 
-      {/* Leave Room Confirmation Modal */}
-      {showLeaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="game-panel w-full max-w-sm rounded-3xl p-6 text-center border border-slate-700 shadow-2xl">
-            <h3 className="text-xl font-black text-white mb-2">Leave Match?</h3>
-            <p className="text-slate-400 text-xs mb-6">Are you sure you want to exit to the main menu?</p>
-            <div className="flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowLeaveModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700"
-              >
-                Stay in Match
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmLeave}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 shadow-lg shadow-amber-500/20"
-              >
-                Leave Match
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LeaveRoomModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirmLeave={handleConfirmLeave}
+      />
     </div>
   );
 };

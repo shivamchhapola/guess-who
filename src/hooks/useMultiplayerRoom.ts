@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GameStatus, WinReason, QuestionLogItem, CardSetTemplate } from '@/types/game';
+import { GameStatus, WinReason, QuestionLogItem, CardSetTemplate, CharacterCard } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
+import { soundFx } from '@/lib/audio';
 
 interface UseMultiplayerRoomParams {
   roomCode: string;
@@ -13,6 +14,7 @@ interface UseMultiplayerRoomParams {
   playerAvatar: string;
   isHost: boolean;
   initialTemplate: CardSetTemplate;
+  onTemplateChangedByHost?: (newTemplate: CardSetTemplate) => void;
 }
 
 export function useMultiplayerRoom({
@@ -24,6 +26,7 @@ export function useMultiplayerRoom({
   playerAvatar,
   isHost,
   initialTemplate,
+  onTemplateChangedByHost,
 }: UseMultiplayerRoomParams) {
   const supabase = createClient();
 
@@ -53,6 +56,7 @@ export function useMultiplayerRoom({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const gameStatusRef = useRef<GameStatus>(gameStatus);
   const localTurnStartAnchorRef = useRef<number>(0);
+  const hasLaunchedRef = useRef<boolean>(false);
 
   useEffect(() => {
     gameStatusRef.current = gameStatus;
@@ -246,6 +250,98 @@ export function useMultiplayerRoom({
       }
     });
 
+    channel.on('broadcast', { event: 'game_event' }, ({ payload }) => {
+      if (payload.type === 'template_changed') {
+        soundFx.playSelect();
+        updatePlayerSecretId(null);
+        setIsMyReady(false);
+        setIsOpponentReady(false);
+        updateFlippedCardIds([]);
+        hasLaunchedRef.current = false;
+        if (onTemplateChangedByHost) onTemplateChangedByHost(payload.template);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `Host updated character deck to "${payload.template.title}"`,
+          },
+        ]);
+      } else if (payload.type === 'start_character_selection') {
+        setGameStatus('selecting_character');
+      } else if (payload.type === 'player_ready') {
+        if (payload.sender !== playerName) {
+          setIsOpponentReady(true);
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: Math.random().toString(),
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              sender: 'system',
+              question: `${payload.sender} selected their secret character!`,
+            },
+          ]);
+        }
+      } else if (payload.type === 'game_started') {
+        setGameStatus('active');
+        setCurrentTurnPlayerId(payload.startingPlayerId);
+        setTurnStartedAt(payload.turnStartedAt || Date.now());
+        localTurnStartAnchorRef.current = Date.now();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `Match started! ${payload.startingPlayerId === playerName ? 'You start first!' : `${payload.startingPlayerId} starts first!`}`,
+          },
+        ]);
+      } else if (payload.type === 'turn_changed') {
+        setCurrentTurnPlayerId(payload.nextTurnPlayerId);
+        setTurnStartedAt(payload.turnStartedAt || Date.now());
+        localTurnStartAnchorRef.current = Date.now();
+        soundFx.playSelect();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `Turn passed to ${payload.nextTurnPlayerId === playerName ? 'you' : payload.nextTurnPlayerId}`,
+          },
+        ]);
+      } else if (payload.type === 'chat_message') {
+        setChatMessages((prev) => [...prev, payload.item]);
+        soundFx.playMessagePop();
+      } else if (payload.type === 'declare_victory') {
+        setGameStatus('finished');
+        setWinnerId(payload.winnerId);
+        setWinReason(payload.winReason);
+        if (payload.secretCardId) setOpponentSecretId(payload.secretCardId);
+      } else if (payload.type === 'new_round_started') {
+        setGameStatus('setup');
+        updatePlayerSecretId(null);
+        setOpponentSecretId(null);
+        setIsMyReady(false);
+        setIsOpponentReady(false);
+        updateFlippedCardIds([]);
+        hasLaunchedRef.current = false;
+        setWinnerId(null);
+        setWinReason(null);
+        setGameRound((r) => r + 1);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            sender: 'system',
+            question: `Returned to lobby for Round ${payload.gameRound || 'New'}. Host can change settings or deck before starting!`,
+          },
+        ]);
+      }
+    });
+
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await channel.track({
@@ -259,7 +355,7 @@ export function useMultiplayerRoom({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isUnlocked, hasSetIdentity, presenceKey, roomCode, supabase, playerName, playerAvatar, isHost]);
+  }, [isUnlocked, hasSetIdentity, presenceKey, roomCode, supabase, playerName, playerAvatar, isHost, updatePlayerSecretId, updateFlippedCardIds, onTemplateChangedByHost]);
 
   /* ── 30-Second Disconnect Countdown (AUD-P1-02) ───────────────── */
   useEffect(() => {
@@ -281,6 +377,209 @@ export function useMultiplayerRoom({
 
     return () => clearInterval(timer);
   }, [disconnectSeconds, presenceKey]);
+
+  /* ── Host Launch Active Match Action ──────────────────────────── */
+  const handleStartActiveMatch = useCallback(() => {
+    if (hasLaunchedRef.current) return;
+    hasLaunchedRef.current = true;
+
+    const oppName = opponentName || 'Opponent';
+    const startingPlayer = Math.random() < 0.5 ? playerName : oppName;
+    const now = Date.now();
+
+    setGameStatus('active');
+    setCurrentTurnPlayerId(startingPlayer);
+    setTurnStartedAt(now);
+    localTurnStartAnchorRef.current = now;
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'game_started',
+        startingPlayerId: startingPlayer,
+        turnStartedAt: now,
+      },
+    });
+
+    syncRoomStateToDb({
+      status: 'active',
+      currentTurnPlayerId: startingPlayer,
+      turnStartedAt: now,
+    });
+  }, [opponentName, playerName, roomCode, supabase, syncRoomStateToDb]);
+
+  /* ── Host Action: Change Template Deck ────────────────────────── */
+  const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
+    soundFx.playSelect();
+    updatePlayerSecretId(null);
+    setIsMyReady(false);
+    setIsOpponentReady(false);
+    updateFlippedCardIds([]);
+    hasLaunchedRef.current = false;
+
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sender: 'system',
+        question: `Host updated character deck to "${newTemplate.title}"`,
+      },
+    ]);
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'template_changed', template: newTemplate },
+    });
+
+    syncRoomStateToDb({
+      status: 'setup',
+      selectedSetId: newTemplate.id,
+    });
+
+    try {
+      await supabase.from('game_rooms').update({ template_id: newTemplate.id }).eq('code', roomCode);
+    } catch (err) {
+      console.warn('Failed to update room template in DB:', err);
+    }
+  };
+
+  /* ── Host Action: Start Game ───────────────────────────────────── */
+  const handleHostStartGame = () => {
+    soundFx.playSelect();
+    setGameStatus('selecting_character');
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'start_character_selection', startedBy: playerName },
+    });
+    syncRoomStateToDb({ status: 'selecting_character' });
+  };
+
+  /* ── Secret Character Selection Action ──────────────────────────── */
+  const handleSelectSecretCard = (cardId: string) => {
+    soundFx.playSelect();
+    updatePlayerSecretId(cardId);
+    setIsMyReady(true);
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'player_ready', sender: playerName },
+    });
+  };
+
+  /* ── Toggle Flip Card Action ───────────────────────────────────── */
+  const handleToggleFlip = (cardId: string) => {
+    updateFlippedCardIds((prev) =>
+      prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
+    );
+  };
+
+  /* ── Confirm Guess Action ─────────────────────────────────────── */
+  const handleConfirmGuess = (guessedCard: CharacterCard) => {
+    const isCorrect = opponentSecretId ? guessedCard.id === opponentSecretId : true;
+    const winningPlayer = isCorrect ? playerName : (opponentName || 'Opponent');
+    const reason: WinReason = isCorrect ? 'correct_guess' : 'wrong_guess';
+
+    setGameStatus('finished');
+    setWinnerId(winningPlayer);
+    setWinReason(reason);
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'declare_victory',
+        winnerId: winningPlayer,
+        winReason: reason,
+        secretCardId: playerSecretId,
+      },
+    });
+
+    syncRoomStateToDb({ status: 'finished', winnerId: winningPlayer, winReason: reason });
+  };
+
+  /* ── Surrender Match Action ───────────────────────────────────── */
+  const handleSurrender = () => {
+    const winningPlayer = opponentName || 'Opponent';
+
+    setGameStatus('finished');
+    setWinnerId(winningPlayer);
+    setWinReason('surrender');
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'declare_victory',
+        winnerId: winningPlayer,
+        winReason: 'surrender',
+        secretCardId: playerSecretId,
+      },
+    });
+
+    syncRoomStateToDb({ status: 'finished', winnerId: winningPlayer, winReason: 'surrender' });
+  };
+
+  /* ── Rematch / Play Again Action ───────────────────────────────── */
+  const handlePlayAgain = () => {
+    const nextRound = gameRound + 1;
+    setGameStatus('setup');
+    updatePlayerSecretId(null);
+    setOpponentSecretId(null);
+    setIsMyReady(false);
+    setIsOpponentReady(false);
+    updateFlippedCardIds([]);
+    hasLaunchedRef.current = false;
+    setWinnerId(null);
+    setWinReason(null);
+    setGameRound(nextRound);
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'new_round_started', gameRound: nextRound },
+    });
+
+    syncRoomStateToDb({
+      status: 'setup',
+      gameRound: nextRound,
+      currentTurnPlayerId: null,
+      turnStartedAt: null,
+      winnerId: null,
+      winReason: null,
+    });
+  };
+
+  /* ── Send Chat Message Action ──────────────────────────────────── */
+  const handleSendChatMessage = (messageText: string) => {
+    const item: QuestionLogItem = {
+      id: Math.random().toString(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      sender: 'player',
+      senderName: playerName,
+      senderId: playerName,
+      question: messageText,
+    };
+
+    setChatMessages((prev) => [...prev, item]);
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'chat_message', item },
+    });
+  };
 
   return {
     supabase,
@@ -322,5 +621,14 @@ export function useMultiplayerRoom({
     channelRef,
     localTurnStartAnchorRef,
     syncRoomStateToDb,
+    handleStartActiveMatch,
+    handleHostChangeTemplate,
+    handleHostStartGame,
+    handleSelectSecretCard,
+    handleToggleFlip,
+    handleConfirmGuess,
+    handleSurrender,
+    handlePlayAgain,
+    handleSendChatMessage,
   };
 }
