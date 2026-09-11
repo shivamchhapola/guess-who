@@ -14,7 +14,7 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **DOMAIN 1** | Gameplay Engine & Realtime Sync | `CardFlip.tsx`, `MultiplayerBoard.tsx`, `GameBoard.tsx` | ✅ Completed | `audit/domain-1-gameplay-engine` | 0 errors, build pass |
 | **DOMAIN 2** | Data Access Layer, Types & DB | `schema.sql`, `client.ts`, `server.ts`, `game.ts` | ✅ Completed | `audit/domain-2-data-layer` | 0 errors, build pass |
 | **DOMAIN 3** | Template Creator & Storage Pipeline | `create/page.tsx`, `templates/page.tsx`, `setUtils.ts` | ✅ Completed | `audit/domain-3-template-creator` | 0 errors, build pass |
-| **DOMAIN 4** | Matchmaking & Navigation Flow | `host/page.tsx`, `lobbies/page.tsx`, `NavHeader.tsx` | ⏳ Pending | `audit/domain-4-matchmaking` | - |
+| **DOMAIN 4** | Matchmaking & Navigation Flow | `host/page.tsx`, `lobbies/page.tsx`, `NavHeader.tsx` | ✅ Completed | `audit/domain-4-matchmaking` | 0 errors, build pass |
 | **DOMAIN 5** | Audio, Performance & Mobile UX | `audio.ts`, `globals.css`, Touch targets, Assets | ⏳ Pending | `audit/domain-5-performance-ux` | - |
 
 ---
@@ -58,8 +58,14 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 
 ---
 
-### 🚪 Domain 4: Matchmaking, Host Controls & Navigation Flow (Pending)
+### 🚪 Domain 4: Matchmaking, Host Controls & Navigation Flow (Completed)
 - **Target Scope**: [`host/page.tsx`](file:///e:/GuessWho/src/app/host/page.tsx), [`lobbies/page.tsx`](file:///e:/GuessWho/src/app/lobbies/page.tsx), [`page.tsx`](file:///e:/GuessWho/src/app/page.tsx), [`PlayerProfileSetup.tsx`](file:///e:/GuessWho/src/components/PlayerProfileSetup.tsx).
+
+- **Key Findings & Fixes**:
+  - **DEC-D4-01**: Added real-time Supabase Postgres changes subscription (`supabase.channel('public_lobbies_realtime')`) in `lobbies/page.tsx` so public lobby lists update instantaneously as players host or close rooms.
+  - **DEC-D4-02**: Created `parseHostDisplayName` helper in `lobbies/page.tsx` to extract clean player nicknames from presence keys instead of displaying raw avatar URLs.
+  - **DEC-D4-03**: Added `localStorage` profile persistence in `PlayerProfileSetup.tsx` so user nickname and avatar preferences persist across sessions.
+  - **DEC-D4-04**: Added input regex sanitization (`replace(/[^A-Za-z0-9]/g, '')`) for room code input on `src/app/page.tsx`.
 
 ---
 
@@ -78,3 +84,4 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **Domain 1 (Gameplay)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
 | **Domain 2 (Data Layer)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
 | **Domain 3 (Creator)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.3s) | ✅ Passed |
+| **Domain 4 (Matchmaking)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
