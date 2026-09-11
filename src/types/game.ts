@@ -49,15 +49,135 @@ export type WinReason =
   | 'disconnect'
   | 'timeout';
 
+/**
+ * Stable identity for a player within a room.
+ * Display names are presentation data and must not be used as identifiers.
+ */
+export interface RoomPlayerIdentity {
+  playerId: string;
+  roomCode: string;
+  name: string;
+  avatarUrl: string;
+  isHost: boolean;
+}
+
+/** Public player state safe to share with every room participant. */
+export interface PublicPlayerState {
+  id: string;
+  name: string;
+  avatarUrl: string;
+  isHost: boolean;
+  isReady: boolean;
+}
+
+/** Private state that must only be exposed to the owning player. */
+export interface PrivatePlayerState {
+  playerId: string;
+  secretCardId: string | null;
+  eliminatedCardIds: string[];
+}
+
+/** Canonical authoritative room/match state. */
+export interface RoomState {
+  roomId: string;
+  code: string;
+  hostPlayerId: string;
+  guestPlayerId: string | null;
+  templateId: string;
+  turnTimerSeconds: number;
+  status: GameStatus;
+  gameRound: number;
+  currentTurnPlayerId: string | null;
+  turnStartedAt: number | null;
+  winnerPlayerId: string | null;
+  winReason: WinReason | null;
+  revision: number;
+  players: Record<string, PublicPlayerState>;
+}
+
+/** Commands represent requests to change authoritative room state. */
+export type GameCommand =
+  | {
+      type: 'start_round';
+      playerId: string;
+    }
+  | {
+      type: 'select_secret';
+      playerId: string;
+      cardId: string;
+    }
+  | {
+      type: 'end_turn';
+      playerId: string;
+    }
+  | {
+      type: 'make_guess';
+      playerId: string;
+      cardId: string;
+    }
+  | {
+      type: 'surrender';
+      playerId: string;
+    }
+  | {
+      type: 'change_template';
+      playerId: string;
+      templateId: string;
+    }
+  | {
+      type: 'start_rematch';
+      playerId: string;
+    };
+
+/** Events/results emitted after authoritative state changes. */
+export type RoomEvent =
+  | {
+      type: 'room_updated';
+      state: RoomState;
+    }
+  | {
+      type: 'round_started';
+      round: number;
+    }
+  | {
+      type: 'turn_started';
+      playerId: string;
+      startedAt: number;
+    }
+  | {
+      type: 'match_finished';
+      winnerPlayerId: string;
+      winReason: WinReason;
+    }
+  | {
+      type: 'rematch_started';
+      round: number;
+    }
+  | {
+      type: 'player_joined';
+      player: PublicPlayerState;
+    }
+  | {
+      type: 'player_left';
+      playerId: string;
+    };
+
+/**
+ * @deprecated Use PublicPlayerState and PrivatePlayerState instead.
+ * Kept temporarily so existing consumers can migrate incrementally.
+ */
 export interface SharedPlayer {
   id: string;
   name: string;
   avatarUrl: string;
   isHost: boolean;
   isReady: boolean;
-  secretCardId: string | null;
 }
 
+/**
+ * @deprecated Use RoomState instead. Kept temporarily for compatibility while
+ * multiplayer consumers migrate to the canonical state contract.
+ */
 export interface SharedRoomState {
   status: GameStatus;
   hostId: string;
