@@ -96,6 +96,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const gameStatusRef = useRef<GameStatus>(gameStatus);
+  const localTurnStartAnchorRef = useRef<number>(0);
 
   useEffect(() => {
     gameStatusRef.current = gameStatus;
@@ -226,13 +227,20 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       try {
         const { data: roomData } = await supabase
           .from('game_rooms')
-          .select('status, state, template_id')
+          .select('status, state, template_id, updated_at')
           .eq('code', roomCode)
           .maybeSingle();
 
         if (roomData && roomData.state) {
           const s = roomData.state as Record<string, unknown>;
           queueMicrotask(() => {
+            if (roomData.updated_at) {
+              const serverTime = Date.parse(roomData.updated_at);
+              if (!isNaN(serverTime)) {
+                const elapsedSinceDbUpdate = Math.max(0, Math.floor((Date.now() - serverTime) / 1000));
+                localTurnStartAnchorRef.current = Date.now() - (elapsedSinceDbUpdate * 1000);
+              }
+            }
             if (roomData.status || s.gameStatus) {
               setGameStatus((roomData.status || s.gameStatus) as GameStatus);
             }
@@ -411,6 +419,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         setGameStatus('active');
         setCurrentTurnPlayerId(payload.startingPlayerId);
         setTurnStartedAt(payload.turnStartedAt || Date.now());
+        localTurnStartAnchorRef.current = Date.now();
         setChatMessages((prev) => [
           ...prev,
           {
@@ -423,6 +432,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       } else if (payload.type === 'turn_changed') {
         setCurrentTurnPlayerId(payload.nextTurnPlayerId);
         setTurnStartedAt(payload.turnStartedAt || Date.now());
+        localTurnStartAnchorRef.current = Date.now();
         soundFx.playSelect();
         setChatMessages((prev) => [
           ...prev,
@@ -485,6 +495,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
     setCurrentTurnPlayerId(nextPlayer);
     setTurnStartedAt(now);
+    localTurnStartAnchorRef.current = now;
 
     const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
@@ -511,8 +522,13 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       return;
     }
 
+    if (localTurnStartAnchorRef.current === 0) {
+      localTurnStartAnchorRef.current = Date.now();
+    }
+
     const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - turnStartedAt) / 1000);
+      const anchor = localTurnStartAnchorRef.current || Date.now();
+      const elapsed = Math.floor((Date.now() - anchor) / 1000);
       const remaining = Math.max(0, turnTimerSetting - elapsed);
       setSecondsRemaining(remaining);
 
@@ -646,6 +662,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setGameStatus('active');
     setCurrentTurnPlayerId(startingPlayer);
     setTurnStartedAt(now);
+    localTurnStartAnchorRef.current = now;
 
     const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
     channel.send({
