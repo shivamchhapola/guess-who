@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { CardSetTemplate, CharacterCard } from '@/types/game';
 import { CardFlip } from './CardFlip';
 import { GuessModal } from './GuessModal';
 import { VictoryModal } from './VictoryModal';
+import { QuestionAssistant } from './QuestionAssistant';
 import { soundFx } from '@/lib/audio';
-import { Eye, Volume2, VolumeX, RotateCcw, ArrowLeft, Layers } from 'lucide-react';
+import { ensureCardAttributes } from '@/lib/setUtils';
+import { Eye, Volume2, VolumeX, RotateCcw, ArrowLeft, Layers, Bot, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -30,7 +32,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const [selectedGuessCard, setSelectedGuessCard] = useState<CharacterCard | null>(null);
   const [isGuessModalOpen, setIsGuessModalOpen] = useState<boolean>(false);
   const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(() => soundFx.getMutedState());
+
+  // AUD-P3-02 & AUD-P3-04: AI Turn Engine & Attribute Enrichment
+  const enrichedCards = useMemo(() => {
+    return ensureCardAttributes(currentTemplate.cards || []);
+  }, [currentTemplate.cards]);
+
+  const [aiStandingIds, setAiStandingIds] = useState<string[]>([]);
+  const [aiLastAction, setAiLastAction] = useState<{ question: string; answer: string; eliminatedCount: number } | null>(null);
+  const [isAiThinking, setIsAiThinking] = useState<boolean>(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -38,10 +49,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({
       setFlippedCardIds([]);
       setPlayerSecretId(null);
       setIsSecretSelected(false);
+      setGameResult(null);
+      setAiLastAction(null);
+      setIsAiThinking(false);
 
       if (initialTemplate.cards.length > 0) {
-        const randomIndex = Math.floor(Math.random() * initialTemplate.cards.length);
-        setOpponentSecretId(initialTemplate.cards[randomIndex].id);
+        const enriched = ensureCardAttributes(initialTemplate.cards);
+        const randomIndex = Math.floor(Math.random() * enriched.length);
+        setOpponentSecretId(enriched[randomIndex].id);
+        setAiStandingIds(enriched.map((c) => c.id));
       }
     });
   }, [initialTemplate]);
@@ -56,6 +72,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     setFlippedCardIds((prev) =>
       prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
     );
+  };
+
+  const handleAutoFlipCards = (toFlip: string[]) => {
+    setFlippedCardIds((prev) => Array.from(new Set([...prev, ...toFlip])));
   };
 
   const handleResetFlips = () => setFlippedCardIds([]);
@@ -74,22 +94,129 @@ export const GameBoard: React.FC<GameBoardProps> = ({
     }
   };
 
+  // AUD-P3-02: Simulated AI Opponent Turn Algorithm
+  const handleTriggerAiTurn = useCallback(() => {
+    if (!playerSecretId || gameResult !== null || isAiThinking) return;
+
+    setIsAiThinking(true);
+
+    setTimeout(() => {
+      const cards = enrichedCards;
+      const currentAiStanding = cards.filter((c) => aiStandingIds.includes(c.id));
+
+      if (currentAiStanding.length <= 1) {
+        // AI makes final guess
+        const finalTarget = currentAiStanding[0] || cards[0];
+        if (finalTarget.id === playerSecretId) {
+          setAiLastAction({
+            question: `AI guessed: "${finalTarget.name}"!`,
+            answer: `CORRECT! Computer AI won the game!`,
+            eliminatedCount: 0,
+          });
+          setGameResult('lost');
+        } else {
+          setAiLastAction({
+            question: `AI guessed: "${finalTarget.name}"!`,
+            answer: `INCORRECT! AI eliminated "${finalTarget.name}".`,
+            eliminatedCount: 1,
+          });
+          setAiStandingIds((prev) => prev.filter((id) => id !== finalTarget.id));
+        }
+        setIsAiThinking(false);
+        return;
+      }
+
+      // Evaluate potential questions to split remaining AI standing cards best
+      const traitKeys: string[] = ['gender', 'hairColor', 'glasses', 'hat', 'facialHair', 'eyeColor'];
+      let bestTraitKey: string = 'hairColor';
+      let bestTraitVal: string | boolean = 'blonde';
+      let minDiffFromHalf = Infinity;
+
+      for (const key of traitKeys) {
+        const valCounts: Record<string, number> = {};
+        for (const card of currentAiStanding) {
+          const val = String(card.attributes?.[key] ?? '');
+          if (val !== '') {
+            valCounts[val] = (valCounts[val] || 0) + 1;
+          }
+        }
+
+        for (const [valStr, count] of Object.entries(valCounts)) {
+          const targetHalf = currentAiStanding.length / 2;
+          const diff = Math.abs(count - targetHalf);
+          if (diff < minDiffFromHalf) {
+            minDiffFromHalf = diff;
+            bestTraitKey = key;
+            bestTraitVal = valStr === 'true' ? true : valStr === 'false' ? false : valStr;
+          }
+        }
+      }
+
+      // Check if player's secret card has this trait
+      const playerCard = cards.find((c) => c.id === playerSecretId);
+      const playerVal = playerCard?.attributes?.[bestTraitKey];
+      let playerMatches = false;
+      if (typeof bestTraitVal === 'boolean') {
+        playerMatches = Boolean(playerVal) === bestTraitVal;
+      } else {
+        playerMatches = String(playerVal).toLowerCase() === String(bestTraitVal).toLowerCase();
+      }
+
+      // Filter AI's board based on answer
+      const nextStanding = currentAiStanding.filter((card) => {
+        const cardVal = card.attributes?.[bestTraitKey];
+        let matches = false;
+        if (typeof bestTraitVal === 'boolean') {
+          matches = Boolean(cardVal) === bestTraitVal;
+        } else {
+          matches = String(cardVal).toLowerCase() === String(bestTraitVal).toLowerCase();
+        }
+        return playerMatches ? matches : !matches;
+      });
+
+      const eliminated = currentAiStanding.length - nextStanding.length;
+      setAiStandingIds(nextStanding.map((c) => c.id));
+
+      // Format human-readable question & log
+      let questionText = `Does your character have ${bestTraitKey}?`;
+      if (bestTraitKey === 'hairColor') questionText = `Does your character have ${bestTraitVal} hair?`;
+      else if (bestTraitKey === 'gender') questionText = `Is your character ${bestTraitVal}?`;
+      else if (bestTraitKey === 'glasses') questionText = `Does your character wear glasses?`;
+      else if (bestTraitKey === 'hat') questionText = `Does your character wear a hat?`;
+      else if (bestTraitKey === 'facialHair') questionText = `Does your character have facial hair?`;
+      else if (bestTraitKey === 'eyeColor') questionText = `Does your character have ${bestTraitVal} eyes?`;
+
+      setAiLastAction({
+        question: `AI asks: "${questionText}"`,
+        answer: playerMatches ? `YES! AI eliminated ${eliminated} cards.` : `NO! AI eliminated ${eliminated} cards.`,
+        eliminatedCount: eliminated,
+      });
+
+      soundFx.playCardFlip(true);
+      setIsAiThinking(false);
+    }, 700);
+  }, [playerSecretId, gameResult, isAiThinking, enrichedCards, aiStandingIds]);
+
   const handlePlayAgain = () => {
+    const enriched = ensureCardAttributes(currentTemplate.cards);
     setFlippedCardIds([]);
     setPlayerSecretId(null);
     setIsSecretSelected(false);
     setGameResult(null);
     setSelectedGuessCard(null);
+    setAiLastAction(null);
+    setIsAiThinking(false);
 
-    if (currentTemplate.cards.length > 0) {
-      const randomIndex = Math.floor(Math.random() * currentTemplate.cards.length);
-      setOpponentSecretId(currentTemplate.cards[randomIndex].id);
+    if (enriched.length > 0) {
+      const randomIndex = Math.floor(Math.random() * enriched.length);
+      setOpponentSecretId(enriched[randomIndex].id);
+      setAiStandingIds(enriched.map((c) => c.id));
     }
   };
 
-  const playerSecretCard = currentTemplate.cards.find((c) => c.id === playerSecretId) || null;
-  const opponentSecretCard = currentTemplate.cards.find((c) => c.id === opponentSecretId) || null;
-  const standingCardsCount = currentTemplate.cards.length - flippedCardIds.length;
+  const playerSecretCard = enrichedCards.find((c) => c.id === playerSecretId) || null;
+  const opponentSecretCard = enrichedCards.find((c) => c.id === opponentSecretId) || null;
+  const standingCardsCount = enrichedCards.length - flippedCardIds.length;
 
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
@@ -114,10 +241,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({
               <h2 className="font-black text-white text-sm sm:text-base tracking-tight truncate">{currentTemplate.title}</h2>
               <span className="hidden sm:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full"
                 style={{ background: 'rgba(6,182,212,0.12)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.25)' }}>
-                Practice
+                Solo vs AI
               </span>
             </div>
-            <p className="text-slate-500 text-[11px] font-semibold">{currentTemplate.cards.length} cards</p>
+            <p className="text-slate-500 text-[11px] font-semibold">{enrichedCards.length} cards</p>
           </div>
         </div>
 
@@ -181,11 +308,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             Choose Your Secret Character
           </h3>
           <p className="text-slate-400 text-sm max-w-md mb-6">
-            Click any card — the computer will try to guess which one you picked!
+            Click any card — the computer AI will try to guess which one you picked!
           </p>
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 w-full">
-            {currentTemplate.cards.map((card) => (
+            {enrichedCards.map((card) => (
               <CardFlip
                 key={card.id}
                 card={card}
@@ -199,31 +326,73 @@ export const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       ) : (
         <>
-          {/* ── Game Status Bar ─────────────────────────────── */}
-          <div className="game-panel px-4 py-2.5 rounded-xl mb-4 flex items-center justify-between gap-3"
-            style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-            <span className="text-xs font-black px-3 py-1 rounded-full"
-              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-              {standingCardsCount} / {currentTemplate.cards.length} Standing
-            </span>
+          {/* ── Question Assistant Widget ─────────────────────── */}
+          <QuestionAssistant
+            cards={enrichedCards}
+            flippedCardIds={flippedCardIds}
+            onAutoFlipCards={handleAutoFlipCards}
+            onResetFlips={handleResetFlips}
+          />
 
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playCardFlip(false);
-                handleResetFlips();
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-colors"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
+          {/* ── Game Status & AI Opponent Bar ──────────────── */}
+          <div className="game-panel px-4 py-3 rounded-2xl mb-4 flex flex-wrap items-center justify-between gap-3"
+            style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black px-3 py-1 rounded-full"
+                style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                Your Board: {standingCardsCount} / {enrichedCards.length} Standing
+              </span>
+
+              <span className="text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5"
+                style={{ background: 'rgba(168,85,247,0.15)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.3)' }}>
+                <Bot className="w-3.5 h-3.5" />
+                AI Board: {aiStandingIds.length} / {enrichedCards.length} Standing
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTriggerAiTurn}
+                disabled={isAiThinking}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-purple-400 to-indigo-400 hover:from-purple-300 hover:to-indigo-300 transition-all disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{isAiThinking ? 'AI Thinking...' : 'Trigger AI Turn'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playCardFlip(false);
+                  handleResetFlips();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset</span>
+              </button>
+            </div>
           </div>
+
+          {/* ── AI Log Action Banner ────────────────────────── */}
+          {aiLastAction && (
+            <div className="px-4 py-2.5 rounded-xl mb-4 text-xs flex flex-wrap items-center justify-between gap-2"
+              style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)' }}>
+              <div className="flex items-center gap-2 text-purple-300 font-semibold">
+                <Bot className="w-4 h-4 text-purple-400 shrink-0" />
+                <span>{aiLastAction.question}</span>
+              </div>
+              <span className="font-bold text-white bg-purple-950/60 px-2.5 py-0.5 rounded-md border border-purple-500/30">
+                {aiLastAction.answer}
+              </span>
+            </div>
+          )}
 
           {/* ── Cards Grid ──────────────────────────────────── */}
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 w-full">
-            {currentTemplate.cards.map((card) => (
+            {enrichedCards.map((card) => (
               <CardFlip
                 key={card.id}
                 card={card}

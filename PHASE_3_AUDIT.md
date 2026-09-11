@@ -41,15 +41,20 @@ This document provides a read-only technical audit of solo practice mode, offlin
 
 ## 📊 Phase 3 Audit Summary Matrix
 
-| Finding ID | Subsystem | Severity | Impact | Proposed Architectural Fix |
-| :--- | :--- | :--- | :--- | :--- |
-| **AUD-P3-01** | Custom Deck Rehydration | 🔴 High | Practice route fails to load custom Supabase template UUIDs | Add Supabase template query in `practice/page.tsx` for custom UUIDs |
-| **AUD-P3-02** | AI Game Engine | 🟡 Medium | Practice mode lacks computer opponent turn simulation | Implement automated AI turn loop in `GameBoard.tsx` |
-| **AUD-P3-03** | Audio UI Sync | 🟢 Low | Mute button state out of sync with `soundFx` singleton | Initialize state from `soundFx.getMutedState()` on mount |
-| **AUD-P3-04** | AI Question Generator | 🟢 Low | Custom decks with empty attributes limit Question Assistant | Add attribute generator / fallback tags in `setUtils.ts` |
+| Finding ID | Subsystem | Severity | Status | Impact | Proposed Architectural Fix |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **AUD-P3-01** | Custom Deck Rehydration | 🔴 High | ✅ Resolved | Practice route fails to load custom Supabase template UUIDs | Added remote Supabase template query in `practice/page.tsx` for custom UUIDs |
+| **AUD-P3-02** | AI Game Engine | 🟡 Medium | ✅ Resolved | Practice mode lacks computer opponent turn simulation | Implemented simulated AI turn loop, AI standing board tracker, and log feed in `GameBoard.tsx` |
+| **AUD-P3-03** | Audio UI Sync | 🟢 Low | ✅ Resolved | Mute button state out of sync with `soundFx` singleton | Initialized `isMuted` state with `soundFx.getMutedState()` on component mount |
+| **AUD-P3-04** | AI Question Generator | 🟢 Low | ✅ Resolved | Custom decks with empty attributes limit Question Assistant | Added `ensureCardAttributes` fallback attribute generator in `setUtils.ts` |
 
 ---
 
 ## 🧪 Phase 3 Verification Status
-- Audit completed in read-only mode without mutating application code.
-- Findings cataloged in [`PHASE_3_AUDIT.md`](file:///e:/GuessWho/PHASE_3_AUDIT.md).
+- AUD-P3-01 resolved: Practice route (`app/play/practice/page.tsx`) queries remote Supabase custom template decks by UUID when `templateId` is not present in built-in static presets.
+- AUD-P3-02 resolved: Implemented interactive computer AI turn loop, AI standing cards tracker (`aiStandingIds`), turn trigger action, and human-readable AI log banner in `GameBoard.tsx`.
+- AUD-P3-03 resolved: Synchronized audio mute UI state with `soundFx.getMutedState()` on mount in `GameBoard.tsx`.
+- AUD-P3-04 resolved: Added deterministic attribute fallback generator `ensureCardAttributes` in `lib/setUtils.ts` to enrich custom photo decks with traits for Tactical Question Assistant and AI solver elimination.
+- Type check: 0 errors (`npx tsc --noEmit`).
+- Lint check: 0 errors, 0 warnings (`npm run lint`).
+- Production build: Pass (`npm run build`).

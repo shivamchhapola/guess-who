@@ -1,4 +1,4 @@
-import { CardSetTemplate } from '@/types/game';
+import { CardSetTemplate, CharacterCard } from '@/types/game';
 
 /**
  * Utility functions for Set Data & UX Model
@@ -91,4 +91,42 @@ export function isCustomSet(template: CardSetTemplate): boolean {
   if (!template) return false;
   const builtInIds = ['the-office-us', 'hollywood-stars', 'marvel-superheroes', 'classic-24'];
   return !builtInIds.includes(template.id) || Boolean(template.creatorId);
+}
+
+/**
+ * Ensures cards have valid attribute dictionaries.
+ * For custom decks with empty attributes, generates deterministic fallback attributes
+ * based on card ID / index so QuestionAssistant and AI turn engines function seamlessly.
+ */
+export function ensureCardAttributes(cards: CharacterCard[]): CharacterCard[] {
+  if (!cards || cards.length === 0) return [];
+  const hairColors: ('brown' | 'black' | 'blonde' | 'red')[] = ['brown', 'black', 'blonde', 'red'];
+  const genders: ('male' | 'female')[] = ['male', 'female'];
+  const eyeColors: ('brown' | 'blue' | 'green')[] = ['brown', 'blue', 'green'];
+
+  return cards.map((card, idx) => {
+    const existing = card.attributes || {};
+    const hasAnyAttr = Object.keys(existing).length > 0;
+
+    if (hasAnyAttr) {
+      return card;
+    }
+
+    // Deterministic fallback based on index / character name hash
+    const charCodeSum = (card.name || '').split('').reduce((sum: number, ch: string) => sum + ch.charCodeAt(0), 0) + idx;
+
+    const inferred: CharacterCard['attributes'] = {
+      gender: genders[charCodeSum % 2],
+      hairColor: hairColors[charCodeSum % 4],
+      glasses: (charCodeSum % 3) === 0,
+      hat: (charCodeSum % 5) === 0,
+      facialHair: (charCodeSum % 2) === 0 && (genders[charCodeSum % 2] === 'male'),
+      eyeColor: eyeColors[charCodeSum % 3],
+    };
+
+    return {
+      ...card,
+      attributes: inferred,
+    };
+  });
 }
