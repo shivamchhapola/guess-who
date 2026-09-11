@@ -21,6 +21,61 @@ function formatFilenameToName(filename: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+/**
+ * Resize & compress image data URLs client-side using HTML5 Canvas
+ * Reduces 2MB–5MB raw photo Data URLs to ~30KB (max 400x400 JPEG at 82% quality)
+ */
+async function compressImageDataUrl(
+  dataUrl: string,
+  maxWidth = 400,
+  maxHeight = 400,
+  quality = 0.82
+): Promise<string> {
+  if (typeof window === 'undefined') return dataUrl;
+  if (!dataUrl.startsWith('data:image/') || dataUrl.includes('image/svg+xml')) {
+    return dataUrl;
+  }
+
+  return new Promise<string>((resolve) => {
+    const img = document.createElement('img');
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const compressed = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressed.length < dataUrl.length ? compressed : dataUrl);
+    };
+
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 export default function CreateTemplatePage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -71,7 +126,7 @@ export default function CreateTemplatePage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setUploadStatus(`Processing ${files.length} selected images...`);
+    setUploadStatus(`Compressing and processing ${files.length} selected images...`);
     const fileArray = Array.from(files);
 
     try {
@@ -91,7 +146,14 @@ export default function CreateTemplatePage() {
       );
 
       const readResults = await Promise.all(readPromises);
-      const newCards: CharacterCard[] = readResults.map((res, index) => ({
+      const compressedResults = await Promise.all(
+        readResults.map(async (res) => ({
+          name: res.name,
+          dataUrl: await compressImageDataUrl(res.dataUrl),
+        }))
+      );
+
+      const newCards: CharacterCard[] = compressedResults.map((res, index) => ({
         id: `card-${Date.now()}-${index + 1}`,
         name: res.name,
         imageUrl: res.dataUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=Card${index + 1}`,
@@ -134,17 +196,19 @@ export default function CreateTemplatePage() {
         return;
       }
 
-      setUploadStatus(`Extracting ${imageFiles.length} photos from ZIP...`);
+      setUploadStatus(`Extracting & compressing ${imageFiles.length} photos from ZIP...`);
       const extractedCards: CharacterCard[] = [];
 
       for (let i = 0; i < imageFiles.length; i++) {
         const item = imageFiles[i];
         const blob = await item.zipEntry.async('blob');
-        const dataUrl = await new Promise<string>((resolve) => {
+        const rawDataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = (ev) => resolve((ev.target?.result as string) || '');
           reader.readAsDataURL(blob);
         });
+
+        const dataUrl = await compressImageDataUrl(rawDataUrl);
 
         extractedCards.push({
           id: `card-${Date.now()}-${i + 1}`,
@@ -197,10 +261,12 @@ export default function CreateTemplatePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       if (ev.target?.result) {
+        const rawDataUrl = ev.target.result as string;
+        const compressedUrl = await compressImageDataUrl(rawDataUrl);
         const next = [...cards];
-        next[idx].imageUrl = ev.target.result as string;
+        next[idx].imageUrl = compressedUrl;
         setCards(next);
       }
     };
