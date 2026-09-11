@@ -1,121 +1,68 @@
-# Phase 4 Audit: Component Modularization & Architecture Refactoring
+# Phase 4 Technical Audit: Component Modularization & Architecture Refactoring
 
-**Target Area**: UI Architecture, Component Decomposition, Prop Interface Design & State Hook Abstraction  
-**Audit Date**: September 11, 2026  
-**Status**: ⚠️ High Complexity Monoliths Identified (Refactoring Roadmap Defined)
+## 🎯 Executive Summary
+This document details the read-only architectural audit of component structure, modular boundaries, state hooks, and UI composition across the **GuessWhooo?** codebase ([`src/components/game/MultiplayerBoard.tsx`](file:///e:/GuessWho/src/components/game/MultiplayerBoard.tsx), [`src/app/create/page.tsx`](file:///e:/GuessWho/src/app/create/page.tsx), [`src/app/templates/page.tsx`](file:///e:/GuessWho/src/app/templates/page.tsx), [`src/app/host/page.tsx`](file:///e:/GuessWho/src/app/host/page.tsx)).
 
----
-
-## Executive Summary
-
-Phase 4 audits the component structure, modular boundaries, state hooks, and UI architecture across the entire **GuessWhooo?** application codebase. While the application executes cleanly with 0 TypeScript errors and 0 build errors, several critical view layers suffer from **monolithic code organization**, high visual coupling, duplicate UI code blocks, and heavy inline state logic.
-
-The primary target is [`src/components/game/MultiplayerBoard.tsx`](file:///e:/GuessWho/src/components/game/MultiplayerBoard.tsx) (1,496 lines, 70KB), which currently manages WebSockets presence, DB persistence, timer countdowns, deck template selection, pre-game lobby rendering, secret character selection, chat log stream, and end-of-game victory flows in a single file.
+While the project builds with zero compilation errors, key view layers suffer from **monolithic component architecture**, heavy inline state logic, and high visual coupling, which impact long-term maintainability and trigger redundant re-renders.
 
 ---
 
-## 1. Monolithic Component Decomposition Plan
+## 🔍 Detailed Subsystem Audit Findings
 
-### 1.1 `MultiplayerBoard.tsx` (1,496 lines → 5 Focused Sub-components + 1 Hook)
-
-#### Current Architectural Issues
-- **1,496 lines** in a single React component file.
-- Combines game state management, WebSocket channels, DOM rendering, modal gates, chat UI, turn timer logic, and deck selector in one monolithic component.
-- High risk of unintended re-renders across chat updates, timer ticks, and opponent presence changes.
-
-#### Decomposition Target Architecture
-
-```
-src/components/game/multiplayer/
-├── MultiplayerBoard.tsx          # Main layout orchestrator (< 250 lines)
-├── hooks/
-│   └── useMultiplayerRoom.ts     # Realtime state sync, presence, DB persistence hook
-└── components/
-    ├── PreGameLobbyView.tsx      # Lobby waiting room, template picker trigger, host controls
-    ├── CharacterSelectionBanner.tsx # Pick secret character step before game start
-    ├── GameHeaderBar.tsx          # Turn status, countdown timer, leave/surrender buttons
-    ├── GameChatLog.tsx           # Chat stream, question assistant drawer, input form
-    └── DeckChangeModal.tsx       # Host modal for swapping active card template set
-```
-
-#### Proposed Interfaces & Modular Extraction
-
-1. **`useMultiplayerRoom(roomCode: string, template: CardSetTemplate, requiredPassword?: string | null)`**:
-   - Encapsulates Supabase Realtime channel subscription (`room_${roomCode}`).
-   - Manages state rehydration, presence tracking, `syncRoomStateToDb`, turn timer countdown, and game status transitions (`setup` | `selecting_character` | `active` | `finished`).
-   - Returns `{ roomState, presenceState, actions: { readyUp, setSecret, submitQuestion, surrender, restartMatch } }`.
-
-2. **`PreGameLobbyView.tsx`**:
-   - Renders host/guest player lobby cards, avatar badges, ready check indicators, room code copy banner, and turn timer selection.
-   - Props: `isHost: boolean`, `roomCode: string`, `template: CardSetTemplate`, `connectedPlayers: Player[]`, `onReady: () => void`, `onChangeTemplate: () => void`.
-
-3. **`GameChatLog.tsx`**:
-   - Manages chat history UI, fast question helper chips, scroll anchor ref, and send message handler.
-   - Isolated re-renders: Chat message typing will no longer force re-renders of 24 character card flip states.
+### 1. `MultiplayerBoard.tsx` Monolith & Lack of Custom Hooks
+- **Current Pattern**: `src/components/game/MultiplayerBoard.tsx` (1,496 lines, 70KB) combines WebSockets presence tracking, DB synchronization, state rehydration, turn countdown timers, chat log UI, template deck switching, pre-game lobby views, and end-of-game victory modals in a single file.
+- **Vulnerability / Gap**: Tying chat input typing (`chatInput`) or turn timer ticks (`secondsRemaining`) directly to the main board state forces React to re-evaluate the entire component tree—including all 24 character card flip components—on every keystroke or second.
+- **User Impact**: Potential frame micro-stuttering during active games and high code maintenance friction.
+- **Architectural Solution Plan**:
+  1. Extract room WebSocket channel, presence, and DB persistence logic into a dedicated `useMultiplayerRoom` custom hook.
+  2. Decompose the UI into 5 focused sub-components: `PreGameLobbyView`, `GameChatLog`, `CharacterSelectionBanner`, `GameHeaderBar`, and `DeckChangeModal`.
 
 ---
 
-### 1.2 `src/app/create/page.tsx` (538 lines → 4 Sub-components)
-
-#### Current Architectural Issues
-- 538 lines combining form state, bulk file upload, JSZip archive parsing, tag handling, card set editing, and Supabase DB saves.
-- Large inline functions for `handleBulkImageSelect` and `handleZipFileSelect`.
-
-#### Decomposition Target Architecture
-
-```
-src/components/create/
-├── BulkImageUploader.tsx       # Drag-and-drop & bulk file input handler
-├── ZipUnpackerWorker.tsx       # JSZip archive parser & macOS filter logic
-├── TagSelectorBar.tsx          # Tag pills & custom tag input handler
-└── CardGridEditor.tsx          # Grid of individual character card inputs & preview
-```
+### 2. `app/create/page.tsx` Monolithic Deck Creator Form & Inline Parsers
+- **Current Pattern**: `src/app/create/page.tsx` (538 lines, 21KB) handles form state, bulk drag-and-drop image reading, JSZip archive unpacking, macOS hidden file filtering, tag pill selection, card grid editing, and Supabase DB persistence inline.
+- **Vulnerability / Gap**: ZIP parsing logic and HTML FileReader callbacks are tightly bound to the React page render loop.
+- **User Impact**: Page component is difficult to unit test, and card editing logic cannot be reused across other deck modification screens.
+- **Architectural Solution Plan**: Decompose into modular sub-components: `BulkImageUploader`, `ZipUnpackerWorker`, `TagSelectorBar`, and `CardGridEditor`.
 
 ---
 
-### 1.3 `src/app/templates/page.tsx` (330 lines → 2 Sub-components)
-
-#### Current Architectural Issues
-- Search bar, tag filter pills, template deck grid, and card counts are rendered in a single file.
-- Template deck cards repeat SVG placeholder fallback logic and badge styling.
-
-#### Refactoring Target
-- Extract **`TemplateCard.tsx`**: Reusable template card display item showing total cards, tag pills, author badge, preview modal trigger, and direct play button.
-- Extract **`TagFilterBar.tsx`**: Controlled tag pill selector bar for filtering templates by category.
+### 3. `app/templates/page.tsx` Inline Deck Cards & Filter Duplication
+- **Current Pattern**: `src/app/templates/page.tsx` (330 lines) renders search bar inputs, tag filter pills, template deck cards, author badges, card counts, and preview modal triggers directly inside one file.
+- **Vulnerability / Gap**: Inline deck card markup duplicates fallback avatar generation and glassmorphic card styling without reusable component primitives.
+- **User Impact**: Changes to template card visual design require editing inline layout code across multiple pages.
+- **Architectural Solution Plan**: Extract reusable primitives: `TemplateCard.tsx` and `TagFilterBar.tsx`.
 
 ---
 
-### 1.4 `src/app/host/page.tsx` (280 lines → 1 Sub-component)
-
-#### Current Architectural Issues
-- Form controls for turn duration (30s, 60s, 90s, unlimited), room passcode toggle, public lobby switch, and player profile setup are combined in one page file.
-
-#### Refactoring Target
-- Extract **`HostSettingsForm.tsx`**: Reusable room settings form component with validated inputs for duration, privacy, and passcode.
+### 4. `app/host/page.tsx` Monolithic Room Settings Form
+- **Current Pattern**: `src/app/host/page.tsx` (280 lines) manages room code generation, timer duration dropdowns, public/private toggles, room passcode gates, and player avatar setup inline.
+- **Vulnerability / Gap**: Room configuration form logic is coupled directly to the host page wrapper.
+- **User Impact**: Prevents embedding room setup controls into modal dialogs or quick-host overlays on other pages.
+- **Architectural Solution Plan**: Extract reusable `HostSettingsForm.tsx` component.
 
 ---
 
-## 2. Prop Interface Cleanup & Type Safety Audit
-
-| Target Component | Current Issue | Recommended Enhancement |
-| :--- | :--- | :--- |
-| [`MultiplayerBoardProps`](file:///e:/GuessWho/src/components/game/MultiplayerBoard.tsx#L25-L29) | `template` prop can be stale if host changes set mid-lobby | Pass `initialTemplate: CardSetTemplate` and manage dynamic template updates strictly via DB state sync |
-| [`CardFlip.tsx`](file:///e:/GuessWho/src/components/game/CardFlip.tsx) | Mixed card state props (`isFlipped`, `isEliminated`, `isSecret`) | Group card visual flags into a clean `CardState` object interface |
-| [`QuestionAssistant.tsx`](file:///e:/GuessWho/src/components/game/QuestionAssistant.tsx) | Pass-through handler `onSelectQuestion: (q: string) => void` | Add strongly-typed `QuestionCategory` filters to assistant options |
+### 5. `globals.css` Tailwind Glassmorphic Utility Duplication
+- **Current Pattern**: Visual panels across modals, game board, header, and lobby list repeatedly specify inline glassmorphism utilities (`bg-slate-900/80 backdrop-blur-md border border-slate-700/50`) across 45+ JSX elements.
+- **Vulnerability / Gap**: Lack of centralized utility tokens causes subtle differences in backdrop opacity, border glow, and shadow elevation across screens.
+- **User Impact**: Minor visual inconsistency across dark mode glass surfaces.
+- **Architectural Solution Plan**: Consolidate glass styling into standard CSS tokens `.glass-panel` and `.game-card` in [`src/app/globals.css`](file:///e:/GuessWho/src/app/globals.css).
 
 ---
 
-## 3. CSS Utility Consolidation & Style Refactoring
+## 📊 Phase 4 Audit Summary Matrix
 
-- **3D Card Flip CSS**: Inline style utilities in [`src/app/globals.css`](file:///e:/GuessWho/src/app/globals.css) (`.perspective-1000`, `.transform-style-3d`, `.backface-hidden`) are defined correctly. Ensure Framer Motion in [`CardFlip.tsx`](file:///e:/GuessWho/src/components/game/CardFlip.tsx) uses hardware-accelerated CSS variables (`will-change: transform`).
-- **Glassmorphic Cards**: Glassmorphic UI backgrounds (`bg-slate-900/80 backdrop-blur-md border border-slate-700/50`) repeat 45+ times across the codebase. Refactor into standard CSS utility class `.glass-panel` in `globals.css`.
+| Finding ID | Subsystem | Severity | Impact | Proposed Architectural Fix |
+| :--- | :--- | :--- | :--- | :--- |
+| **AUD-P4-01** | Board Architecture | 🔴 High | 1,496-line monolith forces unnecessary card grid re-renders | Extract `useMultiplayerRoom` hook + 5 UI sub-components |
+| **AUD-P4-02** | Deck Studio | 🟡 Medium | Monolithic 538-line deck creator mixes ZIP worker & DOM UI | Decompose into `BulkImageUploader`, `ZipWorker`, `CardGridEditor` |
+| **AUD-P4-03** | Template Library | 🟡 Medium | Inlined deck card grid styling lacks reusable primitives | Extract `TemplateCard` and `TagFilterBar` components |
+| **AUD-P4-04** | Host Setup | 🟢 Low | Room creation form controls coupled to page component | Extract reusable `HostSettingsForm` component |
+| **AUD-P4-05** | Design Tokens | 🟢 Low | Glassmorphic CSS utility duplication across 45+ JSX tags | Consolidate glass style tokens into `globals.css` |
 
 ---
 
-## Phase 4 Audit Checklist
-
-- [x] Identified 4 monolithic view files (`MultiplayerBoard.tsx`, `app/create/page.tsx`, `app/templates/page.tsx`, `app/host/page.tsx`).
-- [x] Designed custom hook extraction blueprint (`useMultiplayerRoom`).
-- [x] Mapped component boundaries for isolated chat log, lobby view, deck editor, and card grid components.
-- [x] Outlined CSS utility class consolidation (`.glass-panel`).
-- [x] Verified zero TypeScript compilation errors (`npx tsc --noEmit`).
+## 🧪 Phase 4 Verification Status
+- Audit completed in read-only mode without mutating application code.
+- Findings cataloged in [`PHASE_4_AUDIT.md`](file:///e:/GuessWho/PHASE_4_AUDIT.md).
