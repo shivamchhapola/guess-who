@@ -27,7 +27,7 @@ export const DeckChangeModal: React.FC<DeckChangeModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div className="modal-backdrop">
       <div className="game-panel w-full max-w-2xl max-h-[85vh] rounded-3xl p-5 sm:p-6 flex flex-col shadow-2xl border border-slate-700/60">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-700/50 shrink-0">

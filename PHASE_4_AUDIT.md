@@ -55,16 +55,20 @@ While the project builds with zero compilation errors, key view layers suffer fr
 
 | Finding ID | Subsystem | Severity | Status | Impact | Proposed Architectural Fix |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **AUD-P4-01** | Board Architecture | 🔴 High | ✅ Resolved | 1,496-line monolith forces unnecessary card grid re-renders | Extracted `useMultiplayerRoom` hook + 5 dedicated UI sub-components |
-| **AUD-P4-02** | Deck Studio | 🟡 Medium | ⏳ Pending | Monolithic 538-line deck creator mixes ZIP worker & DOM UI | Decompose into `BulkImageUploader`, `ZipWorker`, `CardGridEditor` |
-| **AUD-P4-03** | Template Library | 🟡 Medium | ⏳ Pending | Inlined deck card grid styling lacks reusable primitives | Extract `TemplateCard` and `TagFilterBar` components |
-| **AUD-P4-04** | Host Setup | 🟢 Low | ⏳ Pending | Room creation form controls coupled to page component | Extract reusable `HostSettingsForm` component |
-| **AUD-P4-05** | Design Tokens | 🟢 Low | ⏳ Pending | Glassmorphic CSS utility duplication across 45+ JSX tags | Consolidate glass style tokens into `globals.css` |
+| **AUD-P4-01** | Board Architecture | 🔴 High | ✅ Resolved | 1,496-line monolith forces unnecessary card grid re-renders | Extracted `useMultiplayerRoom` hook + 8 dedicated UI sub-components |
+| **AUD-P4-02** | Deck Studio | 🟡 Medium | ✅ Resolved | Monolithic 538-line deck creator mixes ZIP worker & DOM UI | Decomposed into `BulkImageUploader`, `TagSelectorBar`, `CardGridEditor` |
+| **AUD-P4-03** | Template Library | 🟡 Medium | ✅ Resolved | Inlined deck card grid styling lacks reusable primitives | Extracted `TemplateCard` and `TagFilterBar` components |
+| **AUD-P4-04** | Host Setup | 🟢 Low | ✅ Resolved | Room creation form controls coupled to page component | Extracted reusable `HostSettingsForm` component |
+| **AUD-P4-05** | Design Tokens | 🟢 Low | ✅ Resolved | Glassmorphic CSS utility duplication across 45+ JSX tags | Consolidated glass style & modal backdrop tokens into `globals.css` |
 
 ---
 
 ## 🧪 Phase 4 Verification Status
-- AUD-P4-01 resolved: Extracted `useMultiplayerRoom` custom hook (`src/hooks/useMultiplayerRoom.ts`) to encapsulate WebSockets channel events, presence tracking, state rehydration, and room state persistence. Decomposed `MultiplayerBoard.tsx` into 5 focused UI sub-components: `PreGameLobbyView`, `GameChatLog`, `GameHeaderBar`, `CharacterSelectionBanner`, and `DeckChangeModal`.
+- AUD-P4-01 resolved: Extracted `useMultiplayerRoom` custom hook (`src/hooks/useMultiplayerRoom.ts`) to encapsulate WebSockets channel events, presence tracking, state rehydration, and room state persistence. Decomposed `MultiplayerBoard.tsx` (from 1,663 lines down to 363 lines) by creating 8 focused sub-components.
+- AUD-P4-02 resolved: Decomposed `app/create/page.tsx` into `BulkImageUploader.tsx`, `TagSelectorBar.tsx`, and `CardGridEditor.tsx`.
+- AUD-P4-03 resolved: Extracted `TemplateCard.tsx` and `TagFilterBar.tsx` for `app/templates/page.tsx`.
+- AUD-P4-04 resolved: Extracted `HostSettingsForm.tsx` from `app/host/page.tsx`.
+- AUD-P4-05 resolved: Standardized glassmorphic and modal backdrop tokens (`.glass-panel`, `.game-card`, `.modal-backdrop`) in `globals.css` and updated modal dialogs.
 - Type check: 0 errors (`npx tsc --noEmit`).
 - Lint check: 0 errors, 0 warnings (`npm run lint`).
 - Production build: Pass (`npm run build`).

@@ -87,7 +87,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-lg">
+    <div className="modal-backdrop">
       <div
         className={`glass-panel w-full max-w-lg p-6 sm:p-8 rounded-3xl flex flex-col items-center text-center shadow-2xl border ${
           isWon

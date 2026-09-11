@@ -16,7 +16,7 @@ export const LeaveRoomModal: React.FC<LeaveRoomModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div className="modal-backdrop">
       <div className="game-panel w-full max-w-sm rounded-3xl p-6 text-center border border-slate-700 shadow-2xl">
         <h3 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
           Leave Match?

@@ -124,8 +124,9 @@ We will systematically audit each architectural area for edge cases, error handl
   - [`GameBoard.tsx`](file:///e:/GuessWho/src/components/game/GameBoard.tsx) state machine & practice mode opponent logic.
   - Card elimination tracking & win condition evaluation offline.
 - [x] **Phase 4: Component Modularization & Architecture Refactoring** (Saved in [`PHASE_4_AUDIT.md`](file:///e:/GuessWho/PHASE_4_AUDIT.md))
-  - Deconstructed `MultiplayerBoard.tsx` into `useMultiplayerRoom` hook + 5 dedicated UI sub-components.
-  - Decomposition plans for `app/create/page.tsx`, `app/templates/page.tsx`, and `app/host/page.tsx`.
+  - Deconstructed `MultiplayerBoard.tsx` into `useMultiplayerRoom` hook + 8 dedicated UI sub-components.
+  - Decomposed `app/create/page.tsx`, `app/templates/page.tsx`, and `app/host/page.tsx` into reusable modular sub-components (`BulkImageUploader`, `TagSelectorBar`, `CardGridEditor`, `TemplateCard`, `TagFilterBar`, `HostSettingsForm`).
+  - Standardized CSS glassmorphic tokens and `.modal-backdrop` across all modal dialogs in `globals.css`.
 - [x] **Phase 5: Mobile UX, Performance Metrics & Web Audio Safety** (Saved in [`PHASE_5_AUDIT.md`](file:///e:/GuessWho/PHASE_5_AUDIT.md))
   - Full mobile viewport ergonomics & coarse pointer touch target audit (44px HIG minimums).
   - Web Audio API node cleanup (`osc.onended = disconnect`) & Mobile Safari autoplay policy unlock.

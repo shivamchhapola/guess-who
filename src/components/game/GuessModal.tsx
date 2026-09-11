@@ -32,7 +32,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="guess-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+      className="modal-backdrop"
     >
       <div className="glass-panel border border-pink-500/30 w-full max-w-md p-6 rounded-3xl flex flex-col items-center text-center shadow-2xl shadow-pink-500/10 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}

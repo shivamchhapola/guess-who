@@ -4,15 +4,12 @@ import React, { useState, useRef } from 'react';
 import JSZip from 'jszip';
 import { CharacterCard } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
-import {
-  UploadCloud, FileArchive, CheckCircle, Image as ImageIcon,
-  Play, Plus, Trash2, Tag, Sparkles, Layers, Users, X
-} from 'lucide-react';
-import Image from 'next/image';
+import { CheckCircle, Play, Sparkles, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
-
-const SUGGESTED_TAGS = ['Custom', 'Photos', 'Friends', 'Party', 'TV Show', 'Comedy', 'Movies', 'Gaming', 'Anime', 'Celebrities'];
+import { BulkImageUploader } from '@/components/create/BulkImageUploader';
+import { TagSelectorBar } from '@/components/create/TagSelectorBar';
+import { CardGridEditor } from '@/components/create/CardGridEditor';
 
 function formatFilenameToName(filename: string): string {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
@@ -402,50 +399,14 @@ export default function CreateTemplatePage() {
           </div>
         )}
 
-        {/* BULK PHOTO & ZIP UPLOADER HERO SECTION */}
-        <div className="game-panel p-8 rounded-3xl mb-8 border border-amber-500/30 shadow-2xl text-center flex flex-col items-center">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4">
-            <UploadCloud className="w-7 h-7" />
-          </div>
-
-          <h2 className="text-2xl sm:text-3xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            Bulk Photo Upload or Drop ZIP Archive
-          </h2>
-          <p className="text-slate-300 text-sm max-w-xl mb-6">
-            Upload multiple photos or a ZIP folder. Image filenames are automatically formatted into character names!
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 w-full max-w-lg mb-4">
-            <input type="file" ref={fileInputRef} multiple accept="image/*" onChange={handleBulkImageSelect} className="hidden" />
-            <input type="file" ref={zipInputRef} accept=".zip" onChange={handleZipFileSelect} className="hidden" />
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="game-btn-primary flex-1 py-3.5 px-5 text-sm cursor-pointer"
-              style={{ borderRadius: '1rem' }}
-            >
-              <ImageIcon className="w-5 h-5" />
-              <span>Select Photos</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => zipInputRef.current?.click()}
-              className="game-btn-purple flex-1 py-3.5 px-5 text-sm cursor-pointer"
-              style={{ borderRadius: '1rem' }}
-            >
-              <FileArchive className="w-5 h-5" />
-              <span>Upload ZIP Archive</span>
-            </button>
-          </div>
-
-          {uploadStatus && (
-            <div className="text-xs font-bold text-amber-300 bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20">
-              {uploadStatus}
-            </div>
-          )}
-        </div>
+        {/* BULK PHOTO & ZIP UPLOADER COMPONENT */}
+        <BulkImageUploader
+          fileInputRef={fileInputRef}
+          zipInputRef={zipInputRef}
+          uploadStatus={uploadStatus}
+          onBulkImageSelect={handleBulkImageSelect}
+          onZipFileSelect={handleZipFileSelect}
+        />
 
         {/* Set Details Form & Tag Selection */}
         <div className="game-panel p-6 rounded-3xl mb-8 border border-white/10">
@@ -479,138 +440,33 @@ export default function CreateTemplatePage() {
             </div>
           </div>
 
-          {/* Tags Selector */}
-          <div>
-            <label className="block text-xs font-bold text-slate-200 mb-2 flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-amber-400" />
-              <span>Category Tags</span>
-            </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {SUGGESTED_TAGS.map((tag) => {
-                const isSelected = selectedTags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    className="px-3 py-1 rounded-full text-xs font-bold transition-all"
-                    style={{
-                      background: isSelected ? '#f59e0b' : 'rgba(30,41,59,0.7)',
-                      color: isSelected ? '#0a0f1a' : '#94a3b8',
-                      border: '1px solid ' + (isSelected ? 'transparent' : 'rgba(71,85,105,0.4)'),
-                    }}
-                  >
-                    #{tag}
-                  </button>
-                );
-              })}
-
-              {selectedTags
-                .filter((t) => !SUGGESTED_TAGS.includes(t))
-                .map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    className="px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1"
-                    style={{
-                      background: '#f59e0b',
-                      color: '#0a0f1a',
-                    }}
-                  >
-                    <span>#{tag}</span>
-                    <X className="w-3 h-3" />
-                  </button>
-                ))}
-            </div>
-
-            <div className="flex items-center gap-2 max-w-sm">
-              <input
-                type="text"
-                value={customTagInput}
-                onChange={(e) => setCustomTagInput(e.target.value)}
-                onKeyDown={handleAddCustomTag}
-                placeholder="Add custom tag (e.g. #Office)..."
-                className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
-              />
-              <button
-                type="button"
-                onClick={handleAddCustomTag}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition-colors"
-              >
-                Add Tag
-              </button>
-            </div>
-          </div>
+          {/* Tags Selector Component */}
+          <TagSelectorBar
+            selectedTags={selectedTags}
+            customTagInput={customTagInput}
+            onCustomTagInputChange={setCustomTagInput}
+            onToggleTag={toggleTag}
+            onAddCustomTag={handleAddCustomTag}
+          />
         </div>
 
-        {/* Cards Header & Add Button */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-black text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            <Layers className="w-5 h-5 text-amber-400" />
-            <span>Character Cards ({cards.length})</span>
-          </h3>
-
-          <button
-            type="button"
-            onClick={handleAddCard}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-amber-300 bg-slate-900 border border-amber-500/30 rounded-xl hover:bg-slate-800 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Single Card</span>
-          </button>
-        </div>
-
-        {/* Dynamic Card Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-          {cards.map((card, idx) => (
-            <div
-              key={card.id}
-              className="game-card p-3 rounded-2xl border border-white/10 flex flex-col items-center gap-2 hover:border-amber-400/60 relative group"
-            >
-              {/* Remove Button */}
-              <button
-                type="button"
-                onClick={() => handleRemoveCard(idx)}
-                className="absolute top-2 right-2 z-10 p-1.5 bg-rose-500/80 hover:bg-rose-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Remove Card"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Hidden File Input for Single Card Photo Swap */}
-              <input
-                type="file"
-                accept="image/*"
-                ref={(el) => {
-                  cardFileInputRefs.current[idx] = el;
-                }}
-                onChange={(e) => handleSingleCardFileSelect(idx, e)}
-                className="hidden"
-              />
-
-              {/* Card Image Preview */}
-              <div
-                onClick={() => cardFileInputRefs.current[idx]?.click()}
-                className="relative w-full aspect-square rounded-xl bg-slate-950 overflow-hidden border border-slate-800 cursor-pointer group/img"
-              >
-                <Image src={card.imageUrl} alt={card.name} fill className="object-cover group-hover/img:scale-105 transition-transform" unoptimized />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-bold text-white">
-                  Change Photo
-                </div>
-              </div>
-
-              {/* Character Name Input */}
-              <input
-                type="text"
-                value={card.name}
-                onChange={(e) => handleCardNameChange(idx, e.target.value)}
-                placeholder={`Name ${idx + 1}`}
-                className="w-full px-2 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs font-bold text-white text-center focus:outline-none focus:border-amber-400"
-              />
-            </div>
-          ))}
-        </div>
+        {/* Card Grid Editor Component */}
+        <CardGridEditor
+          cards={cards}
+          onSetCardInputRef={(idx, el) => {
+            if (cardFileInputRefs.current) {
+              cardFileInputRefs.current[idx] = el;
+            }
+          }}
+          onCardImageClick={(idx) => {
+            const input = cardFileInputRefs.current?.[idx];
+            if (input) input.click();
+          }}
+          onUpdateCardName={handleCardNameChange}
+          onSingleCardImageSelect={handleSingleCardFileSelect}
+          onRemoveCard={handleRemoveCard}
+          onAddCard={handleAddCard}
+        />
       </main>
     </div>
   );

@@ -86,7 +86,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================
-   GLASS PANEL — Alias kept for backward compat
+   GLASS PANEL — Reusable glass surface token
    ============================================ */
 .glass-panel {
   background: rgba(13, 19, 36, 0.92);
