@@ -15,6 +15,7 @@ import { NavHeader } from '@/components/NavHeader';
 import { soundFx } from '@/lib/audio';
 import { PlayerProfileSetup } from '@/components/PlayerProfileSetup';
 import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
+import { getOrCreateRoomPlayerId } from '@/lib/roomIdentity';
 
 function generateRandomCode(length: number = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -111,9 +112,6 @@ function HostRoomContent() {
 
     let upperCode = (roomCode || generateRandomCode(6)).toUpperCase();
     const finalHostName = trimmedName;
-    const hostPresenceKey = selectedAvatar && selectedAvatar.startsWith('https://')
-      ? `${selectedAvatar} ${finalHostName}`
-      : finalHostName;
 
     try {
       const { data: existing } = await supabase
@@ -127,15 +125,18 @@ function HostRoomContent() {
         setRoomCode(upperCode);
       }
 
+      const hostPlayerId = getOrCreateRoomPlayerId(upperCode);
+
       const roomPayload = {
         code: upperCode,
-        host_id: hostPresenceKey,
+        host_id: hostPlayerId,
         template_id: selectedTemplateId,
         password_hash: hasPassword ? password.trim() : null,
         is_public: isPublic,
         turn_timer_seconds: turnTimerSetting,
         status: 'waiting',
         state: {
+          hostPlayerId,
           hostName: finalHostName,
           selectedAvatar,
           selectedTemplateId,
@@ -150,7 +151,7 @@ function HostRoomContent() {
 
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(`room_${upperCode}_role`, 'host');
-        sessionStorage.setItem(`room_${upperCode}_name`, hostPresenceKey);
+        sessionStorage.setItem(`room_${upperCode}_name`, finalHostName);
         sessionStorage.setItem(`room_${upperCode}_avatar`, selectedAvatar);
         sessionStorage.setItem(`room_${upperCode}_template`, selectedTemplateId);
         sessionStorage.setItem(`room_${upperCode}_timer`, String(turnTimerSetting));
