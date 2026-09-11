@@ -195,7 +195,7 @@ CREATE POLICY "Public Card Images Bucket Viewable"
 
 DROP POLICY IF EXISTS "Authenticated Users Can Upload Card Images" ON storage.objects;
 DROP POLICY IF EXISTS "Users Can Upload Card Images" ON storage.objects;
-CREATE POLICY "Users Can Upload Card Images" 
+DROP POLICY IF EXISTS "Anyone Can Upload Card Images" ON storage.objects;
+CREATE POLICY "Anyone Can Upload Card Images" 
   ON storage.objects FOR INSERT 
-  TO authenticated 
   WITH CHECK (bucket_id = 'card-images');

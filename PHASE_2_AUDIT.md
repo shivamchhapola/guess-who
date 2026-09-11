@@ -63,7 +63,7 @@ This document details the read-only architectural audit of data persistence, Sup
 | **AUD-P2-01** | Database RLS | 🔴 High | ✅ Resolved | Guest deck creation fails silently due to `TO authenticated` INSERT policy | Updated RLS policies in `schema.sql` to authorize `creator_id IS NULL` insertions |
 | **AUD-P2-02** | Payload Optimization | 🔴 High | ✅ Resolved | 50MB Base64 payloads cause 413/504 HTTP POST timeouts on deck publish | Client-side HTML5 canvas compression to max 400x400 JPEGs (98.6% payload reduction) |
 | **AUD-P2-03** | Database Performance | 🟡 Medium | ✅ Resolved | `templates.created_at` query forces Filesort on template library | Added compound partial index `idx_templates_public_created` in `schema.sql` |
-| **AUD-P2-04** | Storage Security | 🟡 Medium | ⏳ Pending | Guest image bucket uploads blocked with 403 Forbidden | Harmonize storage bucket RLS permissions |
+| **AUD-P2-04** | Storage Security | 🟡 Medium | ✅ Resolved | Guest image bucket uploads blocked with 403 Forbidden | Harmonized `storage.objects` RLS policy to permit public image uploads to `card-images` bucket |
 | **AUD-P2-05** | Room State RLS | 🟢 Low | ⏳ Pending | Open RLS UPDATE policy on `game_rooms` allows arbitrary state overwrites | Enforce host session verification in update policy |
 
 ---
@@ -72,6 +72,7 @@ This document details the read-only architectural audit of data persistence, Sup
 - AUD-P2-01 resolved: Updated PostgreSQL RLS `INSERT` policies for `public.templates` and `public.cards` in `supabase/schema.sql` to permit anonymous deck insertions (`creator_id IS NULL`); added error boundary handling in `app/create/page.tsx`.
 - AUD-P2-02 resolved: Implemented `compressImageDataUrl` HTML5 canvas helper in `app/create/page.tsx` to automatically downscale and compress raw photo uploads to 400x400 JPEGs, cutting custom deck payload size by 98.6% and preventing 413/504 HTTP errors.
 - AUD-P2-03 resolved: Added compound partial indexes `idx_templates_public_created` and `idx_game_rooms_public_status_created` in `supabase/schema.sql` to eliminate unindexed Filesort operations during template library and lobby queries.
+- AUD-P2-04 resolved: Updated `storage.objects` INSERT policy in `supabase/schema.sql` to allow public image uploads to `card-images` bucket without requiring user authentication.
 - Type check: 0 errors (`npx tsc --noEmit`).
 - Lint check: 0 errors, 0 warnings (`npm run lint`).
 - Production build: Pass (`npm run build`).
