@@ -80,13 +80,13 @@ export const GameHeaderBar: React.FC<GameHeaderBarProps> = ({
       <div className="flex items-center gap-2 shrink-0 flex-wrap">
         {/* Secret Card Widget */}
         {playerSecretCard && (
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl"
             style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
-            <span className="text-[9px] font-black text-amber-400 uppercase tracking-wider">My secret</span>
-            <div className="relative w-6 h-6 rounded-md overflow-hidden shrink-0" style={{ border: '1px solid rgba(245,158,11,0.6)' }}>
+            <span className="text-[9px] font-black text-amber-400 uppercase tracking-wider hidden xs:inline">My secret</span>
+            <div className="relative w-5 h-5 sm:w-6 sm:h-6 rounded-md overflow-hidden shrink-0" style={{ border: '1px solid rgba(245,158,11,0.6)' }}>
               <Image src={playerSecretCard.imageUrl} alt={playerSecretCard.name} fill className="object-cover" unoptimized />
             </div>
-            <span className="text-xs font-bold text-white max-w-[80px] truncate">{playerSecretCard.name}</span>
+            <span className="text-[11px] sm:text-xs font-bold text-white max-w-[65px] sm:max-w-[80px] truncate">{playerSecretCard.name}</span>
           </div>
         )}
 

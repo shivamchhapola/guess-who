@@ -110,6 +110,28 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================
+   MOBILE GPU PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+@media (max-width: 640px) {
+  .game-panel,
+  .glass-panel {
+    backdrop-filter: blur(8px) saturate(1.2);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  }
+
+  .game-card,
+  .glass-card {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .modal-backdrop {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+/* ============================================
    BUTTONS — Primary (Amber/Gold)
    ============================================ */
 .game-btn-primary {

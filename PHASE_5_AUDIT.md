@@ -57,16 +57,22 @@ While the overall mobile layout uses responsive CSS grid breakpoints and `touch-
 
 ## 📊 Phase 5 Audit Summary Matrix
 
-| Finding ID | Subsystem | Severity | Impact | Proposed Architectural Fix |
-| :--- | :--- | :--- | :--- | :--- |
-| **AUD-P5-01** | Web Audio API | 🟡 Medium | Audio nodes remain connected to `destination`, risking memory creep | Add `osc.onended` disconnect handlers |
-| **AUD-P5-02** | Audio Autoplay | 🟡 Medium | Mobile Safari silences audio until explicit user touch | Add one-off `touchstart` listener to resume AudioContext |
-| **AUD-P5-03** | Touch Ergonomics | 🟡 Medium | Card flip area lacks scroll buffer, causing accidental taps | Add `touch-action: pan-y` & 6px touch buffer margins |
-| **AUD-P5-04** | Mobile Viewport | 🟢 Low | Floating secret card button overlaps chat bar on small screens | Group controls into unified mobile bottom action bar |
-| **AUD-P5-05** | CSS GPU Load | 🟢 Low | 20px backdrop blur on 15+ panels drains mobile GPU | Reduce mobile blur to `blur(8px)` via media query |
+| Finding ID | Subsystem | Severity | Status | Impact | Proposed Architectural Fix |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **AUD-P5-01** | Web Audio API | 🟡 Medium | ✅ Resolved | Audio nodes remain connected to `destination`, risking memory creep | Added `osc.onended` disconnect handlers to all audio synthesizers |
+| **AUD-P5-02** | Audio Autoplay | 🟡 Medium | ✅ Resolved | Mobile Safari silences audio until explicit user touch | Added one-off global touch gesture unlock listener for AudioContext |
+| **AUD-P5-03** | Touch Ergonomics | 🟡 Medium | ✅ Resolved | Card flip area lacks scroll buffer, causing accidental taps | Added `touch-pan-y` touch action and hitbox buffers |
+| **AUD-P5-04** | Mobile Viewport | 🟢 Low | ✅ Resolved | Floating secret card button overlaps chat bar on small screens | Integrated secret character badge into mobile sticky header bar |
+| **AUD-P5-05** | CSS GPU Load | 🟢 Low | ✅ Resolved | 20px backdrop blur on 15+ panels drains mobile GPU | Added `@media (max-width: 640px)` reducing mobile blur radius to `8px` |
 
 ---
 
 ## 🧪 Phase 5 Verification Status
-- Audit completed in read-only mode without mutating application code.
-- Findings cataloged in [`PHASE_5_AUDIT.md`](file:///e:/GuessWho/PHASE_5_AUDIT.md).
+- AUD-P5-01 resolved: Added `osc.onended = () => { osc.disconnect(); gain.disconnect(); };` across all audio synth methods in `src/lib/audio.ts`.
+- AUD-P5-02 resolved: Added one-time `touchstart` / `click` listener to resume suspended `AudioContext` on Mobile Safari.
+- AUD-P5-03 resolved: Added `touch-pan-y` touch action to `src/components/game/CardFlip.tsx`.
+- AUD-P5-04 resolved: Responsive secret character widget integrated into sticky header bar (`src/components/game/GameHeaderBar.tsx`).
+- AUD-P5-05 resolved: Mobile GPU backdrop-filter performance query `@media (max-width: 640px)` added to `src/app/globals.css`.
+- Type check: 0 errors (`npx tsc --noEmit`).
+- Lint check: 0 errors, 0 warnings (`npm run lint`).
+- Production build: Pass (`npm run build`).

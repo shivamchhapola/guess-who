@@ -56,7 +56,7 @@ export const CardFlip: React.FC<CardFlipProps> = ({
       role="group"
       aria-label={cardLabel}
       onKeyDown={handleKeyDown}
-      className="relative w-full aspect-[3/4.4] perspective-1000 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl"
+      className="relative w-full aspect-[3/4.4] perspective-1000 select-none touch-pan-y focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl"
     >
       {/* Secret Card Badge */}
       {isSecret && (

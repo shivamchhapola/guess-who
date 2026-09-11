@@ -128,8 +128,10 @@ We will systematically audit each architectural area for edge cases, error handl
   - Decomposed `app/create/page.tsx`, `app/templates/page.tsx`, and `app/host/page.tsx` into reusable modular sub-components (`BulkImageUploader`, `TagSelectorBar`, `CardGridEditor`, `TemplateCard`, `TagFilterBar`, `HostSettingsForm`).
   - Standardized CSS glassmorphic tokens and `.modal-backdrop` across all modal dialogs in `globals.css`.
 - [x] **Phase 5: Mobile UX, Performance Metrics & Web Audio Safety** (Saved in [`PHASE_5_AUDIT.md`](file:///e:/GuessWho/PHASE_5_AUDIT.md))
-  - Full mobile viewport ergonomics & coarse pointer touch target audit (44px HIG minimums).
-  - Web Audio API node cleanup (`osc.onended = disconnect`) & Mobile Safari autoplay policy unlock.
+  - Web Audio API node cleanup (`osc.onended = disconnect`) and one-shot Mobile Safari gesture unlock listener added in `src/lib/audio.ts`.
+  - Added `touch-pan-y` touch action and hitbox buffers in `CardFlip.tsx`.
+  - Integrated mobile secret character widget into `GameHeaderBar.tsx`.
+  - Added `@media (max-width: 640px)` mobile GPU backdrop-filter performance query in `globals.css`.
 
 ---
 
