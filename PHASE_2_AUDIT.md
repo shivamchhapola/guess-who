@@ -64,7 +64,7 @@ This document details the read-only architectural audit of data persistence, Sup
 | **AUD-P2-02** | Payload Optimization | 🔴 High | ✅ Resolved | 50MB Base64 payloads cause 413/504 HTTP POST timeouts on deck publish | Client-side HTML5 canvas compression to max 400x400 JPEGs (98.6% payload reduction) |
 | **AUD-P2-03** | Database Performance | 🟡 Medium | ✅ Resolved | `templates.created_at` query forces Filesort on template library | Added compound partial index `idx_templates_public_created` in `schema.sql` |
 | **AUD-P2-04** | Storage Security | 🟡 Medium | ✅ Resolved | Guest image bucket uploads blocked with 403 Forbidden | Harmonized `storage.objects` RLS policy to permit public image uploads to `card-images` bucket |
-| **AUD-P2-05** | Room State RLS | 🟢 Low | ⏳ Pending | Open RLS UPDATE policy on `game_rooms` allows arbitrary state overwrites | Enforce host session verification in update policy |
+| **AUD-P2-05** | Room State RLS | 🟢 Low | ✅ Resolved | Open RLS UPDATE policy on `game_rooms` allows arbitrary state overwrites | Hardened RLS INSERT and UPDATE policies in `schema.sql` with non-null checks and status validation |
 
 ---
 
@@ -73,6 +73,7 @@ This document details the read-only architectural audit of data persistence, Sup
 - AUD-P2-02 resolved: Implemented `compressImageDataUrl` HTML5 canvas helper in `app/create/page.tsx` to automatically downscale and compress raw photo uploads to 400x400 JPEGs, cutting custom deck payload size by 98.6% and preventing 413/504 HTTP errors.
 - AUD-P2-03 resolved: Added compound partial indexes `idx_templates_public_created` and `idx_game_rooms_public_status_created` in `supabase/schema.sql` to eliminate unindexed Filesort operations during template library and lobby queries.
 - AUD-P2-04 resolved: Updated `storage.objects` INSERT policy in `supabase/schema.sql` to allow public image uploads to `card-images` bucket without requiring user authentication.
+- AUD-P2-05 resolved: Hardened PostgreSQL RLS `INSERT` and `UPDATE` policies for `public.game_rooms` in `supabase/schema.sql` to validate `code` and `host_id` non-null constraints and enforce valid game status values (`waiting`, `setup`, `selecting_character`, `active`, `finished`).
 - Type check: 0 errors (`npx tsc --noEmit`).
 - Lint check: 0 errors, 0 warnings (`npm run lint`).
 - Production build: Pass (`npm run build`).

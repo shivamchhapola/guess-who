@@ -166,13 +166,17 @@ DROP POLICY IF EXISTS "Anyone can create or update game rooms" ON public.game_ro
 DROP POLICY IF EXISTS "Anyone can create game rooms" ON public.game_rooms;
 CREATE POLICY "Anyone can create game rooms" 
   ON public.game_rooms FOR INSERT 
-  WITH CHECK (true);
+  WITH CHECK (code IS NOT NULL AND host_id IS NOT NULL);
 
 DROP POLICY IF EXISTS "Anyone can update existing game rooms" ON public.game_rooms;
 CREATE POLICY "Anyone can update existing game rooms" 
   ON public.game_rooms FOR UPDATE 
   USING (true) 
-  WITH CHECK (true);
+  WITH CHECK (
+    code IS NOT NULL 
+    AND host_id IS NOT NULL 
+    AND status IN ('waiting', 'setup', 'selecting_character', 'active', 'finished')
+  );
 
 -- 5. Foreign Key Performance & Compound Partial Indexes
 CREATE INDEX IF NOT EXISTS idx_cards_template_id ON public.cards(template_id);
