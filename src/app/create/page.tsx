@@ -223,9 +223,12 @@ export default function CreateTemplatePage() {
     try {
       const { data: userData } = await supabase.auth.getUser();
       const creatorId = userData?.user?.id || null;
-      const creatorName = userData?.user?.user_metadata?.username || 'Community Creator';
+      const creatorName =
+        userData?.user?.user_metadata?.username ||
+        userData?.user?.user_metadata?.full_name ||
+        'Community Creator';
 
-      const { data: templateData } = await supabase
+      const { data: templateData, error: templateError } = await supabase
         .from('templates')
         .insert({
           title: title.trim(),
@@ -238,29 +241,40 @@ export default function CreateTemplatePage() {
         .select()
         .single();
 
-      if (templateData?.id) {
-        const cardsToInsert = cards.map((c) => ({
-          template_id: templateData.id,
-          name: c.name,
-          image_url: c.imageUrl,
-          attributes: c.attributes,
-        }));
-        await supabase.from('cards').insert(cardsToInsert);
+      if (templateError || !templateData?.id) {
+        console.error('Template insertion error:', templateError);
+        alert(`Failed to save game set: ${templateError?.message || 'Database permissions error'}`);
+        setSaving(false);
+        return;
+      }
+
+      const cardsToInsert = cards.map((c) => ({
+        template_id: templateData.id,
+        name: c.name,
+        image_url: c.imageUrl,
+        attributes: c.attributes,
+      }));
+
+      const { error: cardsError } = await supabase.from('cards').insert(cardsToInsert);
+      if (cardsError) {
+        console.error('Cards insertion error:', cardsError);
+        alert(`Failed to save deck cards: ${cardsError.message}`);
+        setSaving(false);
+        return;
       }
 
       setSuccessMsg('Game Set Published! Redirecting...');
       const targetUrl =
         destination === 'host'
-          ? `/host?template=${templateData?.id || 'custom'}`
-          : `/play/practice?template=${templateData?.id || 'custom'}`;
+          ? `/host?template=${templateData.id}`
+          : `/play/practice?template=${templateData.id}`;
 
       setTimeout(() => {
         router.push(targetUrl);
       }, 1000);
     } catch (err) {
       console.error('Save template error:', err);
-      const targetUrl = destination === 'host' ? '/host' : '/play/practice';
-      router.push(targetUrl);
+      alert('An unexpected error occurred while publishing your game set.');
     } finally {
       setSaving(false);
     }

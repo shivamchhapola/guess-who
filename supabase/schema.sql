@@ -51,10 +51,14 @@ CREATE POLICY "Public templates are viewable by everyone"
   USING (is_public = true OR (select auth.uid()) = creator_id);
 
 DROP POLICY IF EXISTS "Authenticated users can create templates" ON public.templates;
-CREATE POLICY "Authenticated users can create templates" 
+DROP POLICY IF EXISTS "Anyone can create templates" ON public.templates;
+CREATE POLICY "Anyone can create templates" 
   ON public.templates FOR INSERT 
-  TO authenticated 
-  WITH CHECK ((select auth.uid()) = creator_id);
+  WITH CHECK (
+    ((select auth.uid()) IS NOT NULL AND (select auth.uid()) = creator_id)
+    OR
+    ((select auth.uid()) IS NULL AND creator_id IS NULL)
+  );
 
 DROP POLICY IF EXISTS "Creators can update own templates" ON public.templates;
 CREATE POLICY "Creators can update own templates" 
@@ -93,13 +97,18 @@ CREATE POLICY "Cards of public templates are viewable by everyone"
   );
 
 DROP POLICY IF EXISTS "Creators can insert cards into own templates" ON public.cards;
-CREATE POLICY "Creators can insert cards into own templates" 
+DROP POLICY IF EXISTS "Anyone can insert cards into templates" ON public.cards;
+CREATE POLICY "Anyone can insert cards into templates" 
   ON public.cards FOR INSERT 
-  TO authenticated 
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.templates t 
-      WHERE t.id = cards.template_id AND t.creator_id = (select auth.uid())
+      WHERE t.id = cards.template_id 
+      AND (
+        (t.creator_id IS NOT NULL AND t.creator_id = (select auth.uid()))
+        OR
+        (t.creator_id IS NULL)
+      )
     )
   );
 
