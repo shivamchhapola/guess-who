@@ -53,16 +53,18 @@ While the project builds with zero compilation errors, key view layers suffer fr
 
 ## 📊 Phase 4 Audit Summary Matrix
 
-| Finding ID | Subsystem | Severity | Impact | Proposed Architectural Fix |
-| :--- | :--- | :--- | :--- | :--- |
-| **AUD-P4-01** | Board Architecture | 🔴 High | 1,496-line monolith forces unnecessary card grid re-renders | Extract `useMultiplayerRoom` hook + 5 UI sub-components |
-| **AUD-P4-02** | Deck Studio | 🟡 Medium | Monolithic 538-line deck creator mixes ZIP worker & DOM UI | Decompose into `BulkImageUploader`, `ZipWorker`, `CardGridEditor` |
-| **AUD-P4-03** | Template Library | 🟡 Medium | Inlined deck card grid styling lacks reusable primitives | Extract `TemplateCard` and `TagFilterBar` components |
-| **AUD-P4-04** | Host Setup | 🟢 Low | Room creation form controls coupled to page component | Extract reusable `HostSettingsForm` component |
-| **AUD-P4-05** | Design Tokens | 🟢 Low | Glassmorphic CSS utility duplication across 45+ JSX tags | Consolidate glass style tokens into `globals.css` |
+| Finding ID | Subsystem | Severity | Status | Impact | Proposed Architectural Fix |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **AUD-P4-01** | Board Architecture | 🔴 High | ✅ Resolved | 1,496-line monolith forces unnecessary card grid re-renders | Extracted `useMultiplayerRoom` hook + 5 dedicated UI sub-components |
+| **AUD-P4-02** | Deck Studio | 🟡 Medium | ⏳ Pending | Monolithic 538-line deck creator mixes ZIP worker & DOM UI | Decompose into `BulkImageUploader`, `ZipWorker`, `CardGridEditor` |
+| **AUD-P4-03** | Template Library | 🟡 Medium | ⏳ Pending | Inlined deck card grid styling lacks reusable primitives | Extract `TemplateCard` and `TagFilterBar` components |
+| **AUD-P4-04** | Host Setup | 🟢 Low | ⏳ Pending | Room creation form controls coupled to page component | Extract reusable `HostSettingsForm` component |
+| **AUD-P4-05** | Design Tokens | 🟢 Low | ⏳ Pending | Glassmorphic CSS utility duplication across 45+ JSX tags | Consolidate glass style tokens into `globals.css` |
 
 ---
 
 ## 🧪 Phase 4 Verification Status
-- Audit completed in read-only mode without mutating application code.
-- Findings cataloged in [`PHASE_4_AUDIT.md`](file:///e:/GuessWho/PHASE_4_AUDIT.md).
+- AUD-P4-01 resolved: Extracted `useMultiplayerRoom` custom hook (`src/hooks/useMultiplayerRoom.ts`) to encapsulate WebSockets channel events, presence tracking, state rehydration, and room state persistence. Decomposed `MultiplayerBoard.tsx` into 5 focused UI sub-components: `PreGameLobbyView`, `GameChatLog`, `GameHeaderBar`, `CharacterSelectionBanner`, and `DeckChangeModal`.
+- Type check: 0 errors (`npx tsc --noEmit`).
+- Lint check: 0 errors, 0 warnings (`npm run lint`).
+- Production build: Pass (`npm run build`).
