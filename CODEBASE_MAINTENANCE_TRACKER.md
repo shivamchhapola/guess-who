@@ -123,12 +123,12 @@ We will systematically audit each architectural area for edge cases, error handl
 - [x] **Phase 3: Solo Practice Mode & AI Strategy Engine** (Saved in [`PHASE_3_AUDIT.md`](file:///e:/GuessWho/PHASE_3_AUDIT.md))
   - [`GameBoard.tsx`](file:///e:/GuessWho/src/components/game/GameBoard.tsx) state machine & practice mode opponent logic.
   - Card elimination tracking & win condition evaluation offline.
-- [ ] **Phase 4: Component Modularization & Architecture Refactoring**
-  - Further decomposition of large UI screens into focused, reusable component primitives.
-  - Prop interface cleanup & strict TypeScript model enforcement.
-- [ ] **Phase 5: Mobile UX, Performance Metrics & Web Audio Safety**
-  - Full mobile browser touch audit (iOS Safari, Android Chrome).
-  - Memory leak checks for Web Audio API AudioContext & Supabase Realtime channels.
+- [x] **Phase 4: Component Modularization & Architecture Refactoring** (Saved in [`PHASE_4_AUDIT.md`](file:///e:/GuessWho/PHASE_4_AUDIT.md))
+  - Deconstructed `MultiplayerBoard.tsx` into `useMultiplayerRoom` hook + 5 dedicated UI sub-components.
+  - Decomposition plans for `app/create/page.tsx`, `app/templates/page.tsx`, and `app/host/page.tsx`.
+- [x] **Phase 5: Mobile UX, Performance Metrics & Web Audio Safety** (Saved in [`PHASE_5_AUDIT.md`](file:///e:/GuessWho/PHASE_5_AUDIT.md))
+  - Full mobile viewport ergonomics & coarse pointer touch target audit (44px HIG minimums).
+  - Web Audio API node cleanup (`osc.onended = disconnect`) & Mobile Safari autoplay policy unlock.
 
 ---
 
@@ -140,3 +140,6 @@ We will systematically audit each architectural area for edge cases, error handl
 | **Phase 1 Audit (Realtime Engine)** | 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | Documented in `PHASE_1_AUDIT.md` | ✅ Documented |
 | **Phase 2 Audit (Data & Storage)** | 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | Documented in `PHASE_2_AUDIT.md` | ✅ Documented |
 | **Phase 3 Audit (Solo Practice & AI)**| 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | Documented in `PHASE_3_AUDIT.md` | ✅ Documented |
+| **Phase 4 Audit (Modularization)** | 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | Documented in `PHASE_4_AUDIT.md` | ✅ Documented |
+| **Phase 5 Audit (Mobile & Audio)** | 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | Documented in `PHASE_5_AUDIT.md` | ✅ Documented |
+
