@@ -14,6 +14,9 @@ interface PublicRoom {
   password_hash: string | null;
   created_at: string;
   status?: string;
+  state?: {
+    hostName?: string;
+  } | null;
 }
 
 export default function PublicLobbiesPage() {
@@ -61,10 +64,13 @@ export default function PublicLobbiesPage() {
     return () => clearInterval(interval);
   }, [fetchPublicRooms]);
 
-  const filteredRooms = rooms.filter((r) =>
-    r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.host_id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getHostName = (room: PublicRoom): string => room.state?.hostName || 'Anonymous';
+
+  const filteredRooms = rooms.filter((r) => {
+    const hostName = getHostName(r);
+    const query = searchQuery.toLowerCase();
+    return r.code.toLowerCase().includes(query) || hostName.toLowerCase().includes(query);
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -224,7 +230,7 @@ export default function PublicLobbiesPage() {
                     </div>
 
                     <p className="text-slate-400 text-xs font-semibold mb-1">
-                      Hosted by <span className="text-slate-200 font-bold">{room.host_id}</span>
+                      Hosted by <span className="text-slate-200 font-bold">{getHostName(room)}</span>
                     </p>
                     <p className="text-slate-600 text-xs mb-6">
                       Created at {new Date(room.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
