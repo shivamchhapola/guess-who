@@ -15,7 +15,7 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **DOMAIN 2** | Data Access Layer, Types & DB | `schema.sql`, `client.ts`, `server.ts`, `game.ts` | ✅ Completed | `audit/domain-2-data-layer` | 0 errors, build pass |
 | **DOMAIN 3** | Template Creator & Storage Pipeline | `create/page.tsx`, `templates/page.tsx`, `setUtils.ts` | ✅ Completed | `audit/domain-3-template-creator` | 0 errors, build pass |
 | **DOMAIN 4** | Matchmaking & Navigation Flow | `host/page.tsx`, `lobbies/page.tsx`, `NavHeader.tsx` | ✅ Completed | `audit/domain-4-matchmaking` | 0 errors, build pass |
-| **DOMAIN 5** | Audio, Performance & Mobile UX | `audio.ts`, `globals.css`, Touch targets, Assets | ⏳ Pending | `audit/domain-5-performance-ux` | - |
+| **DOMAIN 5** | Audio, Performance & Mobile UX | `audio.ts`, `globals.css`, Touch targets, Assets | ✅ Completed | `audit/domain-5-performance-ux` | 0 errors, build pass |
 
 ---
 
@@ -69,8 +69,13 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 
 ---
 
-### ⚡ Domain 5: Audio Engine, Performance & Mobile UX (Pending)
+### ⚡ Domain 5: Audio Engine, Performance & Mobile UX (Completed)
 - **Target Scope**: [`audio.ts`](file:///e:/GuessWho/src/lib/audio.ts), [`globals.css`](file:///e:/GuessWho/src/app/globals.css), Touch targets, Asset loading, Next.js image optimization.
+
+- **Key Findings & Fixes**:
+  - **DEC-D5-01**: Added `localStorage` audio mute persistence (`guesswho_sound_muted`) in `SoundEffectsManager` (`audio.ts`) so user audio mute choices persist across navigations and reloads.
+  - **DEC-D5-02**: Wrapped `AudioContext.resume()` calls in try-catch to prevent browser autoplay policy DOMExceptions.
+  - **DEC-D5-03**: Added `touch-action: manipulation` and coarse pointer min-height (44px) rules in `globals.css` to remove tap delays and improve touch ergonomics on mobile browsers.
 
 ---
 
@@ -85,3 +90,4 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **Domain 2 (Data Layer)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
 | **Domain 3 (Creator)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.3s) | ✅ Passed |
 | **Domain 4 (Matchmaking)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
+| **Domain 5 (Audio/UX)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.4s) | ✅ Passed |

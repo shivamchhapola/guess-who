@@ -311,9 +311,19 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ============================================
-   SELECTION COLOR
+   SELECTION COLOR & TOUCH TARGETS
    ============================================ */
 ::selection {
   background: rgba(245, 158, 11, 0.35);
   color: #fff;
+}
+
+button, [role="button"], a {
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  button, input, select, [role="button"] {
+    min-height: 44px;
+  }
 }
