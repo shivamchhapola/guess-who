@@ -14,7 +14,7 @@ import { soundFx } from '@/lib/audio';
 import {
   Eye, MessageSquare, Send, Copy, Check,
   ArrowLeft, RotateCcw, Users,
-  Play, RefreshCw, X, Search, Clock, Flag, ArrowRight, Sparkles,
+  Play, RefreshCw, X, Search, Clock, Flag, ArrowRight, Sparkles, WifiOff,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -91,9 +91,15 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Modals & UI Controls ───────────────────────────────────────── */
   const [selectedGuessCard, setSelectedGuessCard] = useState<CharacterCard | null>(null);
   const [isGuessModalOpen, setIsGuessModalOpen] = useState<boolean>(false);
+  const [disconnectSeconds, setDisconnectSeconds] = useState<number | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const gameStatusRef = useRef<GameStatus>(gameStatus);
+
+  useEffect(() => {
+    gameStatusRef.current = gameStatus;
+  }, [gameStatus]);
 
   /* ── Secret Card Persistence Helper (AUD-P1-01) ──────────────────── */
   const updatePlayerSecretId = useCallback(
@@ -319,10 +325,28 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           setOpponentAvatar(null);
           setOpponentName(otherKey);
         }
+        setDisconnectSeconds((prev) => {
+          if (prev !== null) {
+            setChatMessages((c) => [
+              ...c,
+              {
+                id: Math.random().toString(),
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                sender: 'system',
+                question: 'Opponent reconnected!',
+              },
+            ]);
+          }
+          return null;
+        });
       } else {
         setOpponentName(null);
         setOpponentAvatar(null);
         setIsOpponentReady(false);
+        const currentStatus = gameStatusRef.current;
+        if (currentStatus === 'active' || currentStatus === 'selecting_character') {
+          setDisconnectSeconds((prev) => (prev === null ? 30 : prev));
+        }
       }
     });
 
@@ -499,6 +523,46 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
     return () => clearInterval(interval);
   }, [gameStatus, turnTimerSetting, turnStartedAt, currentTurnPlayerId, playerName, handleEndTurn]);
+
+  /* ── Opponent Disconnect Grace Countdown (AUD-P1-02) ─────────────── */
+  useEffect(() => {
+    if (disconnectSeconds === null) return;
+
+    if (disconnectSeconds <= 0) {
+      queueMicrotask(() => {
+        const winningPlayer = playerName;
+        setGameStatus('finished');
+        setWinnerId(winningPlayer);
+        setWinReason('disconnect');
+        setDisconnectSeconds(null);
+
+        const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+        channel.send({
+          type: 'broadcast',
+          event: 'game_event',
+          payload: {
+            type: 'declare_victory',
+            winnerId: winningPlayer,
+            winReason: 'disconnect',
+            secretCardId: playerSecretId,
+          },
+        });
+
+        syncRoomStateToDb({
+          status: 'finished',
+          winnerId: winningPlayer,
+          winReason: 'disconnect',
+        });
+      });
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setDisconnectSeconds((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [disconnectSeconds, playerName, playerSecretId, roomCode, supabase, syncRoomStateToDb]);
 
   /* ── Host Deck Switcher ─────────────────────────────────────────── */
   const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
@@ -1496,6 +1560,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
               <button type="button" onClick={() => setShowSurrenderModal(false)} className="flex-1 py-3 rounded-xl text-xs font-bold text-slate-300 bg-white/5">Cancel</button>
               <button type="button" onClick={handleSurrender} className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-rose-600">Surrender</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disconnect Grace Period Overlay Banner (AUD-P1-02) */}
+      {disconnectSeconds !== null && gameStatus !== 'finished' && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3.5 bg-amber-950/90 border border-amber-500/50 rounded-2xl shadow-2xl backdrop-blur-md animate-bounce">
+          <WifiOff className="w-5 h-5 text-amber-400 animate-pulse" />
+          <div className="text-sm font-semibold text-amber-200">
+            Opponent disconnected! Reconnection grace period: <span className="font-mono text-amber-400 text-base font-bold underline decoration-amber-500">{disconnectSeconds}s</span>
           </div>
         </div>
       )}
