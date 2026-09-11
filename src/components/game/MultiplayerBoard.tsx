@@ -97,6 +97,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const gameStatusRef = useRef<GameStatus>(gameStatus);
   const localTurnStartAnchorRef = useRef<number>(0);
+  const hasLaunchedRef = useRef<boolean>(false);
 
   useEffect(() => {
     gameStatusRef.current = gameStatus;
@@ -350,19 +351,31 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     channelRef.current = channel;
 
     channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState();
-      const players = Object.keys(state);
-      setConnectedPlayers(players);
-      const otherKey = players.find((p) => p !== presenceKey);
-      if (otherKey) {
-        const spaceIdx = otherKey.indexOf(' ');
-        if (spaceIdx > 0 && otherKey.startsWith('https://')) {
-          setOpponentAvatar(otherKey.slice(0, spaceIdx));
-          setOpponentName(otherKey.slice(spaceIdx + 1));
-        } else {
-          setOpponentAvatar(null);
-          setOpponentName(otherKey);
-        }
+      const state = channel.presenceState<{
+        playerName?: string;
+        playerAvatar?: string;
+        isHost?: boolean;
+      }>();
+      const presenceKeys = Object.keys(state);
+      setConnectedPlayers(presenceKeys);
+
+      const otherPresenceKey = presenceKeys.find((k) => k !== presenceKey);
+      if (otherPresenceKey && state[otherPresenceKey]?.length > 0) {
+        const oppData = state[otherPresenceKey][0];
+        const oppName =
+          oppData.playerName ||
+          (otherPresenceKey.includes(' ')
+            ? otherPresenceKey.slice(otherPresenceKey.indexOf(' ') + 1)
+            : otherPresenceKey);
+        const oppAvatar =
+          oppData.playerAvatar ||
+          (otherPresenceKey.startsWith('https://')
+            ? otherPresenceKey.slice(0, otherPresenceKey.indexOf(' '))
+            : null);
+
+        setOpponentName(oppName);
+        setOpponentAvatar(oppAvatar || null);
+
         setDisconnectSeconds((prev) => {
           if (prev !== null) {
             setChatMessages((c) => [
@@ -421,6 +434,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         setIsMyReady(false);
         setIsOpponentReady(false);
         updateFlippedCardIds([]);
+        hasLaunchedRef.current = false;
         setChatMessages((prev) => [
           ...prev,
           {
@@ -488,6 +502,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         setIsMyReady(false);
         setIsOpponentReady(false);
         updateFlippedCardIds([]);
+        hasLaunchedRef.current = false;
         setWinnerId(null);
         setWinReason(null);
         setGameRound((r) => r + 1);
@@ -505,7 +520,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        await channel.track({ online_at: new Date().toISOString() });
+        await channel.track({
+          playerName,
+          playerAvatar,
+          isHost,
+          online_at: new Date().toISOString(),
+        });
       }
     });
 
@@ -513,7 +533,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, availableTemplates, currentTemplate.id, updatePlayerSecretId, updateFlippedCardIds]);
+  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, playerAvatar, isHost, availableTemplates, currentTemplate.id, updatePlayerSecretId, updateFlippedCardIds]);
 
   /* ── Pass Turn Action ───────────────────────────────────────────── */
   const handleEndTurn = useCallback((reason?: 'timeout') => {
@@ -619,6 +639,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setIsMyReady(false);
     setIsOpponentReady(false);
     updateFlippedCardIds([]);
+    hasLaunchedRef.current = false;
 
     setChatMessages((prev) => [
       ...prev,
@@ -685,6 +706,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
   /* ── Host Launches Active Match with Random First Turn ───────────── */
   const handleStartActiveMatch = useCallback(() => {
+    if (hasLaunchedRef.current) return;
+    hasLaunchedRef.current = true;
+
     const oppName = opponentName || 'Opponent';
     const startingPlayer = Math.random() < 0.5 ? playerName : oppName;
     const now = Date.now();
@@ -795,6 +819,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setIsMyReady(false);
     setIsOpponentReady(false);
     updateFlippedCardIds([]);
+    hasLaunchedRef.current = false;
     setWinnerId(null);
     setWinReason(null);
     setGameRound(nextRound);

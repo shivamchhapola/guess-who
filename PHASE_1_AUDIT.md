@@ -66,8 +66,8 @@ This document provides a deep architectural audit of the realtime multiplayer en
 | **AUD-P1-02** | Disconnect Recovery | 🔴 High | ✅ Resolved | Opponent tab closure leaves player frozen in turn | 30s grace timer + `disconnect` win forfeit |
 | **AUD-P1-03** | Turn Timer Sync | 🟡 Medium | ✅ Resolved | System clock skew causes timer jumps | Monotonic `localTurnStartAnchorRef` + DB `updated_at` server anchor |
 | **AUD-P1-04** | Deduction State | 🟡 Medium | ✅ Resolved | Reload resets all flipped card states to standing | Persist `flippedCardIds` in `sessionStorage` (`room_${roomCode}_flips`) |
-| **AUD-P1-05** | Presence Data | 🟢 Low | ⏳ Pending | String splitting on composite presence key | Use structured `channel.track()` JSON payload |
-| **AUD-P1-06** | Match Launch Gate | 🟢 Low | ⏳ Pending | Double `game_started` broadcast risk | Add `hasLaunchedRef` single-execution guard |
+| **AUD-P1-05** | Presence Data | 🟢 Low | ✅ Resolved | String splitting on composite presence key | Structured JSON `channel.track()` payload with string fallback |
+| **AUD-P1-06** | Match Launch Gate | 🟢 Low | ✅ Resolved | Double `game_started` broadcast risk | Single-execution `hasLaunchedRef` match launch guard |
 
 ---
 
@@ -76,6 +76,8 @@ This document provides a deep architectural audit of the realtime multiplayer en
 - AUD-P1-02 resolved: Implemented 30-second disconnect grace countdown timer, presence drop detection, reconnection chat notifications, top alert banner, and auto-forfeit `disconnect` victory.
 - AUD-P1-03 resolved: Eliminated cross-machine system clock skew by anchoring turn countdown to `localTurnStartAnchorRef` on turn events and DB `updated_at` server timestamp on rehydration.
 - AUD-P1-04 resolved: Encapsulated card flip deduction state in `sessionStorage` with `updateFlippedCardIds` helper; verified tab reload deduction progress rehydration.
+- AUD-P1-05 resolved: Updated presence tracking to broadcast structured JSON objects (`playerName`, `playerAvatar`, `isHost`) with backwards-compatible string fallback parsing.
+- AUD-P1-06 resolved: Added `hasLaunchedRef` ref guard in `handleStartActiveMatch` to guarantee single-execution match launch and prevent duplicate WebSocket broadcasts.
 - Type check: 0 errors (`npx tsc --noEmit`).
 - Lint check: 0 errors, 0 warnings (`npm run lint`).
 - Production build: Pass (`npm run build`).
