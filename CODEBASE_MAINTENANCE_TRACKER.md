@@ -116,7 +116,7 @@ We will systematically audit each architectural area for edge cases, error handl
   - Host disconnect recovery & room state transfer logic.
   - Concurrent guess race conditions (when both players guess simultaneously).
   - WebSockets reconnection state sync verification on flaky network connections.
-- [ ] **Phase 2: Data Persistence, Supabase Storage & Large Payload Safety**
+- [x] **Phase 2: Data Persistence, Supabase Storage & Large Payload Safety** (Saved in [`PHASE_2_AUDIT.md`](file:///e:/GuessWho/PHASE_2_AUDIT.md))
   - Optimization of base64 image data URLs in `templates` and `cards` tables.
   - Rate limiting & file size validation in bulk uploader / ZIP extraction.
   - Hardening RLS policies for updated Postgres schemas.
@@ -138,3 +138,4 @@ We will systematically audit each architectural area for edge cases, error handl
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **System Architecture Mapping** | 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | No Circular Dependencies | ✅ Complete |
 | **Phase 1 Audit (Realtime Engine)** | 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | Documented in `PHASE_1_AUDIT.md` | ✅ Documented |
+| **Phase 2 Audit (Data & Storage)** | 0 Errors | 0 Errors, 0 Warnings | Build Pass (1.1s) | Documented in `PHASE_2_AUDIT.md` | ✅ Documented |
