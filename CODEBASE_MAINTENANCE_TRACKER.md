@@ -1,0 +1,68 @@
+# Master Codebase Maintenance & Technical Audit Tracker
+
+This document tracks the 5-domain deep codebase audit, refactoring decisions, verification checkpoints, and pull request branches for the **GuessWhooo?** repository using the `codebase-maintainer` skill.
+
+---
+
+## 📊 Master Domain Progress Dashboard
+
+| Domain ID | Functional Area | Target Scope | Status | PR / Topic Branch | Build Verification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **P1 PASS** | ESLint & Build Cleanliness | Repo-wide 32 issues | ✅ Completed | `fix/eslint-build-validation` | 0 errors, 0 warnings |
+| **P2 PASS** | Supabase Security & Indexes | `schema.sql`, RLS policies | ✅ Completed | `fix/supabase-security-indexes` | Live Postgres Applied |
+| **P3 PASS** | State Synchronization & Reconnect | `MultiplayerBoard.tsx`, DB sync | ✅ Completed | `fix/reconnect-state-persistence` | 0 errors, build pass |
+| **DOMAIN 1** | Gameplay Engine & Realtime Sync | `CardFlip.tsx`, `MultiplayerBoard.tsx`, `GameBoard.tsx` | ✅ Completed | `audit/domain-1-gameplay-engine` | 0 errors, build pass |
+| **DOMAIN 2** | Data Access Layer, Types & DB | `schema.sql`, `client.ts`, `server.ts`, `game.ts` | ⏳ Pending | `audit/domain-2-data-layer` | - |
+| **DOMAIN 3** | Template Creator & Storage Pipeline | `create/page.tsx`, `templates/page.tsx`, `setUtils.ts` | ⏳ Pending | `audit/domain-3-template-creator` | - |
+| **DOMAIN 4** | Matchmaking & Navigation Flow | `host/page.tsx`, `lobbies/page.tsx`, `NavHeader.tsx` | ⏳ Pending | `audit/domain-4-matchmaking` | - |
+| **DOMAIN 5** | Audio, Performance & Mobile UX | `audio.ts`, `globals.css`, Touch targets, Assets | ⏳ Pending | `audit/domain-5-performance-ux` | - |
+
+---
+
+## 📝 Domain Audit Findings & Decision Logs
+
+### 🌿 Initial Cleanup & Hardening (Completed Passes P1 - P3)
+- **P1 Fix**: Fixed 32 ESLint errors and warnings across 12 files (resolved synchronous `setState` in `useEffect`, moved variable hoisting in `handleEndTurn`, escaped unescaped JSX quotes).
+- **P2 Fix**: Hardened Supabase RLS security policies (removed `FOR ALL` delete vulnerability on `game_rooms`, wrapped `auth.uid()` in subqueries, added target roles `TO authenticated` / `TO anon`) and added high-performance foreign key indexes. Applied live to Supabase PostgreSQL cluster.
+- **P3 Fix**: Added `syncRoomStateToDb` and rehydration effects so mid-game room state updates persist to DB and sync on reconnect/refresh. Added optimistic code collision retries in room host creation.
+
+---
+
+### 🎲 Domain 1: Gameplay Engine & Realtime Sync (Completed)
+- **Target Scope**: [`CardFlip.tsx`](file:///e:/GuessWho/src/components/game/CardFlip.tsx), [`MultiplayerBoard.tsx`](file:///e:/GuessWho/src/components/game/MultiplayerBoard.tsx), [`GameBoard.tsx`](file:///e:/GuessWho/src/components/game/GameBoard.tsx), [`QuestionAssistant.tsx`](file:///e:/GuessWho/src/components/game/QuestionAssistant.tsx), [`GuessModal.tsx`](file:///e:/GuessWho/src/components/game/GuessModal.tsx), [`VictoryModal.tsx`](file:///e:/GuessWho/src/components/game/VictoryModal.tsx), [`play/[roomCode]/page.tsx`](file:///e:/GuessWho/src/app/play/%5BroomCode%5D/page.tsx), [`play/practice/page.tsx`](file:///e:/GuessWho/src/app/play/practice/page.tsx).
+
+- **Key Findings & Fixes**:
+  - **DEC-D1-01**: Outer wrapper container in `CardFlip.tsx` changed from `role="button"` to `role="group"` to eliminate HTML5 interactive element nesting violations with inner buttons (`btn-select`, `btn-guess`, `btn-restore`). Removed `aria-pressed` from group container.
+  - **DEC-D1-02**: Verified dual readiness gate in `MultiplayerBoard.tsx`. Confirmed starting turn selection (`Math.random()`) broadcasts `game_started` with exact timestamp `turnStartedAt` and saves payload to PostgreSQL.
+  - **DEC-D1-03**: Verified Web Audio API lazy AudioContext resume handling (`this.ctx.resume()`) in `src/lib/audio.ts`.
+
+---
+
+### 🗄️ Domain 2: Data Access Layer, Types & DB (Pending)
+- **Target Scope**: [`schema.sql`](file:///e:/GuessWho/supabase/schema.sql), [`client.ts`](file:///e:/GuessWho/src/lib/supabase/client.ts), [`server.ts`](file:///e:/GuessWho/src/lib/supabase/server.ts), [`game.ts`](file:///e:/GuessWho/src/types/game.ts), [`apply_schema.cjs`](file:///e:/GuessWho/scripts/apply_schema.cjs).
+
+---
+
+### 🎨 Domain 3: Template Creator & Storage Pipeline (Pending)
+- **Target Scope**: [`create/page.tsx`](file:///e:/GuessWho/src/app/create/page.tsx), [`templates/page.tsx`](file:///e:/GuessWho/src/app/templates/page.tsx), [`popularTemplates.ts`](file:///e:/GuessWho/src/data/popularTemplates.ts), [`setUtils.ts`](file:///e:/GuessWho/src/lib/setUtils.ts).
+
+---
+
+### 🚪 Domain 4: Matchmaking, Host Controls & Navigation Flow (Pending)
+- **Target Scope**: [`host/page.tsx`](file:///e:/GuessWho/src/app/host/page.tsx), [`lobbies/page.tsx`](file:///e:/GuessWho/src/app/lobbies/page.tsx), [`page.tsx`](file:///e:/GuessWho/src/app/page.tsx), [`PlayerProfileSetup.tsx`](file:///e:/GuessWho/src/components/PlayerProfileSetup.tsx).
+
+---
+
+### ⚡ Domain 5: Audio Engine, Performance & Mobile UX (Pending)
+- **Target Scope**: [`audio.ts`](file:///e:/GuessWho/src/lib/audio.ts), [`globals.css`](file:///e:/GuessWho/src/app/globals.css), Touch targets, Asset loading, Next.js image optimization.
+
+---
+
+## 🧪 Master Verification Log
+
+| Timestamp | Type Check (`npx tsc`) | Lint Check (`npm run lint`) | Build Check (`npm run build`) | Verification Result |
+| :--- | :--- | :--- | :--- | :--- |
+| **Pass 1 (ESLint)** | 0 Errors | 0 Errors, 0 Warnings | Build Success | ✅ Passed |
+| **Pass 2 (Supabase)** | 0 Errors | 0 Errors, 0 Warnings | Build Success | ✅ Passed & Live DB Applied |
+| **Pass 3 (Sync)** | 0 Errors | 0 Errors, 0 Warnings | Build Success | ✅ Passed |
+| **Domain 1 (Gameplay)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
