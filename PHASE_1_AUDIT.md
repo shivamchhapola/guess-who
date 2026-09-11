@@ -60,17 +60,19 @@ This document provides a deep architectural audit of the realtime multiplayer en
 
 ## 📊 Phase 1 Audit Summary Matrix
 
-| Finding ID | Subsystem | Severity | Impact | Proposed Architectural Fix |
-| :--- | :--- | :--- | :--- | :--- |
-| **AUD-P1-01** | Secret Card State | 🔴 High | Mid-game reload wipes secret card widget | Persist `playerSecretId` in `sessionStorage` |
-| **AUD-P1-02** | Disconnect Recovery | 🔴 High | Opponent tab closure leaves player frozen in turn | 30s grace timer + `opponent_disconnected` forfeit |
-| **AUD-P1-03** | Turn Timer Sync | 🟡 Medium | System clock skew causes timer jumps | Monotonic elapsed time / server timestamp |
-| **AUD-P1-04** | Deduction State | 🟡 Medium | Reload resets all flipped card states to standing | Persist `flippedCardIds` in `sessionStorage` |
-| **AUD-P1-05** | Presence Data | 🟢 Low | String splitting on composite presence key | Use structured `channel.track()` JSON payload |
-| **AUD-P1-06** | Match Launch Gate | 🟢 Low | Double `game_started` broadcast risk | Add `hasLaunchedRef` single-execution guard |
+| Finding ID | Subsystem | Severity | Status | Impact | Proposed Architectural Fix |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **AUD-P1-01** | Secret Card State | 🔴 High | ✅ Resolved | Mid-game reload wipes secret card widget | Persisted `playerSecretId` in `sessionStorage` (`room_${roomCode}_secret`) |
+| **AUD-P1-02** | Disconnect Recovery | 🔴 High | ⏳ Pending | Opponent tab closure leaves player frozen in turn | 30s grace timer + `opponent_disconnected` forfeit |
+| **AUD-P1-03** | Turn Timer Sync | 🟡 Medium | ⏳ Pending | System clock skew causes timer jumps | Monotonic elapsed time / server timestamp |
+| **AUD-P1-04** | Deduction State | 🟡 Medium | ⏳ Pending | Reload resets all flipped card states to standing | Persist `flippedCardIds` in `sessionStorage` |
+| **AUD-P1-05** | Presence Data | 🟢 Low | ⏳ Pending | String splitting on composite presence key | Use structured `channel.track()` JSON payload |
+| **AUD-P1-06** | Match Launch Gate | 🟢 Low | ⏳ Pending | Double `game_started` broadcast risk | Add `hasLaunchedRef` single-execution guard |
 
 ---
 
 ## 🧪 Phase 1 Verification Status
-- Audit completed in read-only mode without mutating application code.
-- Findings cataloged in [`PHASE_1_AUDIT.md`](file:///e:/GuessWho/PHASE_1_AUDIT.md).
+- AUD-P1-01 resolved: Encapsulated secret card state in `sessionStorage` with `updatePlayerSecretId` helper; verified tab reload secret rehydration.
+- Type check: 0 errors (`npx tsc --noEmit`).
+- Lint check: 0 errors, 0 warnings (`npm run lint`).
+- Production build: Pass (`npm run build`).

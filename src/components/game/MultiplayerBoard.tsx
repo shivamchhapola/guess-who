@@ -95,6 +95,21 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  /* ── Secret Card Persistence Helper (AUD-P1-01) ──────────────────── */
+  const updatePlayerSecretId = useCallback(
+    (secretId: string | null) => {
+      setPlayerSecretId(secretId);
+      if (typeof window !== 'undefined') {
+        if (secretId) {
+          sessionStorage.setItem(`room_${roomCode}_secret`, secretId);
+        } else {
+          sessionStorage.removeItem(`room_${roomCode}_secret`);
+        }
+      }
+    },
+    [roomCode]
+  );
+
   /* ── Filtered Templates ─────────────────────────────────────────── */
   const filteredTemplates = useMemo(() => {
     return availableTemplates.filter((t) => {
@@ -115,6 +130,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         const savedTimer = sessionStorage.getItem(`room_${roomCode}_timer`);
         if (savedTimer) {
           setTurnTimerSetting(Number(savedTimer));
+        }
+
+        const savedSecret = sessionStorage.getItem(`room_${roomCode}_secret`);
+        if (savedSecret) {
+          setPlayerSecretId(savedSecret);
+          setIsMyReady(true);
         }
 
         if (rawName.startsWith('https://')) {
@@ -334,7 +355,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       } else if (payload.type === 'template_changed') {
         setCurrentTemplate(payload.template);
         soundFx.playSelect();
-        setPlayerSecretId(null);
+        updatePlayerSecretId(null);
         setIsMyReady(false);
         setIsOpponentReady(false);
         setFlippedCardIds([]);
@@ -398,7 +419,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         if (payload.secretCardId) setOpponentSecretId(payload.secretCardId);
       } else if (payload.type === 'new_round_started') {
         setGameStatus('setup'); // Return to lobby for settings / deck changes before starting next match
-        setPlayerSecretId(null);
+        updatePlayerSecretId(null);
         setOpponentSecretId(null);
         setIsMyReady(false);
         setIsOpponentReady(false);
@@ -428,7 +449,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, availableTemplates, currentTemplate.id]);
+  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, availableTemplates, currentTemplate.id, updatePlayerSecretId]);
 
   /* ── Pass Turn Action ───────────────────────────────────────────── */
   const handleEndTurn = useCallback((reason?: 'timeout') => {
@@ -484,7 +505,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     soundFx.playSelect();
     setCurrentTemplate(newTemplate);
     setIsChangeSetOpen(false);
-    setPlayerSecretId(null);
+    updatePlayerSecretId(null);
     setIsMyReady(false);
     setIsOpponentReady(false);
     setFlippedCardIds([]);
@@ -541,7 +562,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Secret Character Selection & Dual Readiness Gate ────────────── */
   const handleSelectSecretCard = (cardId: string) => {
     soundFx.playSelect();
-    setPlayerSecretId(cardId);
+    updatePlayerSecretId(cardId);
     setIsMyReady(true);
 
     const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
@@ -658,7 +679,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const handlePlayAgain = () => {
     const nextRound = gameRound + 1;
     setGameStatus('setup'); // Return to lobby for settings / deck changes before starting next match
-    setPlayerSecretId(null);
+    updatePlayerSecretId(null);
     setOpponentSecretId(null);
     setIsMyReady(false);
     setIsOpponentReady(false);
