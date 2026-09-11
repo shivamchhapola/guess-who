@@ -111,36 +111,45 @@ function HostRoomContent() {
       : finalHostName;
 
     try {
-      const { data: existing } = await supabase
-        .from('game_rooms')
-        .select('code')
-        .eq('code', upperCode)
-        .maybeSingle();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data: existing } = await supabase
+          .from('game_rooms')
+          .select('code')
+          .eq('code', upperCode)
+          .maybeSingle();
 
-      if (existing) {
-        upperCode = await getUniqueRoomCode();
-        setRoomCode(upperCode);
-      }
+        if (existing) {
+          upperCode = await getUniqueRoomCode();
+          setRoomCode(upperCode);
+        }
 
-      const roomPayload = {
-        code: upperCode,
-        host_id: hostPresenceKey,
-        template_id: selectedTemplateId,
-        password_hash: hasPassword ? password.trim() : null,
-        is_public: isPublic,
-        turn_timer_seconds: turnTimerSetting,
-        status: 'waiting',
-        state: {
-          hostName: finalHostName,
-          selectedAvatar,
-          selectedTemplateId,
-          turnTimerSetting,
-        },
-      };
+        const roomPayload = {
+          code: upperCode,
+          host_id: hostPresenceKey,
+          template_id: selectedTemplateId,
+          password_hash: hasPassword ? password.trim() : null,
+          is_public: isPublic,
+          turn_timer_seconds: turnTimerSetting,
+          status: 'waiting',
+          state: {
+            hostName: finalHostName,
+            selectedAvatar,
+            selectedTemplateId,
+            turnTimerSetting,
+            gameStatus: 'setup',
+          },
+        };
 
-      const { error } = await supabase.from('game_rooms').insert(roomPayload);
-      if (error && error.code !== '23505') {
-        console.warn('Room creation note:', error);
+        const { error } = await supabase.from('game_rooms').insert(roomPayload);
+        if (!error) {
+          break;
+        } else if (error.code === '23505') {
+          upperCode = await getUniqueRoomCode();
+          setRoomCode(upperCode);
+        } else {
+          console.warn('Room creation note:', error);
+          break;
+        }
       }
 
       if (typeof window !== 'undefined') {

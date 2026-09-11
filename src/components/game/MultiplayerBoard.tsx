@@ -150,6 +150,92 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     }
   }, [template]);
 
+  /* ── DB Room State Synchronization Helper ────────────────────────── */
+  const syncRoomStateToDb = useCallback(
+    async (stateUpdate: {
+      status?: GameStatus;
+      turnTimerSetting?: number;
+      currentTurnPlayerId?: string | null;
+      turnStartedAt?: number | null;
+      winnerId?: string | null;
+      winReason?: WinReason | null;
+      gameRound?: number;
+      selectedSetId?: string;
+    }) => {
+      try {
+        const nextStatus = stateUpdate.status || gameStatus;
+        const roomPayloadState = {
+          gameStatus: nextStatus,
+          turnTimerSetting: stateUpdate.turnTimerSetting ?? turnTimerSetting,
+          currentTurnPlayerId: stateUpdate.currentTurnPlayerId !== undefined ? stateUpdate.currentTurnPlayerId : currentTurnPlayerId,
+          turnStartedAt: stateUpdate.turnStartedAt !== undefined ? stateUpdate.turnStartedAt : turnStartedAt,
+          winnerId: stateUpdate.winnerId !== undefined ? stateUpdate.winnerId : winnerId,
+          winReason: stateUpdate.winReason !== undefined ? stateUpdate.winReason : winReason,
+          gameRound: stateUpdate.gameRound ?? gameRound,
+          selectedSetId: stateUpdate.selectedSetId || currentTemplate.id,
+        };
+
+        await supabase
+          .from('game_rooms')
+          .update({
+            status: nextStatus,
+            state: roomPayloadState,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('code', roomCode);
+      } catch (err) {
+        console.warn('Failed to sync room state to DB:', err);
+      }
+    },
+    [currentTemplate.id, currentTurnPlayerId, gameRound, gameStatus, roomCode, supabase, turnStartedAt, turnTimerSetting, winReason, winnerId]
+  );
+
+  /* ── Initial Room State Rehydration on Connect/Refresh ───────────── */
+  useEffect(() => {
+    if (!isUnlocked || !hasSetIdentity) return;
+
+    async function rehydrateRoomState() {
+      try {
+        const { data: roomData } = await supabase
+          .from('game_rooms')
+          .select('status, state, template_id')
+          .eq('code', roomCode)
+          .maybeSingle();
+
+        if (roomData && roomData.state) {
+          const s = roomData.state as Record<string, unknown>;
+          queueMicrotask(() => {
+            if (roomData.status || s.gameStatus) {
+              setGameStatus((roomData.status || s.gameStatus) as GameStatus);
+            }
+            if (typeof s.turnTimerSetting === 'number') {
+              setTurnTimerSetting(s.turnTimerSetting);
+            }
+            if (s.currentTurnPlayerId !== undefined) {
+              setCurrentTurnPlayerId(s.currentTurnPlayerId as string | null);
+            }
+            if (s.turnStartedAt !== undefined) {
+              setTurnStartedAt(s.turnStartedAt as number | null);
+            }
+            if (s.winnerId !== undefined) {
+              setWinnerId(s.winnerId as string | null);
+            }
+            if (s.winReason !== undefined) {
+              setWinReason(s.winReason as WinReason | null);
+            }
+            if (typeof s.gameRound === 'number') {
+              setGameRound(s.gameRound);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Could not rehydrate room state from DB:', err);
+      }
+    }
+
+    rehydrateRoomState();
+  }, [isUnlocked, hasSetIdentity, roomCode, supabase]);
+
   /* ── Fetch DB Templates ─────────────────────────────────────────── */
   useEffect(() => {
     async function fetchAllTemplates() {
@@ -365,7 +451,13 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         reason,
       },
     });
-  }, [currentTurnPlayerId, opponentName, playerName, roomCode, supabase]);
+
+    syncRoomStateToDb({
+      status: 'active',
+      currentTurnPlayerId: nextPlayer,
+      turnStartedAt: now,
+    });
+  }, [currentTurnPlayerId, opponentName, playerName, roomCode, supabase, syncRoomStateToDb]);
 
   /* ── Turn Timer Real-time Countdown ─────────────────────────────── */
   useEffect(() => {
@@ -413,6 +505,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       payload: { type: 'template_changed', template: newTemplate },
     });
 
+    syncRoomStateToDb({
+      status: 'setup',
+      selectedSetId: newTemplate.id,
+    });
+
     try {
       await supabase
         .from('game_rooms')
@@ -433,6 +530,10 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'start_character_selection', startedBy: playerName },
+    });
+
+    syncRoomStateToDb({
+      status: 'selecting_character',
     });
   };
 
@@ -470,7 +571,13 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         turnStartedAt: now,
       },
     });
-  }, [opponentName, playerName, roomCode, supabase]);
+
+    syncRoomStateToDb({
+      status: 'active',
+      currentTurnPlayerId: startingPlayer,
+      turnStartedAt: now,
+    });
+  }, [opponentName, playerName, roomCode, supabase, syncRoomStateToDb]);
 
   /* ── Host Auto-Start Active Match Listener ───────────────────────── */
   useEffect(() => {
@@ -510,6 +617,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         secretCardId: playerSecretId,
       },
     });
+
+    syncRoomStateToDb({
+      status: 'finished',
+      winnerId: winningPlayer,
+      winReason: reason,
+    });
   };
 
   /* ── Surrender Match Action ──────────────────────────────────────── */
@@ -531,6 +644,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         winReason: 'surrender',
         secretCardId: playerSecretId,
       },
+    });
+
+    syncRoomStateToDb({
+      status: 'finished',
+      winnerId: winningPlayer,
+      winReason: 'surrender',
     });
   };
 
@@ -555,6 +674,15 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         type: 'new_round_started',
         gameRound: nextRound,
       },
+    });
+
+    syncRoomStateToDb({
+      status: 'setup',
+      gameRound: nextRound,
+      currentTurnPlayerId: null,
+      turnStartedAt: null,
+      winnerId: null,
+      winReason: null,
     });
   };
 
