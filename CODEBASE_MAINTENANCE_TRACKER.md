@@ -13,7 +13,7 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **P3 PASS** | State Synchronization & Reconnect | `MultiplayerBoard.tsx`, DB sync | ✅ Completed | `fix/reconnect-state-persistence` | 0 errors, build pass |
 | **DOMAIN 1** | Gameplay Engine & Realtime Sync | `CardFlip.tsx`, `MultiplayerBoard.tsx`, `GameBoard.tsx` | ✅ Completed | `audit/domain-1-gameplay-engine` | 0 errors, build pass |
 | **DOMAIN 2** | Data Access Layer, Types & DB | `schema.sql`, `client.ts`, `server.ts`, `game.ts` | ✅ Completed | `audit/domain-2-data-layer` | 0 errors, build pass |
-| **DOMAIN 3** | Template Creator & Storage Pipeline | `create/page.tsx`, `templates/page.tsx`, `setUtils.ts` | ⏳ Pending | `audit/domain-3-template-creator` | - |
+| **DOMAIN 3** | Template Creator & Storage Pipeline | `create/page.tsx`, `templates/page.tsx`, `setUtils.ts` | ✅ Completed | `audit/domain-3-template-creator` | 0 errors, build pass |
 | **DOMAIN 4** | Matchmaking & Navigation Flow | `host/page.tsx`, `lobbies/page.tsx`, `NavHeader.tsx` | ⏳ Pending | `audit/domain-4-matchmaking` | - |
 | **DOMAIN 5** | Audio, Performance & Mobile UX | `audio.ts`, `globals.css`, Touch targets, Assets | ⏳ Pending | `audit/domain-5-performance-ux` | - |
 
@@ -47,8 +47,14 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 
 ---
 
-### 🎨 Domain 3: Template Creator & Storage Pipeline (Pending)
+### 🎨 Domain 3: Template Creator & Storage Pipeline (Completed)
 - **Target Scope**: [`create/page.tsx`](file:///e:/GuessWho/src/app/create/page.tsx), [`templates/page.tsx`](file:///e:/GuessWho/src/app/templates/page.tsx), [`popularTemplates.ts`](file:///e:/GuessWho/src/data/popularTemplates.ts), [`setUtils.ts`](file:///e:/GuessWho/src/lib/setUtils.ts).
+
+- **Key Findings & Fixes**:
+  - **DEC-D3-01**: Refactored `handleBulkImageSelect` in `create/page.tsx` using `Promise.all` to asynchronously convert image files into Data URLs cleanly before setting state once, preventing race conditions and redundant re-renders.
+  - **DEC-D3-02**: Filtered out hidden macOS dot-files (`.DS_Store`, `._*`) and `__MACOSX` directories during ZIP archive extraction in `handleZipFileSelect`.
+  - **DEC-D3-03**: Added template ID deduplication in `templates/page.tsx` when merging fetched Supabase community decks with built-in templates.
+  - **DEC-D3-04**: Added optional chaining and null safety fallbacks to utility functions in `src/lib/setUtils.ts`.
 
 ---
 
@@ -71,3 +77,4 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **Pass 3 (Sync)** | 0 Errors | 0 Errors, 0 Warnings | Build Success | ✅ Passed |
 | **Domain 1 (Gameplay)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
 | **Domain 2 (Data Layer)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
+| **Domain 3 (Creator)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.3s) | ✅ Passed |

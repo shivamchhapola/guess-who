@@ -42,23 +42,27 @@ export default function TemplatesPage() {
           .order('created_at', { ascending: false });
 
         if (dbTemplates && dbTemplates.length > 0) {
-          const formatted: CardSetTemplate[] = dbTemplates.map((t) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || '',
-            creatorName: t.creator_name || 'Community Creator',
-            isPublic: t.is_public,
-            tags: t.tags || ['Custom'],
-            createdAt: t.created_at,
-            updatedAt: t.updated_at,
-            cards: (t.cards || []).map((c: { id: string; name: string; image_url: string; attributes: Record<string, unknown> }) => ({
-              id: c.id,
-              name: c.name,
-              imageUrl: c.image_url,
-              attributes: c.attributes || {},
-            })),
-          }));
-          setTemplates([...ALL_POPULAR_TEMPLATES, CLASSIC_GUESS_WHO_TEMPLATE, ...formatted]);
+          const builtIn = [...ALL_POPULAR_TEMPLATES, CLASSIC_GUESS_WHO_TEMPLATE];
+          const existingIds = new Set(builtIn.map((b) => b.id));
+          const formatted: CardSetTemplate[] = dbTemplates
+            .filter((t) => !existingIds.has(t.id))
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description || '',
+              creatorName: t.creator_name || 'Community Creator',
+              isPublic: t.is_public,
+              tags: t.tags || ['Custom'],
+              createdAt: t.created_at,
+              updatedAt: t.updated_at,
+              cards: (t.cards || []).map((c: { id: string; name: string; image_url: string; attributes: Record<string, unknown> }) => ({
+                id: c.id,
+                name: c.name,
+                imageUrl: c.image_url,
+                attributes: c.attributes || {},
+              })),
+            }));
+          setTemplates([...builtIn, ...formatted]);
         }
       } catch (err) {
         console.warn('Could not load remote templates:', err);

@@ -67,35 +67,46 @@ export default function CreateTemplatePage() {
   };
 
   // Handle Bulk Image Select
-  const handleBulkImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBulkImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setUploadStatus(`Processing ${files.length} selected images...`);
     const fileArray = Array.from(files);
 
-    const newCards: CharacterCard[] = fileArray.map((file, index) => ({
-      id: `card-${index + 1}`,
-      name: formatFilenameToName(file.name),
-      imageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=Card${index + 1}`,
-      attributes: {},
-    }));
+    try {
+      const readPromises = fileArray.map(
+        (file) =>
+          new Promise<{ name: string; dataUrl: string }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              resolve({
+                name: formatFilenameToName(file.name),
+                dataUrl: (event.target?.result as string) || '',
+              });
+            };
+            reader.onerror = () => reject(new Error(`Failed to read file ${file.name}`));
+            reader.readAsDataURL(file);
+          })
+      );
 
-    fileArray.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const dataUrl = event.target.result as string;
-          newCards[index].imageUrl = dataUrl;
-          setCards([...newCards]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+      const readResults = await Promise.all(readPromises);
+      const newCards: CharacterCard[] = readResults.map((res, index) => ({
+        id: `card-${Date.now()}-${index + 1}`,
+        name: res.name,
+        imageUrl: res.dataUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=Card${index + 1}`,
+        attributes: {},
+      }));
 
-    setUploadStatus(`Successfully created ${fileArray.length}-card set from photos!`);
-    if (!title) {
-      setTitle('Custom Photo Game Set');
+      setCards(newCards);
+      setUploadStatus(`Successfully created ${newCards.length}-card set from photos!`);
+      if (!title) {
+        setTitle('Custom Photo Game Set');
+      }
+    } catch (err) {
+      console.error('Error processing bulk images:', err);
+      alert('Could not process all selected images.');
+      setUploadStatus(null);
     }
   };
 
@@ -110,13 +121,15 @@ export default function CreateTemplatePage() {
       const imageFiles: { name: string; zipEntry: JSZip.JSZipObject }[] = [];
 
       zip.forEach((relativePath, zipEntry) => {
-        if (!zipEntry.dir && /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(zipEntry.name)) {
-          imageFiles.push({ name: zipEntry.name.split('/').pop() || zipEntry.name, zipEntry });
+        const basename = zipEntry.name.split('/').pop() || zipEntry.name;
+        const isHiddenOrSystem = zipEntry.name.includes('__MACOSX') || basename.startsWith('.');
+        if (!zipEntry.dir && !isHiddenOrSystem && /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(zipEntry.name)) {
+          imageFiles.push({ name: basename, zipEntry });
         }
       });
 
       if (imageFiles.length === 0) {
-        alert('No image files (.jpg, .png, .webp) found inside ZIP archive.');
+        alert('No valid image files (.jpg, .png, .webp) found inside ZIP archive.');
         setUploadStatus(null);
         return;
       }
@@ -129,12 +142,12 @@ export default function CreateTemplatePage() {
         const blob = await item.zipEntry.async('blob');
         const dataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
-          reader.onload = (ev) => resolve(ev.target?.result as string);
+          reader.onload = (ev) => resolve((ev.target?.result as string) || '');
           reader.readAsDataURL(blob);
         });
 
         extractedCards.push({
-          id: `card-${i + 1}`,
+          id: `card-${Date.now()}-${i + 1}`,
           name: formatFilenameToName(item.name),
           imageUrl: dataUrl,
           attributes: {},
