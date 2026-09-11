@@ -117,6 +117,24 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     [roomCode]
   );
 
+  /* ── Flipped Cards Persistence Helper (AUD-P1-04) ─────────────────── */
+  const updateFlippedCardIds = useCallback(
+    (action: string[] | ((prev: string[]) => string[])) => {
+      setFlippedCardIds((prev) => {
+        const next = typeof action === 'function' ? action(prev) : action;
+        if (typeof window !== 'undefined') {
+          if (next.length > 0) {
+            sessionStorage.setItem(`room_${roomCode}_flips`, JSON.stringify(next));
+          } else {
+            sessionStorage.removeItem(`room_${roomCode}_flips`);
+          }
+        }
+        return next;
+      });
+    },
+    [roomCode]
+  );
+
   /* ── Filtered Templates ─────────────────────────────────────────── */
   const filteredTemplates = useMemo(() => {
     return availableTemplates.filter((t) => {
@@ -143,6 +161,18 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         if (savedSecret) {
           setPlayerSecretId(savedSecret);
           setIsMyReady(true);
+        }
+
+        const savedFlips = sessionStorage.getItem(`room_${roomCode}_flips`);
+        if (savedFlips) {
+          try {
+            const parsed = JSON.parse(savedFlips);
+            if (Array.isArray(parsed)) {
+              setFlippedCardIds(parsed);
+            }
+          } catch {
+            // Ignore parse errors
+          }
         }
 
         if (rawName.startsWith('https://')) {
@@ -390,7 +420,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         updatePlayerSecretId(null);
         setIsMyReady(false);
         setIsOpponentReady(false);
-        setFlippedCardIds([]);
+        updateFlippedCardIds([]);
         setChatMessages((prev) => [
           ...prev,
           {
@@ -457,7 +487,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         setOpponentSecretId(null);
         setIsMyReady(false);
         setIsOpponentReady(false);
-        setFlippedCardIds([]);
+        updateFlippedCardIds([]);
         setWinnerId(null);
         setWinReason(null);
         setGameRound((r) => r + 1);
@@ -483,7 +513,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, availableTemplates, currentTemplate.id, updatePlayerSecretId]);
+  }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, availableTemplates, currentTemplate.id, updatePlayerSecretId, updateFlippedCardIds]);
 
   /* ── Pass Turn Action ───────────────────────────────────────────── */
   const handleEndTurn = useCallback((reason?: 'timeout') => {
@@ -588,7 +618,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     updatePlayerSecretId(null);
     setIsMyReady(false);
     setIsOpponentReady(false);
-    setFlippedCardIds([]);
+    updateFlippedCardIds([]);
 
     setChatMessages((prev) => [
       ...prev,
@@ -693,7 +723,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
   /* ── Toggle Card Elimination ─────────────────────────────────────── */
   const handleToggleFlip = (cardId: string) => {
-    setFlippedCardIds((prev) =>
+    updateFlippedCardIds((prev) =>
       prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
     );
   };
@@ -764,7 +794,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setOpponentSecretId(null);
     setIsMyReady(false);
     setIsOpponentReady(false);
-    setFlippedCardIds([]);
+    updateFlippedCardIds([]);
     setWinnerId(null);
     setWinReason(null);
     setGameRound(nextRound);
@@ -1438,7 +1468,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => setFlippedCardIds([])}
+              onClick={() => updateFlippedCardIds([])}
               className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
             >
               <RotateCcw className="w-3 h-3" /> Reset Flips

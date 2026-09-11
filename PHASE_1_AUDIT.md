@@ -65,7 +65,7 @@ This document provides a deep architectural audit of the realtime multiplayer en
 | **AUD-P1-01** | Secret Card State | 🔴 High | ✅ Resolved | Mid-game reload wipes secret card widget | Persisted `playerSecretId` in `sessionStorage` (`room_${roomCode}_secret`) |
 | **AUD-P1-02** | Disconnect Recovery | 🔴 High | ✅ Resolved | Opponent tab closure leaves player frozen in turn | 30s grace timer + `disconnect` win forfeit |
 | **AUD-P1-03** | Turn Timer Sync | 🟡 Medium | ✅ Resolved | System clock skew causes timer jumps | Monotonic `localTurnStartAnchorRef` + DB `updated_at` server anchor |
-| **AUD-P1-04** | Deduction State | 🟡 Medium | ⏳ Pending | Reload resets all flipped card states to standing | Persist `flippedCardIds` in `sessionStorage` |
+| **AUD-P1-04** | Deduction State | 🟡 Medium | ✅ Resolved | Reload resets all flipped card states to standing | Persist `flippedCardIds` in `sessionStorage` (`room_${roomCode}_flips`) |
 | **AUD-P1-05** | Presence Data | 🟢 Low | ⏳ Pending | String splitting on composite presence key | Use structured `channel.track()` JSON payload |
 | **AUD-P1-06** | Match Launch Gate | 🟢 Low | ⏳ Pending | Double `game_started` broadcast risk | Add `hasLaunchedRef` single-execution guard |
 
@@ -75,6 +75,7 @@ This document provides a deep architectural audit of the realtime multiplayer en
 - AUD-P1-01 resolved: Encapsulated secret card state in `sessionStorage` with `updatePlayerSecretId` helper; verified tab reload secret rehydration.
 - AUD-P1-02 resolved: Implemented 30-second disconnect grace countdown timer, presence drop detection, reconnection chat notifications, top alert banner, and auto-forfeit `disconnect` victory.
 - AUD-P1-03 resolved: Eliminated cross-machine system clock skew by anchoring turn countdown to `localTurnStartAnchorRef` on turn events and DB `updated_at` server timestamp on rehydration.
+- AUD-P1-04 resolved: Encapsulated card flip deduction state in `sessionStorage` with `updateFlippedCardIds` helper; verified tab reload deduction progress rehydration.
 - Type check: 0 errors (`npx tsc --noEmit`).
 - Lint check: 0 errors, 0 warnings (`npm run lint`).
 - Production build: Pass (`npm run build`).
