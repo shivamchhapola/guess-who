@@ -8,16 +8,17 @@ import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { CardFlip } from './CardFlip';
 import { GuessModal } from './GuessModal';
 import { VictoryModal } from './VictoryModal';
+import { RoomPasswordGate } from './RoomPasswordGate';
+import { JoinIdentityGate } from './JoinIdentityGate';
 import { soundFx } from '@/lib/audio';
 import {
   Eye, MessageSquare, Send, Copy, Check,
-  ArrowLeft, Lock, RotateCcw, Users,
+  ArrowLeft, RotateCcw, Users,
   Play, RefreshCw, X, Search, Clock, Flag, ArrowRight, Sparkles,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { SetPreviewModal } from '../SetPreviewModal';
-import { PlayerProfileSetup } from '../PlayerProfileSetup';
 import { matchesSearch } from '@/lib/setUtils';
 import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
 
@@ -774,116 +775,38 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     };
 
     return (
-      <div className="w-full max-w-lg mx-auto px-4 py-12 sm:py-16">
-        <div
-          className="game-panel p-6 sm:p-8 rounded-3xl text-left shadow-2xl animate-slide-in-up"
-          style={{ border: '1px solid rgba(245,158,11,0.3)' }}
-        >
-          <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-0.5">
-                Joining Room
-              </span>
-              <h2 className="text-2xl font-black text-white font-mono tracking-wider">
-                #{roomCode}
-              </h2>
-            </div>
-            <div className="text-right">
-              <span className="text-[11px] font-bold text-slate-300 bg-white/5 border border-white/10 px-3 py-1 rounded-full block mb-1">
-                {template.title}
-              </span>
-              <span className="text-[10px] text-slate-500 font-semibold block">
-                {template.cards.length} Characters
-              </span>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h1 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Your Player Profile
-            </h1>
-            <p className="text-slate-400 text-xs mt-1">
-              Choose your nickname and avatar before entering the game room.
-            </p>
-          </div>
-
-          <form onSubmit={handleJoinSubmit} className="flex flex-col gap-6">
-            <PlayerProfileSetup
-              name={joinNickname}
-              avatar={selectedAvatar}
-              onNameChange={setJoinNickname}
-              onAvatarChange={setSelectedAvatar}
-              compact={false}
-            />
-
-            {requiredPassword && (
-              <div>
-                <label className="block text-xs font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5" />
-                  Room Passcode Required
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={inputPassword}
-                  onChange={(e) => setInputPassword(e.target.value)}
-                  placeholder="Enter room passcode"
-                  className="w-full px-4 py-3 rounded-2xl text-sm font-bold text-white bg-slate-950 border border-amber-500/40 focus:border-amber-400 focus:outline-none"
-                />
-                {passError && (
-                  <p className="text-rose-400 text-xs font-semibold mt-1.5">{passError}</p>
-                )}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="game-btn-primary w-full py-4 text-base rounded-2xl justify-center shadow-lg shadow-amber-500/20 font-bold flex items-center gap-2"
-            >
-              <Users className="w-5 h-5" />
-              <span>Enter Room</span>
-            </button>
-          </form>
-        </div>
-      </div>
+      <JoinIdentityGate
+        joinNickname={joinNickname}
+        selectedAvatar={selectedAvatar}
+        setJoinNickname={setJoinNickname}
+        setSelectedAvatar={setSelectedAvatar}
+        requiredPassword={requiredPassword}
+        inputPassword={inputPassword}
+        setInputPassword={setInputPassword}
+        passError={passError}
+        onSubmit={handleJoinSubmit}
+      />
     );
   }
 
   /* ── Password Unlock Gate ────────────────────────────────────────── */
   if (!isUnlocked) {
     return (
-      <div className="w-full max-w-md mx-auto px-4 py-20">
-        <div className="game-panel p-8 rounded-3xl text-center shadow-2xl border border-amber-500/30">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-7 h-7" />
-          </div>
-          <h2 className="text-2xl font-black text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>Password Protected</h2>
-          <p className="text-slate-400 text-sm mb-6">Enter the passcode for Room <span className="text-amber-400 font-mono font-black">#{roomCode}</span></p>
-
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (inputPassword === requiredPassword) {
-              setIsUnlocked(true);
-              setPassError(null);
-            } else {
-              setPassError('Incorrect passcode');
-            }
-          }} className="flex flex-col gap-3">
-            <input
-              type="password"
-              required
-              value={inputPassword}
-              onChange={(e) => setInputPassword(e.target.value)}
-              placeholder="Room Passcode"
-              className="w-full px-4 py-3 rounded-xl text-sm text-center text-white bg-slate-950 border border-slate-700 focus:border-amber-500 focus:outline-none"
-            />
-            {passError && <p className="text-rose-400 text-xs font-semibold">{passError}</p>}
-            <button type="submit" className="game-btn-primary w-full justify-center py-3">
-              Unlock Room
-            </button>
-          </form>
-        </div>
-      </div>
+      <RoomPasswordGate
+        roomCode={roomCode}
+        inputPassword={inputPassword}
+        setInputPassword={setInputPassword}
+        passError={passError}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (inputPassword === requiredPassword) {
+            setIsUnlocked(true);
+            setPassError(null);
+          } else {
+            setPassError('Incorrect passcode');
+          }
+        }}
+      />
     );
   }
 

@@ -35,6 +35,7 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
   - **DEC-D1-01**: Outer wrapper container in `CardFlip.tsx` changed from `role="button"` to `role="group"` to eliminate HTML5 interactive element nesting violations with inner buttons (`btn-select`, `btn-guess`, `btn-restore`). Removed `aria-pressed` from group container.
   - **DEC-D1-02**: Verified dual readiness gate in `MultiplayerBoard.tsx`. Confirmed starting turn selection (`Math.random()`) broadcasts `game_started` with exact timestamp `turnStartedAt` and saves payload to PostgreSQL.
   - **DEC-D1-03**: Verified Web Audio API lazy AudioContext resume handling (`this.ctx.resume()`) in `src/lib/audio.ts`.
+  - **DEC-D1-04**: Decomposed monolithic `MultiplayerBoard.tsx` (1500+ lines) into focused modular components ([`RoomPasswordGate.tsx`](file:///e:/GuessWho/src/components/game/RoomPasswordGate.tsx) and [`JoinIdentityGate.tsx`](file:///e:/GuessWho/src/components/game/JoinIdentityGate.tsx)), reducing complexity and improving maintainability.
 
 ---
 
