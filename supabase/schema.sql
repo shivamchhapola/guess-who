@@ -174,12 +174,14 @@ CREATE POLICY "Anyone can update existing game rooms"
   USING (true) 
   WITH CHECK (true);
 
--- 5. Foreign Key Performance & Partial Indexes
+-- 5. Foreign Key Performance & Compound Partial Indexes
 CREATE INDEX IF NOT EXISTS idx_cards_template_id ON public.cards(template_id);
 CREATE INDEX IF NOT EXISTS idx_templates_creator_id ON public.templates(creator_id);
 CREATE INDEX IF NOT EXISTS idx_templates_is_public ON public.templates(is_public) WHERE is_public = true;
+CREATE INDEX IF NOT EXISTS idx_templates_public_created ON public.templates(is_public, created_at DESC) WHERE is_public = true;
 CREATE INDEX IF NOT EXISTS idx_game_rooms_template_id ON public.game_rooms(template_id);
 CREATE INDEX IF NOT EXISTS idx_game_rooms_is_public ON public.game_rooms(is_public) WHERE is_public = true;
+CREATE INDEX IF NOT EXISTS idx_game_rooms_public_status_created ON public.game_rooms(is_public, status, created_at DESC) WHERE is_public = true;
 
 -- 6. Storage Bucket Policies for Custom Card Images
 INSERT INTO storage.buckets (id, name, public) 
