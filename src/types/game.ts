@@ -203,3 +203,44 @@ export interface LocalGameState {
   guessHistory: QuestionLogItem[];
   startTime: number;
 }
+
+/** Database Row Types matching Supabase PostgreSQL schema.sql */
+export interface ProfileRow {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  created_at: string;
+}
+
+export interface TemplateRow {
+  id: string;
+  creator_id: string | null;
+  creator_name: string;
+  title: string;
+  description: string | null;
+  is_public: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CardRow {
+  id: string;
+  template_id: string;
+  name: string;
+  image_url: string;
+  attributes: Record<string, string | boolean | undefined>;
+}
+
+export interface GameRoomRow {
+  code: string;
+  host_id: string;
+  template_id: string | null;
+  password_hash: string | null;
+  is_public: boolean;
+  turn_timer_seconds: number | null;
+  status: GameStatus;
+  state: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}

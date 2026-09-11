@@ -12,7 +12,7 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **P2 PASS** | Supabase Security & Indexes | `schema.sql`, RLS policies | ✅ Completed | `fix/supabase-security-indexes` | Live Postgres Applied |
 | **P3 PASS** | State Synchronization & Reconnect | `MultiplayerBoard.tsx`, DB sync | ✅ Completed | `fix/reconnect-state-persistence` | 0 errors, build pass |
 | **DOMAIN 1** | Gameplay Engine & Realtime Sync | `CardFlip.tsx`, `MultiplayerBoard.tsx`, `GameBoard.tsx` | ✅ Completed | `audit/domain-1-gameplay-engine` | 0 errors, build pass |
-| **DOMAIN 2** | Data Access Layer, Types & DB | `schema.sql`, `client.ts`, `server.ts`, `game.ts` | ⏳ Pending | `audit/domain-2-data-layer` | - |
+| **DOMAIN 2** | Data Access Layer, Types & DB | `schema.sql`, `client.ts`, `server.ts`, `game.ts` | ✅ Completed | `audit/domain-2-data-layer` | 0 errors, build pass |
 | **DOMAIN 3** | Template Creator & Storage Pipeline | `create/page.tsx`, `templates/page.tsx`, `setUtils.ts` | ⏳ Pending | `audit/domain-3-template-creator` | - |
 | **DOMAIN 4** | Matchmaking & Navigation Flow | `host/page.tsx`, `lobbies/page.tsx`, `NavHeader.tsx` | ⏳ Pending | `audit/domain-4-matchmaking` | - |
 | **DOMAIN 5** | Audio, Performance & Mobile UX | `audio.ts`, `globals.css`, Touch targets, Assets | ⏳ Pending | `audit/domain-5-performance-ux` | - |
@@ -38,8 +38,12 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 
 ---
 
-### 🗄️ Domain 2: Data Access Layer, Types & DB (Pending)
+### 🗄️ Domain 2: Data Access Layer, Types & DB (Completed)
 - **Target Scope**: [`schema.sql`](file:///e:/GuessWho/supabase/schema.sql), [`client.ts`](file:///e:/GuessWho/src/lib/supabase/client.ts), [`server.ts`](file:///e:/GuessWho/src/lib/supabase/server.ts), [`game.ts`](file:///e:/GuessWho/src/types/game.ts), [`apply_schema.cjs`](file:///e:/GuessWho/scripts/apply_schema.cjs).
+
+- **Key Findings & Fixes**:
+  - **DEC-D2-01**: Defined explicit strict database row interfaces (`GameRoomRow`, `TemplateRow`, `CardRow`, `ProfileRow`) in `src/types/game.ts` matching PostgreSQL `schema.sql` so database queries are strictly typed.
+  - **DEC-D2-02**: Added developer environment variable check and warning log in `src/lib/supabase/client.ts` when falling back to placeholder Supabase credentials.
 
 ---
 
@@ -66,3 +70,4 @@ This document tracks the 5-domain deep codebase audit, refactoring decisions, ve
 | **Pass 2 (Supabase)** | 0 Errors | 0 Errors, 0 Warnings | Build Success | ✅ Passed & Live DB Applied |
 | **Pass 3 (Sync)** | 0 Errors | 0 Errors, 0 Warnings | Build Success | ✅ Passed |
 | **Domain 1 (Gameplay)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
+| **Domain 2 (Data Layer)**| 0 Errors | 0 Errors, 0 Warnings | Build Success (1.1s) | ✅ Passed |
