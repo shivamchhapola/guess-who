@@ -65,7 +65,7 @@ export default function TemplatesPage() {
       }
     }
     fetchTemplates();
-  }, []);
+  }, [supabase]);
 
   const filteredTemplates = templates.filter((t) => {
     const matchesQ = matchesSearch(t, searchQuery);

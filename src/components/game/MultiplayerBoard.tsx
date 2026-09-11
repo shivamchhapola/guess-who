@@ -44,7 +44,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [joinNickname, setJoinNickname] = useState<string>('');
   const [selectedAvatar, setSelectedAvatar] = useState<string>('🎮');
   const [playerAvatar, setPlayerAvatar] = useState<string>('');
-  const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
+  const [, setConnectedPlayers] = useState<string[]>([]);
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null);
 
@@ -57,7 +57,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [currentTemplate, setCurrentTemplate] = useState<CardSetTemplate>(template);
   const [isChangeSetOpen, setIsChangeSetOpen] = useState<boolean>(false);
   const [setSearchQuery, setSetSearchQuery] = useState<string>('');
-  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
+  const [selectedTagFilter] = useState<string | null>(null);
   const [previewingTemplate, setPreviewingTemplate] = useState<CardSetTemplate | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<CardSetTemplate[]>([
     ...ALL_POPULAR_TEMPLATES,
@@ -94,15 +94,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  /* ── Available Tags & Filtered Templates ────────────────────────── */
-  const availableTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    availableTemplates.forEach((t) => {
-      (t.tags || []).forEach((tag) => tagSet.add(tag));
-    });
-    return Array.from(tagSet);
-  }, [availableTemplates]);
-
+  /* ── Filtered Templates ─────────────────────────────────────────── */
   const filteredTemplates = useMemo(() => {
     return availableTemplates.filter((t) => {
       const queryMatch = matchesSearch(t, setSearchQuery);
@@ -114,32 +106,34 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Hydration & Session Identity Setup ──────────────────────────── */
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setIsHost(sessionStorage.getItem(`room_${roomCode}_role`) === 'host');
-      const rawName = sessionStorage.getItem(`room_${roomCode}_name`) || '';
-      setPresenceKey(rawName);
+      queueMicrotask(() => {
+        setIsHost(sessionStorage.getItem(`room_${roomCode}_role`) === 'host');
+        const rawName = sessionStorage.getItem(`room_${roomCode}_name`) || '';
+        setPresenceKey(rawName);
 
-      const savedTimer = sessionStorage.getItem(`room_${roomCode}_timer`);
-      if (savedTimer) {
-        setTurnTimerSetting(Number(savedTimer));
-      }
+        const savedTimer = sessionStorage.getItem(`room_${roomCode}_timer`);
+        if (savedTimer) {
+          setTurnTimerSetting(Number(savedTimer));
+        }
 
-      if (rawName.startsWith('https://')) {
-        const spaceIdx = rawName.indexOf(' ');
-        if (spaceIdx > 0) {
-          setPlayerAvatar(rawName.slice(0, spaceIdx));
-          setPlayerName(rawName.slice(spaceIdx + 1));
+        if (rawName.startsWith('https://')) {
+          const spaceIdx = rawName.indexOf(' ');
+          if (spaceIdx > 0) {
+            setPlayerAvatar(rawName.slice(0, spaceIdx));
+            setPlayerName(rawName.slice(spaceIdx + 1));
+          } else {
+            setPlayerName(rawName);
+          }
         } else {
           setPlayerName(rawName);
+          setPlayerAvatar(sessionStorage.getItem(`room_${roomCode}_avatar`) || '');
         }
-      } else {
-        setPlayerName(rawName);
-        setPlayerAvatar(sessionStorage.getItem(`room_${roomCode}_avatar`) || '');
-      }
-      setHasSetIdentity(Boolean(rawName));
-      setJoinNickname(generateRandomName());
-      setSelectedAvatar(generateRandomAvatar());
+        setHasSetIdentity(Boolean(rawName));
+        setJoinNickname(generateRandomName());
+        setSelectedAvatar(generateRandomAvatar());
+        setIsMounted(true);
+      });
     }
-    setIsMounted(true);
   }, [roomCode]);
 
   /* ── Scroll Chat Log ────────────────────────────────────────────── */
@@ -150,7 +144,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Sync Template Props ────────────────────────────────────────── */
   useEffect(() => {
     if (template && template.id) {
-      setCurrentTemplate(template);
+      queueMicrotask(() => {
+        setCurrentTemplate(template);
+      });
     }
   }, [template]);
 
@@ -347,6 +343,30 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     };
   }, [roomCode, presenceKey, isUnlocked, hasSetIdentity, supabase, playerName, availableTemplates, currentTemplate.id]);
 
+  /* ── Pass Turn Action ───────────────────────────────────────────── */
+  const handleEndTurn = useCallback((reason?: 'timeout') => {
+    if (currentTurnPlayerId !== playerName && reason !== 'timeout') return;
+
+    soundFx.playSelect();
+    const nextPlayer = opponentName || 'Opponent';
+    const now = Date.now();
+
+    setCurrentTurnPlayerId(nextPlayer);
+    setTurnStartedAt(now);
+
+    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'turn_changed',
+        nextTurnPlayerId: nextPlayer,
+        turnStartedAt: now,
+        reason,
+      },
+    });
+  }, [currentTurnPlayerId, opponentName, playerName, roomCode, supabase]);
+
   /* ── Turn Timer Real-time Countdown ─────────────────────────────── */
   useEffect(() => {
     if (gameStatus !== 'active' || !turnTimerSetting || turnTimerSetting === 0 || !turnStartedAt) {
@@ -364,7 +384,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gameStatus, turnTimerSetting, turnStartedAt, currentTurnPlayerId, playerName]);
+  }, [gameStatus, turnTimerSetting, turnStartedAt, currentTurnPlayerId, playerName, handleEndTurn]);
 
   /* ── Host Deck Switcher ─────────────────────────────────────────── */
   const handleHostChangeTemplate = async (newTemplate: CardSetTemplate) => {
@@ -455,33 +475,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   /* ── Host Auto-Start Active Match Listener ───────────────────────── */
   useEffect(() => {
     if (isHost && gameStatus === 'selecting_character' && isMyReady && isOpponentReady) {
-      handleStartActiveMatch();
+      queueMicrotask(() => {
+        handleStartActiveMatch();
+      });
     }
   }, [isHost, gameStatus, isMyReady, isOpponentReady, handleStartActiveMatch]);
-
-  /* ── Pass Turn Action ───────────────────────────────────────────── */
-  const handleEndTurn = (reason?: 'timeout') => {
-    if (currentTurnPlayerId !== playerName && reason !== 'timeout') return;
-
-    soundFx.playSelect();
-    const nextPlayer = opponentName || 'Opponent';
-    const now = Date.now();
-
-    setCurrentTurnPlayerId(nextPlayer);
-    setTurnStartedAt(now);
-
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'turn_changed',
-        nextTurnPlayerId: nextPlayer,
-        turnStartedAt: now,
-        reason,
-      },
-    });
-  };
 
   /* ── Toggle Card Elimination ─────────────────────────────────────── */
   const handleToggleFlip = (cardId: string) => {

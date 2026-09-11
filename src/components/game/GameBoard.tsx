@@ -33,15 +33,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   useEffect(() => {
-    setCurrentTemplate(initialTemplate);
-    setFlippedCardIds([]);
-    setPlayerSecretId(null);
-    setIsSecretSelected(false);
+    queueMicrotask(() => {
+      setCurrentTemplate(initialTemplate);
+      setFlippedCardIds([]);
+      setPlayerSecretId(null);
+      setIsSecretSelected(false);
 
-    if (initialTemplate.cards.length > 0) {
-      const randomIndex = Math.floor(Math.random() * initialTemplate.cards.length);
-      setOpponentSecretId(initialTemplate.cards[randomIndex].id);
-    }
+      if (initialTemplate.cards.length > 0) {
+        const randomIndex = Math.floor(Math.random() * initialTemplate.cards.length);
+        setOpponentSecretId(initialTemplate.cards[randomIndex].id);
+      }
+    });
   }, [initialTemplate]);
 
   const handleSelectSecret = (cardId: string) => {

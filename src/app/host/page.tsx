@@ -37,13 +37,8 @@ function HostRoomContent() {
   const [isPublic, setIsPublic] = useState<boolean>(true);
   const [turnTimerSetting, setTurnTimerSetting] = useState<number>(60); // 0 (off), 30, 60, 90, 120
 
-  const [hostName, setHostName] = useState<string>('');
-  const [selectedAvatar, setSelectedAvatar] = useState<string>('');
-
-  useEffect(() => {
-    setHostName(generateRandomName());
-    setSelectedAvatar(generateRandomAvatar());
-  }, []);
+  const [hostName, setHostName] = useState<string>(() => generateRandomName());
+  const [selectedAvatar, setSelectedAvatar] = useState<string>(() => generateRandomAvatar());
 
   const [loading, setLoading] = useState<boolean>(false);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -307,7 +302,7 @@ function HostRoomContent() {
                     {turnTimerSetting === 0 ? 'Off' : `${turnTimerSetting}s per turn`}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 pl-6">Set a maximum time limit for each player's turn</p>
+                <p className="text-xs text-slate-400 pl-6">Set a maximum time limit for each player&apos;s turn</p>
                 <div className="grid grid-cols-5 gap-2 pl-6 pt-1">
                   {[0, 30, 60, 90, 120].map((seconds) => (
                     <button

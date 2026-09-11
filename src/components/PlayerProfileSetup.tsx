@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { User, Shuffle, Dices } from 'lucide-react';
 import { soundFx } from '@/lib/audio';
 import {
   AVATAR_STYLES,
   SEED_VARIATIONS,
-  PRIMARY_MODIFIERS,
-  SECONDARY_NOUNS,
   generateRandomName,
   generateRandomAvatar,
 } from '@/lib/randomIdentity';

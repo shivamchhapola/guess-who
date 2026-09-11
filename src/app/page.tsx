@@ -5,8 +5,8 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Play, Users, Gamepad2, ArrowRight,
-  Flame, X, Eye, Globe, PlusCircle,
+  Play, Gamepad2, ArrowRight,
+  Flame, Eye, Globe,
 } from 'lucide-react';
 import { CardSetTemplate } from '@/types/game';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';

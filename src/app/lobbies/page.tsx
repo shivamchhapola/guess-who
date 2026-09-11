@@ -52,7 +52,9 @@ export default function PublicLobbiesPage() {
   }, [supabase]);
 
   useEffect(() => {
-    fetchPublicRooms();
+    queueMicrotask(() => {
+      fetchPublicRooms();
+    });
   }, [fetchPublicRooms]);
 
   // Auto-refresh every 20 seconds

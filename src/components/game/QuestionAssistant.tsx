@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { CharacterCard } from '@/types/game';
-import { Sparkles, Filter, RotateCcw, Check, HelpCircle } from 'lucide-react';
+import { Sparkles, Filter, RotateCcw } from 'lucide-react';
 import { soundFx } from '@/lib/audio';
 
 interface QuestionAssistantProps {
@@ -68,7 +68,7 @@ export const QuestionAssistant: React.FC<QuestionAssistantProps> = ({
               {activeRemainingCardsCount} / {cards.length} Standing
             </span>
           </h4>
-          <p className="text-slate-400 text-xs">Fast-eliminate cards based on your opponent's question answer.</p>
+          <p className="text-slate-400 text-xs">Fast-eliminate cards based on your opponent&apos;s question answer.</p>
         </div>
       </div>
 
