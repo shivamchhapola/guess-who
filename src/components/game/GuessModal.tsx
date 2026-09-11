@@ -32,7 +32,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="guess-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+      className="modal-backdrop"
     >
       <div className="glass-panel border border-pink-500/30 w-full max-w-md p-6 rounded-3xl flex flex-col items-center text-center shadow-2xl shadow-pink-500/10 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
@@ -65,7 +65,7 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           {card.name}
         </h3>
         <p className="text-slate-400 text-xs mb-6">
-          Are you sure you want to guess <span className="font-bold text-slate-200">{card.name}</span> as your opponent's secret character?
+          Are you sure you want to guess <span className="font-bold text-slate-200">{card.name}</span> as your opponent&apos;s secret character?
         </p>
 
         <div className="w-full p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-amber-300 text-xs mb-6 text-left">

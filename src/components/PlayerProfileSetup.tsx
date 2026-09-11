@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { User, Shuffle, Dices } from 'lucide-react';
 import { soundFx } from '@/lib/audio';
 import {
   AVATAR_STYLES,
   SEED_VARIATIONS,
-  PRIMARY_MODIFIERS,
-  SECONDARY_NOUNS,
   generateRandomName,
   generateRandomAvatar,
 } from '@/lib/randomIdentity';
@@ -48,6 +46,37 @@ export function PlayerProfileSetup({
 }: PlayerProfileSetupProps) {
   const { style: activeStyle, seed: activeSeed } = parseAvatarUrl(avatar);
 
+  const isMountedRef = React.useRef(false);
+
+  // Load saved preferences on mount if available
+  React.useEffect(() => {
+    if (isMountedRef.current || typeof window === 'undefined') return;
+    isMountedRef.current = true;
+    const savedName = localStorage.getItem('guesswho_profile_name');
+    const savedAvatar = localStorage.getItem('guesswho_profile_avatar');
+    if (savedName && !name) {
+      onNameChange(savedName);
+    }
+    if (savedAvatar && !avatar) {
+      onAvatarChange(savedAvatar);
+    }
+  }, [avatar, name, onAvatarChange, onNameChange]);
+
+  // Save to localStorage when changed
+  const handleNameUpdate = (newName: string) => {
+    onNameChange(newName);
+    if (typeof window !== 'undefined' && newName.trim()) {
+      localStorage.setItem('guesswho_profile_name', newName.trim());
+    }
+  };
+
+  const handleAvatarUpdate = (newAvatarUrl: string) => {
+    onAvatarChange(newAvatarUrl);
+    if (typeof window !== 'undefined' && newAvatarUrl) {
+      localStorage.setItem('guesswho_profile_avatar', newAvatarUrl);
+    }
+  };
+
   const currentAvatarUrl = avatar && avatar.startsWith('http')
     ? avatar
     : `https://api.dicebear.com/7.x/${activeStyle}/svg?seed=${activeSeed}`;
@@ -55,13 +84,13 @@ export function PlayerProfileSetup({
   const updateAvatar = (style: string, seed: string) => {
     soundFx.playSelect();
     const newUrl = `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`;
-    onAvatarChange(newUrl);
+    handleAvatarUpdate(newUrl);
   };
 
   const handleRandomizeAvatar = () => {
     soundFx.playSelect();
     const newAvatar = generateRandomAvatar();
-    onAvatarChange(newAvatar);
+    handleAvatarUpdate(newAvatar);
   };
 
   const handleRandomizeNickname = () => {
@@ -72,7 +101,7 @@ export function PlayerProfileSetup({
       if (newName !== current) break;
       newName = generateRandomName();
     }
-    onNameChange(newName);
+    handleNameUpdate(newName);
   };
 
   return (
@@ -185,7 +214,7 @@ export function PlayerProfileSetup({
             type="text"
             required
             value={name}
-            onChange={(e) => onNameChange(e.target.value)}
+            onChange={(e) => handleNameUpdate(e.target.value)}
             placeholder="Host Player"
             maxLength={20}
             className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-white placeholder:text-slate-600 focus:outline-none transition-all bg-slate-950/80 border ${

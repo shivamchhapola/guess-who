@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { X, Play, Users, Check, Sparkles, User, Tag } from 'lucide-react';
+import { X, Play, Check, User } from 'lucide-react';
 import { CardSetTemplate } from '@/types/game';
 import { getCreatorLabel, getCharacterCountLabel } from '@/lib/setUtils';
 

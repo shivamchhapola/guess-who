@@ -5,8 +5,8 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Play, Users, Gamepad2, ArrowRight,
-  Flame, X, Eye, Globe, PlusCircle,
+  Play, Gamepad2, ArrowRight,
+  Flame, Eye, Globe,
 } from 'lucide-react';
 import { CardSetTemplate } from '@/types/game';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
@@ -120,7 +120,7 @@ export default function Home() {
                   <input
                     type="text"
                     value={roomCode}
-                    onChange={e => setRoomCode(e.target.value.toUpperCase())}
+                    onChange={e => setRoomCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
                     placeholder="ROOM CODE"
                     maxLength={6}
                     className="w-full px-4 py-3 rounded-2xl text-center text-base font-mono font-black tracking-widest uppercase focus:outline-none"

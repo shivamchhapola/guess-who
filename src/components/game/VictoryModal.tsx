@@ -24,7 +24,6 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   isOpen,
   winReason,
   winnerName,
-  guessedCard,
   secretCard,
   opponentSecretCard,
   onPlayAgain,
@@ -88,7 +87,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-lg">
+    <div className="modal-backdrop">
       <div
         className={`glass-panel w-full max-w-lg p-6 sm:p-8 rounded-3xl flex flex-col items-center text-center shadow-2xl border ${
           isWon
@@ -148,7 +147,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           {opponentSecretCard && (
             <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-cyan-500/30">
               <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-2">
-                Opponent's Secret
+                Opponent&apos;s Secret
               </span>
               <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border border-cyan-500/40 mb-1.5 bg-slate-950">
                 <Image

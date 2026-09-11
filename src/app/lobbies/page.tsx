@@ -14,6 +14,22 @@ interface PublicRoom {
   password_hash: string | null;
   created_at: string;
   status?: string;
+  state?: {
+    hostName?: string;
+    selectedAvatar?: string;
+  };
+}
+
+function parseHostDisplayName(hostId: string, stateHostName?: string): string {
+  if (stateHostName) return stateHostName;
+  if (!hostId) return 'Anonymous Host';
+  if (hostId.startsWith('http://') || hostId.startsWith('https://')) {
+    const spaceIdx = hostId.indexOf(' ');
+    if (spaceIdx !== -1) {
+      return hostId.substring(spaceIdx + 1).trim();
+    }
+  }
+  return hostId;
 }
 
 export default function PublicLobbiesPage() {
@@ -52,19 +68,38 @@ export default function PublicLobbiesPage() {
   }, [supabase]);
 
   useEffect(() => {
-    fetchPublicRooms();
+    queueMicrotask(() => {
+      fetchPublicRooms();
+    });
   }, [fetchPublicRooms]);
 
-  // Auto-refresh every 20 seconds
+  // Realtime subscription + auto-refresh fallback
   useEffect(() => {
-    const interval = setInterval(fetchPublicRooms, 20_000);
-    return () => clearInterval(interval);
-  }, [fetchPublicRooms]);
+    const channel = supabase
+      .channel('public_lobbies_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'game_rooms' },
+        () => {
+          fetchPublicRooms();
+        }
+      )
+      .subscribe();
 
-  const filteredRooms = rooms.filter((r) =>
-    r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.host_id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const interval = setInterval(fetchPublicRooms, 20_000);
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [supabase, fetchPublicRooms]);
+
+  const filteredRooms = rooms.filter((r) => {
+    const hostName = parseHostDisplayName(r.host_id, r.state?.hostName);
+    return (
+      r.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hostName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -224,7 +259,7 @@ export default function PublicLobbiesPage() {
                     </div>
 
                     <p className="text-slate-400 text-xs font-semibold mb-1">
-                      Hosted by <span className="text-slate-200 font-bold">{room.host_id}</span>
+                      Hosted by <span className="text-slate-200 font-bold">{parseHostDisplayName(room.host_id, room.state?.hostName)}</span>
                     </p>
                     <p className="text-slate-600 text-xs mb-6">
                       Created at {new Date(room.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

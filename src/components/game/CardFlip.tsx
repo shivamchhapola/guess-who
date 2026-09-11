@@ -53,11 +53,10 @@ export const CardFlip: React.FC<CardFlipProps> = ({
     <div
       id={`card-flip-${card.id}`}
       tabIndex={0}
-      role="button"
+      role="group"
       aria-label={cardLabel}
-      aria-pressed={isFlippingDown}
       onKeyDown={handleKeyDown}
-      className="relative w-full aspect-[3/4.4] perspective-1000 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl"
+      className="relative w-full aspect-[3/4.4] perspective-1000 select-none touch-pan-y focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl"
     >
       {/* Secret Card Badge */}
       {isSecret && (
