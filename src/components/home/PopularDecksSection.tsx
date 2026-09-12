@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Eye, ArrowRight } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { CardSetTemplate } from '@/types/game';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 
@@ -27,9 +27,9 @@ export function PopularDecksSection({ onSelectTemplate }: PopularDecksSectionPro
         </div>
         <Link
           href="/templates"
-          className="text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 shrink-0 self-start sm:self-auto"
+          className="text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors shrink-0 self-start sm:self-auto"
         >
-          View All Decks <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          View All Decks
         </Link>
       </div>
 
