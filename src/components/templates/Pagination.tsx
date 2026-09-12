@@ -10,6 +10,7 @@ interface PaginationProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  itemLabel?: string;
 }
 
 export function Pagination({
@@ -18,6 +19,7 @@ export function Pagination({
   totalItems,
   itemsPerPage,
   onPageChange,
+  itemLabel = 'items',
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -64,7 +66,7 @@ export function Pagination({
       <p className="text-xs sm:text-sm font-medium text-slate-400">
         Showing <span className="font-bold text-white">{startItem}</span>–
         <span className="font-bold text-white">{endItem}</span> of{' '}
-        <span className="font-bold text-amber-400">{totalItems}</span> decks
+        <span className="font-bold text-amber-400">{totalItems}</span> {itemLabel}
       </p>
 
       {/* Pagination Controls */}

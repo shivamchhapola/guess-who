@@ -8,7 +8,7 @@ export function GameModeCards() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-14 sm:mb-20">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        {/* CARD 1: HOST A GAME */}
+        {/* CARD 1: HOST GAME */}
         <div
           className="game-panel p-5 sm:p-7 rounded-3xl flex flex-col justify-between group transition-all duration-300 relative overflow-hidden"
           style={{
@@ -35,7 +35,7 @@ export function GameModeCards() {
               className="text-xl sm:text-2xl font-black text-white mb-2"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
-              Host a Game
+              Host Game
             </h3>
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-6">
               Create a private room, get a code, invite friends, and choose your favorite deck in the lobby.
@@ -48,7 +48,7 @@ export function GameModeCards() {
             className="game-btn-purple text-sm h-12 sm:h-13 py-3 px-5 justify-center rounded-2xl w-full shadow-lg shadow-purple-500/10 flex items-center gap-2 font-bold transition-all duration-200 active:scale-[0.98]"
           >
             <Gamepad2 className="w-4 h-4 shrink-0" />
-            <span>Host a Game</span>
+            <span>Host Game</span>
           </Link>
         </div>
 

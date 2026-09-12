@@ -4,13 +4,16 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Lock, Globe, Search, RefreshCw, Play, AlertCircle, Loader2, Layers } from 'lucide-react';
+import { Lock, Globe, Search, RefreshCw, Play, AlertCircle, Layers, Gamepad2 } from 'lucide-react';
 import { NavHeader } from '@/components/NavHeader';
 import { HomeFooter } from '@/components/home/HomeFooter';
+import { Pagination } from '@/components/templates/Pagination';
 import { soundFx } from '@/lib/audio';
 import { CardSetTemplate, CharacterCard } from '@/types/game';
 import { THE_OFFICE_TEMPLATE, ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+
+const LOBBIES_PER_PAGE = 9;
 
 const BUILT_IN_TEMPLATES: CardSetTemplate[] = [
   THE_OFFICE_TEMPLATE,
@@ -102,30 +105,47 @@ function resolveRoomTemplate(row: PublicRoomRow): CardSetTemplate {
 export default function PublicLobbiesPage() {
   const [rooms, setRooms] = useState<ProcessedRoom[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
-  // Silent background fetch support to eliminate UI layout morphing during auto-sync
+  // Server-side fetch with stale lobby filter, server search, and pagination range
   const fetchPublicRooms = useCallback(
-    async (isSilent = false) => {
+    async (isSilent = false, page = currentPage, search = searchQuery) => {
       if (!isSilent) {
         setLoading(true);
       }
       setError(null);
       try {
-        const { data, error: fetchError } = await supabase
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const trimmed = search.trim().replace(/[%_]/g, '');
+
+        let query = supabase
           .from('game_rooms')
-          .select('*, templates(*, cards(*))')
+          .select('*, templates(*, cards(*))', { count: 'exact' })
           .eq('is_public', true)
           .in('status', ['waiting', 'in_progress'])
+          .gte('created_at', tenMinutesAgo)
           .order('created_at', { ascending: false });
+
+        if (trimmed) {
+          query = query.or(`code.ilike.%${trimmed}%,host_id.ilike.%${trimmed}%`);
+        }
+
+        const from = (page - 1) * LOBBIES_PER_PAGE;
+        const to = from + LOBBIES_PER_PAGE - 1;
+        query = query.range(from, to);
+
+        const { data, count, error: fetchError } = await query;
 
         if (fetchError) {
           console.error('Supabase error:', fetchError);
           setError('Could not load lobbies. Please try again.');
         } else {
+          setTotalCount(count ?? 0);
           const processed: ProcessedRoom[] = (data ?? []).map((row: PublicRoomRow) => {
             const hostName = parseHostDisplayName(row.host_id, row.state?.hostName);
             const template = resolveRoomTemplate(row);
@@ -160,7 +180,7 @@ export default function PublicLobbiesPage() {
         }
       }
     },
-    [supabase]
+    [supabase, currentPage, searchQuery]
   );
 
   useEffect(() => {
@@ -189,16 +209,11 @@ export default function PublicLobbiesPage() {
     };
   }, [supabase, fetchPublicRooms]);
 
-  // Search filter across room code, host name, or deck title
-  const filteredRooms = rooms.filter((r) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      r.code.toLowerCase().includes(q) ||
-      r.hostName.toLowerCase().includes(q) ||
-      r.template.title.toLowerCase().includes(q)
-    );
-  });
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setCurrentPage(1);
+    fetchPublicRooms(false, 1, val);
+  };
 
   return (
     <div className="min-h-screen flex flex-col justify-between">
@@ -208,15 +223,16 @@ export default function PublicLobbiesPage() {
         {/* Clean Page Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-8">
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="text-2xl sm:text-4xl md:text-5xl shrink-0">🎮</span>
               <h1
-                className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight"
+                className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight"
                 style={{ fontFamily: 'Outfit, sans-serif' }}
               >
                 Public <span className="text-cyan-400">Lobbies</span>
               </h1>
-              <span className="px-3 py-1 rounded-full text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30">
-                {filteredRooms.length} {filteredRooms.length === 1 ? 'Lobby' : 'Lobbies'}
+              <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 shrink-0">
+                {totalCount} {totalCount === 1 ? 'Lobby' : 'Lobbies'}
               </span>
             </div>
             <p className="text-slate-300 text-xs sm:text-sm mt-1.5 leading-relaxed">
@@ -231,7 +247,7 @@ export default function PublicLobbiesPage() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search code, host, or deck..."
                 className="w-full h-11 pl-9 pr-4 rounded-2xl text-xs sm:text-sm font-medium bg-slate-950/90 border border-slate-700/80 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 transition-all"
                 style={{ caretColor: '#22d3ee' }}
@@ -254,19 +270,34 @@ export default function PublicLobbiesPage() {
           </div>
         </div>
 
-        {/* Stable Height Container (Prevents UI morphing during fetch/refresh) */}
-        <div className="min-h-[380px]">
-          {/* Loading Initial State */}
+        {/* Stable Full-Width Container (Prevents width/height layout morphing) */}
+        <div className="min-h-[380px] w-full">
+          {/* Skeleton Loading Grid (Prevents layout pop/morphing on refresh) */}
           {loading && rooms.length === 0 && (
-            <div className="game-panel p-12 rounded-3xl text-center min-h-[320px] flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-9 h-9 text-cyan-400 animate-spin" />
-              <p className="text-slate-300 text-sm font-bold">Checking open lobbies…</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="game-panel p-5 sm:p-6 rounded-3xl animate-pulse min-h-[280px] flex flex-col justify-between"
+                  style={{ border: '1px solid rgba(6, 182, 212, 0.15)' }}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="h-7 w-24 bg-slate-800/80 rounded-xl" />
+                      <div className="h-5 w-16 bg-slate-800/80 rounded-full" />
+                    </div>
+                    <div className="h-12 w-full bg-slate-800/60 rounded-2xl mb-4" />
+                    <div className="h-16 w-full bg-slate-800/40 rounded-2xl" />
+                  </div>
+                  <div className="h-11 w-full bg-slate-800/80 rounded-2xl mt-4" />
+                </div>
+              ))}
             </div>
           )}
 
           {/* Error State */}
           {error && !loading && (
-            <div className="game-panel p-8 rounded-3xl text-center min-h-[320px] flex flex-col items-center justify-center gap-4 mb-6 border-red-500/30">
+            <div className="game-panel w-full p-8 rounded-3xl text-center min-h-[360px] flex flex-col items-center justify-center gap-4 mb-6 border-red-500/30">
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center"
                 style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#f87171' }}
@@ -291,19 +322,13 @@ export default function PublicLobbiesPage() {
             </div>
           )}
 
-          {/* Stable Empty State (Constrained inside container) */}
-          {!loading && !error && filteredRooms.length === 0 && (
-            <div className="game-panel p-10 rounded-3xl text-center min-h-[320px] flex flex-col items-center justify-center max-w-md mx-auto my-4">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.3)', color: '#22d3ee' }}
-              >
-                <Users className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-black text-white mb-1.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          {/* Full-Width Stable Empty State (Zero width morphing) */}
+          {!loading && !error && rooms.length === 0 && (
+            <div className="game-panel w-full p-10 sm:p-12 rounded-3xl text-center min-h-[360px] flex flex-col items-center justify-center border border-cyan-500/20 shadow-2xl">
+              <h3 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 {searchQuery ? 'No Lobbies Match Search' : 'No Public Lobbies Online'}
               </h3>
-              <p className="text-slate-300 text-xs max-w-sm mb-5 leading-relaxed">
+              <p className="text-slate-300 text-xs sm:text-sm max-w-sm mb-6 leading-relaxed">
                 {searchQuery
                   ? 'Try a different room code, host nickname, or deck title.'
                   : 'Be the first to host a game room and invite players!'}
@@ -312,8 +337,8 @@ export default function PublicLobbiesPage() {
                 {searchQuery ? (
                   <button
                     type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="py-2 px-4 text-xs font-extrabold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded-xl hover:bg-cyan-500/20 transition-all cursor-pointer"
+                    onClick={() => handleSearchChange('')}
+                    className="py-2.5 px-5 text-xs font-extrabold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 rounded-2xl hover:bg-cyan-500/20 transition-all cursor-pointer"
                   >
                     Clear Search
                   </button>
@@ -321,8 +346,9 @@ export default function PublicLobbiesPage() {
                   <Link
                     href="/host"
                     onClick={() => soundFx.playSelect()}
-                    className="game-btn-primary py-2.5 px-5 text-xs font-extrabold rounded-xl inline-flex items-center gap-2"
+                    className="game-btn-primary py-3 px-6 text-sm font-extrabold rounded-2xl inline-flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
+                    <Gamepad2 className="w-4 h-4 shrink-0" />
                     <span>Host Game</span>
                   </Link>
                 )}
@@ -331,9 +357,9 @@ export default function PublicLobbiesPage() {
           )}
 
           {/* Lobbies Grid */}
-          {!loading && !error && filteredRooms.length > 0 && (
+          {!loading && !error && rooms.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredRooms.map((room) => {
+              {rooms.map((room) => {
                 const cardPreviews = room.template.cards.slice(0, 4);
 
                 return (
@@ -429,6 +455,21 @@ export default function PublicLobbiesPage() {
                 );
               })}
             </div>
+          )}
+
+          {/* Pagination Controls */}
+          {!loading && !error && rooms.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(totalCount / LOBBIES_PER_PAGE)}
+              totalItems={totalCount}
+              itemsPerPage={LOBBIES_PER_PAGE}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                fetchPublicRooms(false, page, searchQuery);
+              }}
+              itemLabel="lobbies"
+            />
           )}
         </div>
       </main>

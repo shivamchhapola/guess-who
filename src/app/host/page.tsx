@@ -49,8 +49,27 @@ function HostRoomContent() {
   const [isPublic, setIsPublic] = useState<boolean>(true);
   const [turnTimerSetting, setTurnTimerSetting] = useState<number>(60); // 0 (off), 30, 60, 90, 120
 
-  const [hostName, setHostName] = useState<string>(() => generateRandomName());
-  const [selectedAvatar, setSelectedAvatar] = useState<string>(() => generateRandomAvatar());
+  const [hostName, setHostName] = useState<string>('Captain Detective');
+  const [selectedAvatar, setSelectedAvatar] = useState<string>('https://api.dicebear.com/7.x/avataaars/svg?seed=Alex');
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      const savedName = localStorage.getItem('guesswho_profile_name');
+      const savedAvatar = localStorage.getItem('guesswho_profile_avatar');
+
+      if (savedName && savedName.trim()) {
+        setHostName(savedName.trim());
+      } else {
+        setHostName(generateRandomName());
+      }
+
+      if (savedAvatar && savedAvatar.trim()) {
+        setSelectedAvatar(savedAvatar.trim());
+      } else {
+        setSelectedAvatar(generateRandomAvatar());
+      }
+    });
+  }, []);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -182,13 +201,15 @@ function HostRoomContent() {
           setRoomCode(upperCode);
         }
 
+        const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+        const dbTemplateId = isUuid(selectedTemplate.id) ? selectedTemplate.id : null;
+
         const roomPayload = {
           code: upperCode,
           host_id: hostPresenceKey,
-          template_id: selectedTemplate.id,
+          template_id: dbTemplateId,
           password_hash: hasPassword ? password.trim() : null,
           is_public: isPublic,
-          turn_timer_seconds: turnTimerSetting,
           status: 'waiting',
           state: {
             hostName: finalHostName,
@@ -207,8 +228,11 @@ function HostRoomContent() {
           upperCode = await getUniqueRoomCode();
           setRoomCode(upperCode);
         } else {
-          console.warn('Room creation note:', error);
-          break;
+          console.error('Room creation database error:', error);
+          setErrorMessage(`Database error: ${error.message}`);
+          isSubmittingRef.current = false;
+          setLoading(false);
+          return;
         }
       }
 
@@ -235,10 +259,10 @@ function HostRoomContent() {
         {/* Page Header */}
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-amber-500 mb-1 block">
-            HOST A GAME
+            HOST GAME
           </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            Host a Game
+            Host Game
           </h1>
           <p className="text-slate-400 text-sm mt-1">
             Choose your deck, setup your profile, and configure room settings.

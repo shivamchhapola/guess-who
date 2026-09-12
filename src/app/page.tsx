@@ -55,7 +55,7 @@ export default function Home() {
           {/* 2. Inline Join Game Segment (Right below heading and description) */}
           <JoinGameSegment />
 
-          {/* 3. Host a Game & Public Lobbies Cards */}
+          {/* 3. Host Game & Public Lobbies Cards */}
           <GameModeCards />
         </section>
 
@@ -71,7 +71,7 @@ export default function Home() {
         template={selectedTemplate}
         isOpen={selectedTemplate !== null}
         onClose={() => setSelectedTemplate(null)}
-        primaryActionLabel="Host Multiplayer Room"
+        primaryActionLabel="Host Game"
         onSelectSet={(tpl) => router.push(`/host?template=${tpl.id}`)}
         secondaryActionLabel="Play Solo Practice"
         onSecondaryAction={(tpl) => router.push(`/play/practice?template=${tpl.id}`)}

@@ -152,6 +152,7 @@ export default function TemplatesPage() {
           totalItems={filteredTemplates.length}
           itemsPerPage={ITEMS_PER_PAGE}
           onPageChange={setCurrentPage}
+          itemLabel="decks"
         />
 
         {/* Empty State */}
