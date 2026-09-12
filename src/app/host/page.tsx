@@ -1,18 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { THE_OFFICE_TEMPLATE } from '@/data/popularTemplates';
+import { THE_OFFICE_TEMPLATE, ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
+import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { createClient } from '@/lib/supabase/client';
-import {
-  ArrowRight,
-  Loader2,
-} from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { soundFx } from '@/lib/audio';
 import { PlayerProfileSetup } from '@/components/PlayerProfileSetup';
 import { HostSettingsForm } from '@/components/host/HostSettingsForm';
+import { HostDeckSelector } from '@/components/host/HostDeckSelector';
+import { HomeFooter } from '@/components/home/HomeFooter';
 import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
+import { CardSetTemplate } from '@/types/game';
+
+const BUILT_IN_TEMPLATES: CardSetTemplate[] = [
+  THE_OFFICE_TEMPLATE,
+  ...ALL_POPULAR_TEMPLATES.filter((t) => t.id !== THE_OFFICE_TEMPLATE.id),
+  CLASSIC_GUESS_WHO_TEMPLATE,
+];
 
 function generateRandomCode(length: number = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -25,11 +32,18 @@ function generateRandomCode(length: number = 6): string {
 
 function HostRoomContent() {
   const searchParams = useSearchParams();
-  const initialTemplateId = searchParams.get('template') || THE_OFFICE_TEMPLATE.id;
+  const templateParam = searchParams.get('template');
+
+  const [availableTemplates, setAvailableTemplates] = useState<CardSetTemplate[]>(BUILT_IN_TEMPLATES);
+  const [selectedTemplate, setSelectedTemplate] = useState<CardSetTemplate>(() => {
+    if (templateParam) {
+      const found = BUILT_IN_TEMPLATES.find((t) => t.id === templateParam);
+      if (found) return found;
+    }
+    return THE_OFFICE_TEMPLATE;
+  });
 
   const [roomCode, setRoomCode] = useState<string>('');
-  const [selectedTemplateId] = useState<string>(initialTemplateId);
-
   const [hasPassword, setHasPassword] = useState<boolean>(false);
   const [password, setPassword] = useState<string>('');
   const [isPublic, setIsPublic] = useState<boolean>(true);
@@ -47,6 +61,53 @@ function HostRoomContent() {
 
   const router = useRouter();
   const supabase = createClient();
+
+  // Load custom community templates from Supabase for deck chooser
+  useEffect(() => {
+    async function fetchRemoteTemplates() {
+      try {
+        const { data: dbTemplates } = await supabase
+          .from('templates')
+          .select('*, cards(*)')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false });
+
+        if (dbTemplates && dbTemplates.length > 0) {
+          const existingIds = new Set(BUILT_IN_TEMPLATES.map((b) => b.id));
+          const formatted: CardSetTemplate[] = dbTemplates
+            .filter((t) => !existingIds.has(t.id))
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description || '',
+              creatorName: t.creator_name || 'Community Creator',
+              isPublic: t.is_public,
+              tags: t.tags || ['Custom'],
+              createdAt: t.created_at,
+              updatedAt: t.updated_at,
+              cards: (t.cards || []).map((c: { id: string; name: string; image_url: string; attributes?: Record<string, unknown> }) => ({
+                id: c.id,
+                name: c.name,
+                imageUrl: c.image_url,
+                attributes: c.attributes || {},
+              })),
+            }));
+
+          setAvailableTemplates([...BUILT_IN_TEMPLATES, ...formatted]);
+
+          if (templateParam) {
+            const foundCustom = formatted.find((t) => t.id === templateParam);
+            if (foundCustom) {
+              setSelectedTemplate(foundCustom);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load remote templates for host selector:', err);
+      }
+    }
+    fetchRemoteTemplates();
+  }, [supabase, templateParam]);
 
   const getUniqueRoomCode = useCallback(async (): Promise<string> => {
     let code = generateRandomCode(6);
@@ -124,7 +185,7 @@ function HostRoomContent() {
         const roomPayload = {
           code: upperCode,
           host_id: hostPresenceKey,
-          template_id: selectedTemplateId,
+          template_id: selectedTemplate.id,
           password_hash: hasPassword ? password.trim() : null,
           is_public: isPublic,
           turn_timer_seconds: turnTimerSetting,
@@ -132,7 +193,8 @@ function HostRoomContent() {
           state: {
             hostName: finalHostName,
             selectedAvatar,
-            selectedTemplateId,
+            selectedTemplateId: selectedTemplate.id,
+            deckTitle: selectedTemplate.title,
             turnTimerSetting,
             gameStatus: 'setup',
           },
@@ -154,11 +216,11 @@ function HostRoomContent() {
         sessionStorage.setItem(`room_${upperCode}_role`, 'host');
         sessionStorage.setItem(`room_${upperCode}_name`, hostPresenceKey);
         sessionStorage.setItem(`room_${upperCode}_avatar`, selectedAvatar);
-        sessionStorage.setItem(`room_${upperCode}_template`, selectedTemplateId);
+        sessionStorage.setItem(`room_${upperCode}_template`, selectedTemplate.id);
         sessionStorage.setItem(`room_${upperCode}_timer`, String(turnTimerSetting));
       }
 
-      router.push(`/play/${upperCode}?template=${selectedTemplateId}`);
+      router.push(`/play/${upperCode}?template=${selectedTemplate.id}`);
     } catch (err) {
       console.error('Error launching room:', err);
       setErrorMessage('Could not launch room. Please try again.');
@@ -167,11 +229,9 @@ function HostRoomContent() {
     }
   };
 
-
   return (
     <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <form onSubmit={handleCreateRoom} className="flex flex-col gap-8">
-        
+      <form onSubmit={handleCreateRoom} className="flex flex-col gap-6">
         {/* Page Header */}
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-amber-500 mb-1 block">
@@ -181,7 +241,7 @@ function HostRoomContent() {
             Host a Game
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Set up your profile and room settings.
+            Choose your deck, setup your profile, and configure room settings.
           </p>
         </div>
 
@@ -191,68 +251,69 @@ function HostRoomContent() {
           </div>
         )}
 
-        {/* Single Column Content Flow */}
-        <div className="flex flex-col gap-6">
-          
-          {/* 1. Host Profile */}
-          <section className="game-panel p-6 rounded-3xl border border-white/10">
-            <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              <span className="text-amber-500 font-extrabold">1.</span> Host Profile
-            </h2>
-            <PlayerProfileSetup
-              name={hostName}
-              avatar={selectedAvatar}
-              onNameChange={(val) => {
-                setHostName(val);
-                if (nameError) setNameError(null);
-              }}
-              onAvatarChange={setSelectedAvatar}
-              nameError={nameError}
-            />
-          </section>
-
-          {/* 2. Room Settings */}
-          <HostSettingsForm
-            isPublic={isPublic}
-            onIsPublicChange={setIsPublic}
-            hasPassword={hasPassword}
-            onHasPasswordChange={(val) => {
-              setHasPassword(val);
-              if (passwordError) setPasswordError(null);
+        {/* 1. Host Profile */}
+        <section className="game-panel p-6 rounded-3xl border border-white/10">
+          <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <span className="text-amber-500 font-extrabold">1.</span> Host Profile
+          </h2>
+          <PlayerProfileSetup
+            name={hostName}
+            avatar={selectedAvatar}
+            onNameChange={(val) => {
+              setHostName(val);
+              if (nameError) setNameError(null);
             }}
-            password={password}
-            onPasswordChange={(val) => {
-              setPassword(val);
-              if (passwordError) setPasswordError(null);
-            }}
-            passwordError={passwordError}
-            turnTimerSetting={turnTimerSetting}
-            onTurnTimerChange={setTurnTimerSetting}
+            onAvatarChange={setSelectedAvatar}
+            nameError={nameError}
           />
+        </section>
 
-          {/* Primary Action CTA */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="game-btn-primary w-full py-4 text-base rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 min-h-[56px] shadow-xl shadow-amber-500/20"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin shrink-0 text-slate-950" />
-                  <span>Creating Room...</span>
-                </>
-              ) : (
-                <>
-                  <span>Create Room</span>
-                  <ArrowRight className="w-5 h-5 ml-0.5 shrink-0" />
-                </>
-              )}
-            </button>
-          </div>
+        {/* 2. Character Deck Selector */}
+        <HostDeckSelector
+          selectedTemplate={selectedTemplate}
+          availableTemplates={availableTemplates}
+          onSelectTemplate={setSelectedTemplate}
+        />
 
+        {/* 3. Room Settings */}
+        <HostSettingsForm
+          isPublic={isPublic}
+          onIsPublicChange={setIsPublic}
+          hasPassword={hasPassword}
+          onHasPasswordChange={(val) => {
+            setHasPassword(val);
+            if (passwordError) setPasswordError(null);
+          }}
+          password={password}
+          onPasswordChange={(val) => {
+            setPassword(val);
+            if (passwordError) setPasswordError(null);
+          }}
+          passwordError={passwordError}
+          turnTimerSetting={turnTimerSetting}
+          onTurnTimerChange={setTurnTimerSetting}
+        />
+
+        {/* Primary Action CTA */}
+        <div className="pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="game-btn-primary w-full py-4 text-base rounded-2xl font-bold flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 min-h-[56px] shadow-xl shadow-amber-500/20"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin shrink-0 text-slate-950" />
+                <span>Creating Room...</span>
+              </>
+            ) : (
+              <>
+                <span>Create Room</span>
+                <ArrowRight className="w-5 h-5 ml-0.5 shrink-0" />
+              </>
+            )}
+          </button>
         </div>
-
       </form>
     </main>
   );
@@ -265,9 +326,7 @@ export default function HostRoomPage() {
       <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading room setup...</div>}>
         <HostRoomContent />
       </Suspense>
-      <footer className="game-panel py-6 text-center text-xs text-slate-500" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        © {new Date().getFullYear()} GuessWhooo?
-      </footer>
+      <HomeFooter />
     </div>
   );
 }
