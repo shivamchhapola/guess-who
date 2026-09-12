@@ -30,7 +30,7 @@ export function HostSettingsForm({
   return (
     <section className="game-panel p-6 rounded-3xl border border-white/10">
       <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-        <span className="text-amber-500 font-extrabold">2.</span> Room Settings
+        <span className="text-amber-500 font-extrabold">3.</span> Room Settings
       </h2>
 
       {/* Vertical Stack of Room Settings */}
