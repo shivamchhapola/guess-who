@@ -159,7 +159,7 @@ export function DeckBoardPreviewStep({
             className="py-3.5 px-5 rounded-2xl text-xs font-bold text-slate-200 hover:text-white bg-slate-800/90 border border-slate-700 transition-all flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 cursor-pointer"
           >
             <Play className="w-4 h-4 fill-current text-amber-400" />
-            <span>Publish & Solo Practice</span>
+            <span>Save &amp; Practice Solo</span>
           </button>
 
           <button

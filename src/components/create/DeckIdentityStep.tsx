@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles, Globe, Lock, ArrowRight } from 'lucide-react';
 import { TagSelectorBar } from '@/components/create/TagSelectorBar';
 import { soundFx } from '@/lib/audio';
@@ -34,12 +34,15 @@ export function DeckIdentityStep({
   onAddCustomTag,
   onNextStep,
 }: DeckIdentityStepProps) {
+  const [titleError, setTitleError] = useState('');
+
   const handleProceed = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      alert('Please enter a Game Set Title.');
+      setTitleError('Please enter a title for your game set.');
       return;
     }
+    setTitleError('');
     soundFx.playSelect();
     onNextStep();
   };
@@ -50,7 +53,7 @@ export function DeckIdentityStep({
         <div>
           <h3 className="text-xl font-black text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
             <Sparkles className="w-5 h-5 text-amber-400" />
-            <span>Step 1: Set Identity & Metadata</span>
+            <span>Step 1: Set Identity &amp; Details</span>
           </h3>
           <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
             Name your deck, add a description, select visibility, and tag topics for search.
@@ -68,11 +71,24 @@ export function DeckIdentityStep({
             type="text"
             required
             value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
+            onChange={(e) => {
+              onTitleChange(e.target.value);
+              if (titleError) setTitleError('');
+            }}
             placeholder="e.g. Dunder Mifflin Scranton, Marvel Heroes, Office Squad"
-            className="w-full h-12 px-4 bg-slate-950/90 border border-slate-700/80 rounded-2xl text-sm font-bold text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400 transition-all"
+            className={`w-full h-12 px-4 bg-slate-950/90 border rounded-2xl text-sm font-bold text-white placeholder:text-slate-500 focus:outline-none transition-all ${
+              titleError
+                ? 'border-rose-500/70 focus:border-rose-400'
+                : 'border-slate-700/80 focus:border-amber-400'
+            }`}
             style={{ caretColor: '#f59e0b' }}
           />
+          {titleError && (
+            <p className="text-rose-400 text-xs font-semibold mt-1.5 flex items-center gap-1">
+              <span>⚠</span>
+              {titleError}
+            </p>
+          )}
         </div>
 
         <div>

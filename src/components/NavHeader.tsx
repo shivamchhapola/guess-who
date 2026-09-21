@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Gamepad2, UploadCloud, Users, LogIn, LogOut, User as UserIcon, Menu, X, Tv } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -14,19 +14,21 @@ interface NavHeaderProps {
 export function NavHeader({ activePage }: NavHeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const supabaseRef = useRef(createClient());
 
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = supabaseRef.current;
     supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) {
-        setUser(data.user);
-      }
+      setUser(data?.user ?? null);
+      setAuthLoading(false);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAuthLoading(false);
     });
 
     return () => {
@@ -34,13 +36,18 @@ export function NavHeader({ activePage }: NavHeaderProps) {
     };
   }, []);
 
+  // Reuses the hoisted supabase ref — no redundant client creation
   const handleLogOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    setUser(null);
+    await supabaseRef.current.auth.signOut();
+    // Do NOT manually setUser(null) — onAuthStateChange fires and does it
   };
 
-  const displayName = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Creator';
+  const displayName =
+    user?.user_metadata?.username ||
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split('@')[0] ||
+    'Player';
 
   const navLinks = [
     { href: '/templates', label: 'Browse Sets', icon: Tv, page: 'templates' },
@@ -117,7 +124,10 @@ export function NavHeader({ activePage }: NavHeaderProps) {
             <span>Make Set</span>
           </Link>
 
-          {user ? (
+          {authLoading ? (
+            /* Skeleton pill prevents layout shift while auth resolves */
+            <div className="w-24 h-7 rounded-xl bg-slate-800/60 animate-pulse" />
+          ) : user ? (
             <div className="flex items-center gap-2 pl-2 border-l border-white/10">
               <div
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-200"

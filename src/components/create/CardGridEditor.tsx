@@ -15,7 +15,7 @@ interface CardGridEditorProps {
   onUpdateCardName: (index: number, name: string) => void;
   onSingleCardImageSelect: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveCard: (index: number) => void;
-  onClearAllCards?: () => void;
+  // onClearAllCards removed — Clear All lives only in the parent step footer
 }
 
 export const CardGridEditor: React.FC<CardGridEditorProps> = ({
@@ -27,7 +27,6 @@ export const CardGridEditor: React.FC<CardGridEditorProps> = ({
   onUpdateCardName,
   onSingleCardImageSelect,
   onRemoveCard,
-  onClearAllCards,
 }) => {
   return (
     <div className="space-y-4">
@@ -41,23 +40,6 @@ export const CardGridEditor: React.FC<CardGridEditorProps> = ({
             {cards.length} {cards.length === 1 ? 'Card' : 'Cards'}
           </span>
         </div>
-
-        {cards.length > 0 && onClearAllCards && (
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                soundFx.playMessagePop();
-                onClearAllCards();
-              }}
-              className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 font-bold rounded-xl text-xs border border-rose-500/30 hover:border-rose-500/50 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] flex items-center gap-1.5 cursor-pointer"
-              title="Remove all cards to start clean"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear All</span>
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Empty State Callout when deck has 0 cards */}
@@ -69,10 +51,10 @@ export const CardGridEditor: React.FC<CardGridEditorProps> = ({
 
           <div className="max-w-md">
             <h4 className="text-lg font-black text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Your Character Workshop is Clean!
+              No characters yet
             </h4>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Upload photos from your device or drop a ZIP folder. Character names will be automatically extracted from filenames!
+              Upload photos or a ZIP file above. Character names are extracted from filenames automatically.
             </p>
           </div>
 

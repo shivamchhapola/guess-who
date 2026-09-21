@@ -55,7 +55,7 @@ export function CreateStudioHeader({
             </span>
           </div>
           <p className="text-slate-300 text-xs sm:text-sm">
-            Craft custom photo decks, unpack ZIP archives, and publish sets to GuessWhooo?
+            Craft custom photo decks, unpack ZIP archives, and publish your set to the community.
           </p>
         </div>
       </div>

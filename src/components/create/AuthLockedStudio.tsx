@@ -42,7 +42,7 @@ export function AuthLockedStudio() {
           Log in to <span className="text-amber-400">Make a Set</span> 📸
         </h1>
         <p className="text-slate-300 text-xs sm:text-base max-w-xl mx-auto mb-10 leading-relaxed">
-          Custom deck creation is strictly feature-gated for logged in creators. Upload your personal photos, unpack ZIP archives, and publish custom Guess Who decks!
+          Creating custom decks requires a free account. Upload your photos, pack them in a ZIP, and publish a Guess Who set for your friends or the world.
         </p>
 
         {/* Feature Highlights Grid */}
@@ -60,7 +60,7 @@ export function AuthLockedStudio() {
               <Archive className="w-4 h-4" />
             </div>
             <h4 className="text-xs font-bold text-white mb-1">ZIP Unpacking</h4>
-            <p className="text-[11px] text-slate-400 leading-snug">Drag and drop ZIP archives to generate 24-card sets instantly.</p>
+            <p className="text-[11px] text-slate-400 leading-snug">Upload a ZIP file of photos to generate a full-card set in seconds.</p>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800">

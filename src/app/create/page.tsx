@@ -13,6 +13,11 @@ import { CreateStudioHeader } from '@/components/create/CreateStudioHeader';
 import { DeckIdentityStep } from '@/components/create/DeckIdentityStep';
 import { CharacterWorkshopStep } from '@/components/create/CharacterWorkshopStep';
 import { DeckBoardPreviewStep } from '@/components/create/DeckBoardPreviewStep';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
+
+/** Max cards per deck — fits 8 rows in a 6-col board grid */
+const MAX_CARDS = 48;
 
 function formatFilenameToName(filename: string): string {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
@@ -82,26 +87,28 @@ export default function CreateTemplatePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>(['Custom', 'Party']);
   const [customTagInput, setCustomTagInput] = useState('');
 
-  // Initial card list (starts clean so creators can upload or load starters)
   const [cards, setCards] = useState<CharacterCard[]>([]);
-
-  const handleClearAllCards = () => {
-    setCards([]);
-  };
 
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const zipInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const zipInputRef = useRef<HTMLInputElement | null>(null);
   const cardFileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   const router = useRouter();
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const { toasts, toast, dismiss } = useToast();
+
+  // Clear upload status whenever the user changes steps
+  useEffect(() => {
+    setUploadStatus(null);
+  }, [currentStep]);
 
   // Supabase Auth Guard Listener (Gated feature)
   useEffect(() => {
+    const supabase = supabaseRef.current;
     async function checkAuthSession() {
       try {
         const { data } = await supabase.auth.getUser();
@@ -119,7 +126,7 @@ export default function CreateTemplatePage() {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -139,16 +146,39 @@ export default function CreateTemplatePage() {
     }
   };
 
+  const handleAddCard = () => {
+    if (cards.length >= MAX_CARDS) {
+      toast(`${MAX_CARDS}-card limit reached. Remove some cards first.`, 'warning');
+      return;
+    }
+    setCards((prev) => [
+      ...prev,
+      {
+        id: `card-${Date.now()}-${prev.length}`,
+        name: '',
+        imageUrl: '',
+        attributes: {},
+      },
+    ]);
+  };
+
+  const handleClearAllCards = () => {
+    setCards([]);
+  };
+
   // Handle Bulk Image Select
   const handleBulkImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setUploadStatus(`Compressing and processing ${files.length} selected images...`);
     const fileArray = Array.from(files);
+    const capped = fileArray.length > MAX_CARDS;
+    const toProcess = capped ? fileArray.slice(0, MAX_CARDS) : fileArray;
+
+    setUploadStatus(`Compressing and processing ${toProcess.length} selected images...`);
 
     try {
-      const readPromises = fileArray.map(
+      const readPromises = toProcess.map(
         (file) =>
           new Promise<{ name: string; dataUrl: string }>((resolve, reject) => {
             const reader = new FileReader();
@@ -180,12 +210,20 @@ export default function CreateTemplatePage() {
 
       setCards(newCards);
       setUploadStatus(`Successfully created ${newCards.length}-card set from photos!`);
+
+      if (capped) {
+        toast(
+          `Capped at ${MAX_CARDS} cards — ${fileArray.length - MAX_CARDS} extra image${fileArray.length - MAX_CARDS > 1 ? 's' : ''} were skipped.`,
+          'warning'
+        );
+      }
+
       if (!title) {
         setTitle('Custom Photo Game Set');
       }
     } catch (err) {
       console.error('Error processing bulk images:', err);
-      alert('Could not process all selected images.');
+      toast('Could not process all selected images. Please try again.', 'error');
       setUploadStatus(null);
     }
   };
@@ -209,16 +247,19 @@ export default function CreateTemplatePage() {
       });
 
       if (imageFiles.length === 0) {
-        alert('No valid image files (.jpg, .png, .webp) found inside ZIP archive.');
+        toast('No valid image files (.jpg, .png, .webp) found inside the ZIP archive.', 'error');
         setUploadStatus(null);
         return;
       }
 
-      setUploadStatus(`Extracting & compressing ${imageFiles.length} photos from ZIP...`);
+      const capped = imageFiles.length > MAX_CARDS;
+      const toProcess = capped ? imageFiles.slice(0, MAX_CARDS) : imageFiles;
+
+      setUploadStatus(`Extracting & compressing ${toProcess.length} photos from ZIP...`);
       const extractedCards: CharacterCard[] = [];
 
-      for (let i = 0; i < imageFiles.length; i++) {
-        const item = imageFiles[i];
+      for (let i = 0; i < toProcess.length; i++) {
+        const item = toProcess[i];
         const blob = await item.zipEntry.async('blob');
         const rawDataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -238,21 +279,47 @@ export default function CreateTemplatePage() {
 
       setCards(extractedCards);
       setUploadStatus(`Successfully created ${extractedCards.length}-card set from ZIP!`);
+
+      if (capped) {
+        toast(
+          `Capped at ${MAX_CARDS} cards — ${imageFiles.length - MAX_CARDS} extra image${imageFiles.length - MAX_CARDS > 1 ? 's' : ''} were skipped.`,
+          'warning'
+        );
+      }
+
       if (!title) {
         setTitle(formatFilenameToName(file.name) || 'Custom Photo Set');
       }
     } catch (err) {
       console.error('Error unpacking ZIP file:', err);
-      alert('Could not process ZIP file.');
+      toast('Could not process the ZIP file. Make sure it\'s a valid archive.', 'error');
       setUploadStatus(null);
     }
   };
 
+  const handleFilesDropped = async (files: FileList) => {
+    // Check if a ZIP was dropped
+    const zipFile = Array.from(files).find(
+      (f) => f.type === 'application/zip' || f.name.toLowerCase().endsWith('.zip')
+    );
+    if (zipFile) {
+      const syntheticEvent = {
+        target: { files: Object.assign([zipFile], { item: (i: number) => [zipFile][i] }) },
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      await handleZipFileSelect(syntheticEvent);
+      return;
+    }
 
+    // Otherwise treat as bulk image drop
+    const syntheticEvent = {
+      target: { files },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    await handleBulkImageSelect(syntheticEvent);
+  };
 
   const handleRemoveCard = (idx: number) => {
     if (cards.length <= 4) {
-      alert('A game set needs at least 4 character cards.');
+      toast('A game set needs at least 4 character cards.', 'warning');
       return;
     }
     setCards(cards.filter((_, i) => i !== idx));
@@ -282,11 +349,11 @@ export default function CreateTemplatePage() {
 
   const handleSaveTemplate = async (destination: 'host' | 'practice') => {
     if (!title.trim()) {
-      alert('Please enter a Game Set Title.');
+      toast('Please enter a Game Set Title before publishing.', 'error');
       return;
     }
     if (cards.length < 4) {
-      alert('A game set must have at least 4 character cards.');
+      toast('A game set must have at least 4 character cards.', 'error');
       return;
     }
 
@@ -294,6 +361,7 @@ export default function CreateTemplatePage() {
     setSuccessMsg(null);
 
     try {
+      const supabase = supabaseRef.current;
       const { data: userData } = await supabase.auth.getUser();
       const creatorId = userData?.user?.id || null;
       const creatorName =
@@ -316,7 +384,10 @@ export default function CreateTemplatePage() {
 
       if (templateError || !templateData?.id) {
         console.error('Template insertion error:', templateError);
-        alert(`Failed to save game set: ${templateError?.message || 'Database permissions error'}`);
+        toast(
+          `Failed to save game set: ${templateError?.message || 'Database permissions error'}`,
+          'error'
+        );
         setSaving(false);
         return;
       }
@@ -331,7 +402,7 @@ export default function CreateTemplatePage() {
       const { error: cardsError } = await supabase.from('cards').insert(cardsToInsert);
       if (cardsError) {
         console.error('Cards insertion error:', cardsError);
-        alert(`Failed to save deck cards: ${cardsError.message}`);
+        toast(`Failed to save deck cards: ${cardsError.message}`, 'error');
         setSaving(false);
         return;
       }
@@ -347,7 +418,7 @@ export default function CreateTemplatePage() {
       }, 1000);
     } catch (err) {
       console.error('Save template error:', err);
-      alert('An unexpected error occurred while publishing your game set.');
+      toast('An unexpected error occurred while publishing your game set.', 'error');
     } finally {
       setSaving(false);
     }
@@ -399,6 +470,7 @@ export default function CreateTemplatePage() {
             {currentStep === 2 && (
               <CharacterWorkshopStep
                 cards={cards}
+                maxCards={MAX_CARDS}
                 fileInputRef={fileInputRef}
                 zipInputRef={zipInputRef}
                 uploadStatus={uploadStatus}
@@ -413,10 +485,12 @@ export default function CreateTemplatePage() {
                 }}
                 onBulkImageSelect={handleBulkImageSelect}
                 onZipFileSelect={handleZipFileSelect}
+                onFilesDropped={handleFilesDropped}
                 onCardNameChange={handleCardNameChange}
                 onSingleCardFileSelect={handleSingleCardFileSelect}
                 onRemoveCard={handleRemoveCard}
                 onClearAllCards={handleClearAllCards}
+                onAddCard={handleAddCard}
                 onPrevStep={() => setCurrentStep(1)}
                 onNextStep={() => setCurrentStep(3)}
               />
@@ -440,6 +514,9 @@ export default function CreateTemplatePage() {
       </main>
 
       <HomeFooter />
+
+      {/* Toast notification stack */}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
