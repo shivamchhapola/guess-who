@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, PlusCircle, X, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { CardSetTemplate } from '@/types/game';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
@@ -12,12 +11,18 @@ import { NavHeader } from '@/components/NavHeader';
 import { SetPreviewModal } from '@/components/SetPreviewModal';
 import { TemplateCard } from '@/components/templates/TemplateCard';
 import { TagFilterBar } from '@/components/templates/TagFilterBar';
+import { TemplatesHeader } from '@/components/templates/TemplatesHeader';
+import { Pagination } from '@/components/templates/Pagination';
+import { HomeFooter } from '@/components/home/HomeFooter';
 import { matchesSearch } from '@/lib/setUtils';
+
+const ITEMS_PER_PAGE = 9;
 
 export default function TemplatesPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [previewTemplate, setPreviewTemplate] = useState<CardSetTemplate | null>(null);
   const [templates, setTemplates] = useState<CardSetTemplate[]>([
     ...ALL_POPULAR_TEMPLATES,
@@ -26,6 +31,7 @@ export default function TemplatesPage() {
 
   const supabase = createClient();
 
+  // Load public community templates from Supabase
   useEffect(() => {
     async function fetchTemplates() {
       try {
@@ -65,80 +71,70 @@ export default function TemplatesPage() {
     fetchTemplates();
   }, [supabase]);
 
-  const filteredTemplates = templates.filter((t) => {
-    const matchesQ = matchesSearch(t, searchQuery);
-    const matchesT = selectedTag ? (t.tags || []).includes(selectedTag) : true;
-    return matchesQ && matchesT;
-  });
+  // Compute tag frequencies and rank top tags
+  const { topTags, allTags } = useMemo(() => {
+    const counts: Record<string, number> = {};
+    templates.forEach((t) => {
+      (t.tags || []).forEach((tag) => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
+    });
 
-  const allTags = Array.from(new Set(templates.flatMap((t) => t.tags || []))).sort();
+    const sortedAll = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    const top = sortedAll.slice(0, 10);
+    return { topTags: top, allTags: sortedAll };
+  }, [templates]);
+
+  // Filter templates by search query & tag selection
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((t) => {
+      const matchesQ = matchesSearch(t, searchQuery);
+      const matchesT = selectedTag ? (t.tags || []).includes(selectedTag) : true;
+      return matchesQ && matchesT;
+    });
+  }, [templates, searchQuery, selectedTag]);
+
+  // Reset pagination to page 1 whenever filters change
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
+  const handleTagSelect = (tag: string | null) => {
+    setSelectedTag(tag);
+    setCurrentPage(1);
+  };
+
+  // Pagination calculation (9 items per page)
+  const totalPages = Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE);
+  const paginatedTemplates = useMemo(() => {
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTemplates.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  }, [filteredTemplates, currentPage]);
 
   return (
     <div className="min-h-screen flex flex-col">
       <NavHeader activePage="templates" />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-3xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                Game Set Library
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/25">
-                {filteredTemplates.length} {filteredTemplates.length === 1 ? 'Set' : 'Sets'}
-              </span>
-            </div>
-            <p className="text-slate-400 text-sm">
-              Discover character sets or create your own custom Guess Who board.
-            </p>
-          </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {/* Header & Controls */}
+        <TemplatesHeader
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          filteredCount={filteredTemplates.length}
+        />
 
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by title, tag, or creator..."
-                className="pl-9 pr-9 py-2.5 rounded-xl text-xs font-semibold bg-slate-950/80 border border-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 w-64 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+        {/* Tag Filters Bar (Top popular flex row + popover) */}
+        <TagFilterBar
+          topTags={topTags}
+          allTags={allTags}
+          selectedTag={selectedTag}
+          onSelectTag={handleTagSelect}
+        />
 
-            <Link
-              href="/create"
-              className="game-btn-primary text-xs py-2.5 px-4 shrink-0 font-bold flex items-center gap-1.5"
-              style={{ borderRadius: '0.75rem' }}
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Create Set</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Tag Filters Component */}
-        <div className="mb-8">
-          <TagFilterBar
-            allTags={allTags}
-            selectedTag={selectedTag}
-            onSelectTag={setSelectedTag}
-          />
-        </div>
-
-        {/* Template Cards Grid Component */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredTemplates.map((template) => (
+        {/* Template Cards Grid (9 items per page) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {paginatedTemplates.map((template) => (
             <TemplateCard
               key={template.id}
               template={template}
@@ -149,20 +145,33 @@ export default function TemplatesPage() {
           ))}
         </div>
 
+        {/* Pagination Controls */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredTemplates.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          itemLabel="decks"
+        />
+
         {/* Empty State */}
         {filteredTemplates.length === 0 && (
-          <div className="glass-panel p-12 rounded-3xl text-center max-w-md mx-auto my-12 border border-slate-700/50 shadow-xl">
-            <Filter className="w-12 h-12 text-slate-600 mx-auto mb-4 animate-pulse" />
+          <div className="game-panel p-10 sm:p-12 rounded-3xl text-center max-w-md mx-auto my-12 border border-slate-700/50 shadow-xl">
+            <Filter className="w-12 h-12 text-slate-500 mx-auto mb-4 animate-pulse" />
             <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              No matching sets found
+              No matching decks found
             </h3>
-            <p className="text-slate-400 text-sm mb-6">
-              Try searching for something else or clear your search and tag filters.
+            <p className="text-slate-400 text-xs sm:text-sm mb-6 leading-relaxed">
+              Try searching for a different keyword or reset your active tag filters.
             </p>
             <button
               type="button"
-              onClick={() => { setSearchQuery(''); setSelectedTag(null); }}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold rounded-xl text-xs transition-colors"
+              onClick={() => {
+                handleSearchChange('');
+                handleTagSelect(null);
+              }}
+              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-extrabold rounded-2xl text-xs transition-colors cursor-pointer"
             >
               Reset Filters
             </button>
@@ -170,7 +179,10 @@ export default function TemplatesPage() {
         )}
       </main>
 
-      {/* Preview Modal */}
+      {/* Footer */}
+      <HomeFooter />
+
+      {/* Set Preview Modal */}
       <SetPreviewModal
         template={previewTemplate}
         isOpen={previewTemplate !== null}

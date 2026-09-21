@@ -43,8 +43,9 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-700/50">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-2xl sm:text-3xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Match Lobby
+            <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <span>🎮</span>
+              <span>Match Lobby</span>
             </h2>
             <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
               {roomCode}

@@ -21,7 +21,7 @@ export function SetPreviewModal({
   isOpen,
   onClose,
   onSelectSet,
-  primaryActionLabel = 'Use This Set',
+  primaryActionLabel = 'Host Game',
   onSecondaryAction,
   secondaryActionLabel = 'Solo Practice',
 }: SetPreviewModalProps) {

@@ -442,11 +442,50 @@ export function useMultiplayerRoom({
     });
 
     try {
-      await supabase.from('game_rooms').update({ template_id: newTemplate.id }).eq('code', roomCode);
+      const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      const dbTemplateId = isUuid(newTemplate.id) ? newTemplate.id : null;
+      await supabase.from('game_rooms').update({ template_id: dbTemplateId }).eq('code', roomCode);
     } catch (err) {
       console.warn('Failed to update room template in DB:', err);
     }
   };
+
+  /* ── Host Tab Close / Unload Room Cleanup Handler ────────────────────── */
+  useEffect(() => {
+    if (!isHost || !roomCode) return;
+
+    const markRoomClosed = async () => {
+      try {
+        await supabase.from('game_rooms').update({ status: 'closed' }).eq('code', roomCode);
+      } catch (err) {
+        console.warn('Could not mark room closed:', err);
+      }
+    };
+
+    const handleHostUnload = () => {
+      markRoomClosed();
+    };
+
+    window.addEventListener('beforeunload', handleHostUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleHostUnload);
+    };
+  }, [isHost, roomCode, supabase]);
+
+  /* ── 10-Minute Unjoined Lobby Auto-Close Timeout ────────────────── */
+  useEffect(() => {
+    if (!isHost || gameStatus !== 'setup' || opponentName) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        await supabase.from('game_rooms').update({ status: 'closed' }).eq('code', roomCode);
+      } catch (err) {
+        console.warn('Lobby auto-close timeout error:', err);
+      }
+    }, 10 * 60 * 1000);
+
+    return () => clearTimeout(timer);
+  }, [isHost, gameStatus, opponentName, roomCode, supabase]);
 
   /* ── Host Action: Start Game ───────────────────────────────────── */
   const handleHostStartGame = () => {
