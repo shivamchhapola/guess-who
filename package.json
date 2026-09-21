@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "db:push": "node scripts/apply_schema.cjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "start:dev": "node scripts/apply_schema.cjs && next dev"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
