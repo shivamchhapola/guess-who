@@ -37,19 +37,17 @@ export const CharacterSelectionBanner: React.FC<CharacterSelectionBannerProps> =
 
       {/* Ready Status Pills */}
       <div className="flex items-center gap-3 mb-6">
-        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-          isMyReady
+        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${isMyReady
             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
             : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-        }`}>
+          }`}>
           You: {isMyReady ? 'Secret Chosen ✓' : 'Selecting...'}
         </span>
 
-        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-          isOpponentReady
+        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${isOpponentReady
             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
             : 'bg-slate-800 text-slate-400 border-slate-700'
-        }`}>
+          }`}>
           Opponent: {isOpponentReady ? 'Secret Chosen ✓' : 'Selecting...'}
         </span>
       </div>
@@ -63,7 +61,7 @@ export const CharacterSelectionBanner: React.FC<CharacterSelectionBannerProps> =
             isFlippingDown={false}
             isSecret={card.id === playerSecretId}
             isSelectable={true}
-            onToggleFlip={() => {}}
+            onToggleFlip={() => { }}
             onSelectSecret={onSelectSecretCard}
           />
         ))}

@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
 import { CharacterCard } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
-import { CheckCircle, Play, Sparkles, Users } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
-import { BulkImageUploader } from '@/components/create/BulkImageUploader';
-import { TagSelectorBar } from '@/components/create/TagSelectorBar';
-import { CardGridEditor } from '@/components/create/CardGridEditor';
+import { HomeFooter } from '@/components/home/HomeFooter';
+import { AuthLockedStudio } from '@/components/create/AuthLockedStudio';
+import { CreateStudioHeader } from '@/components/create/CreateStudioHeader';
+import { DeckIdentityStep } from '@/components/create/DeckIdentityStep';
+import { CharacterWorkshopStep } from '@/components/create/CharacterWorkshopStep';
+import { DeckBoardPreviewStep } from '@/components/create/DeckBoardPreviewStep';
 
 function formatFilenameToName(filename: string): string {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
@@ -18,10 +21,6 @@ function formatFilenameToName(filename: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-/**
- * Resize & compress image data URLs client-side using HTML5 Canvas
- * Reduces 2MB–5MB raw photo Data URLs to ~30KB (max 400x400 JPEG at 82% quality)
- */
 async function compressImageDataUrl(
   dataUrl: string,
   maxWidth = 400,
@@ -74,20 +73,21 @@ async function compressImageDataUrl(
 }
 
 export default function CreateTemplatePage() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [currentStep, setCurrentStep] = useState<number>(1);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
   const [selectedTags, setSelectedTags] = useState<string[]>(['Custom', 'Party']);
   const [customTagInput, setCustomTagInput] = useState('');
 
-  // Initial card list (starts with 16 placeholder cards)
-  const [cards, setCards] = useState<CharacterCard[]>(() =>
-    Array.from({ length: 16 }, (_, idx) => ({
-      id: `card-${idx + 1}`,
-      name: `Person ${idx + 1}`,
-      imageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=Photo${idx + 1}&backgroundColor=0f172a,1e293b`,
-      attributes: {},
-    }))
-  );
+  // Initial card list (starts clean so creators can upload or load starters)
+  const [cards, setCards] = useState<CharacterCard[]>([]);
+
+  const handleClearAllCards = () => {
+    setCards([]);
+  };
 
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -99,6 +99,27 @@ export default function CreateTemplatePage() {
 
   const router = useRouter();
   const supabase = createClient();
+
+  // Supabase Auth Guard Listener (Gated feature)
+  useEffect(() => {
+    async function checkAuthSession() {
+      try {
+        const { data } = await supabase.auth.getUser();
+        setIsAuthenticated(!!data?.user);
+      } catch {
+        setIsAuthenticated(false);
+      }
+    }
+    checkAuthSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session?.user);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -227,18 +248,7 @@ export default function CreateTemplatePage() {
     }
   };
 
-  const handleAddCard = () => {
-    const nextId = cards.length + 1;
-    setCards([
-      ...cards,
-      {
-        id: `card-${nextId}`,
-        name: `Person ${nextId}`,
-        imageUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=Card${nextId}&backgroundColor=0f172a`,
-        attributes: {},
-      },
-    ]);
-  };
+
 
   const handleRemoveCard = (idx: number) => {
     if (cards.length <= 4) {
@@ -297,7 +307,7 @@ export default function CreateTemplatePage() {
           title: title.trim(),
           description: description.trim(),
           tags: selectedTags.length > 0 ? selectedTags : ['Custom'],
-          is_public: true,
+          is_public: isPublic,
           creator_id: creatorId,
           creator_name: creatorName,
         })
@@ -344,130 +354,92 @@ export default function CreateTemplatePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col justify-between">
       <NavHeader activePage="create" />
 
-      {/* Main Studio Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Top Action Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-3xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                Create Custom Set 📸
-              </h1>
-              <span
-                className="px-2.5 py-0.5 rounded-full text-xs font-bold text-amber-400"
-                style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}
-              >
-                {cards.length} Cards
-              </span>
-            </div>
-            <p className="text-slate-400 text-sm">
-              Upload photos or a ZIP archive to generate a custom Guess Who set instantly.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleSaveTemplate('practice')}
-              disabled={saving}
-              className="game-btn-secondary py-2.5 px-4 text-xs font-bold disabled:opacity-50"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              <span>Solo Practice</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSaveTemplate('host')}
-              disabled={saving}
-              className="game-btn-primary py-2.5 px-5 text-sm font-black disabled:opacity-50"
-              style={{ borderRadius: '0.75rem' }}
-            >
-              <Users className="w-4 h-4" />
-              <span>{saving ? 'Publishing...' : 'Host Room with Set'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Success Alert */}
-        {successMsg && (
-          <div className="p-4 mb-6 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-sm flex items-center gap-2 animate-in fade-in">
-            <CheckCircle className="w-5 h-5" />
-            <span>{successMsg}</span>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {/* Loading Auth State */}
+        {isAuthenticated === null && (
+          <div className="game-panel p-16 rounded-3xl text-center min-h-[360px] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-9 h-9 text-amber-400 animate-spin" />
+            <p className="text-slate-300 text-sm font-bold">Checking studio access...</p>
           </div>
         )}
 
-        {/* BULK PHOTO & ZIP UPLOADER COMPONENT */}
-        <BulkImageUploader
-          fileInputRef={fileInputRef}
-          zipInputRef={zipInputRef}
-          uploadStatus={uploadStatus}
-          onBulkImageSelect={handleBulkImageSelect}
-          onZipFileSelect={handleZipFileSelect}
-        />
+        {/* Auth Locked View (Unauthenticated Users) */}
+        {isAuthenticated === false && <AuthLockedStudio />}
 
-        {/* Set Details Form & Tag Selection */}
-        <div className="game-panel p-6 rounded-3xl mb-8 border border-white/10">
-          <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Set Details & Tags</span>
-          </h3>
+        {/* Authenticated Deck Creator Studio */}
+        {isAuthenticated === true && (
+          <div>
+            <CreateStudioHeader
+              currentStep={currentStep}
+              totalCards={cards.length}
+              title={title}
+              onSelectStep={setCurrentStep}
+            />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-            <div>
-              <label className="block text-xs font-bold text-slate-200 mb-1.5">Game Set Title *</label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Dunder Mifflin Scranton, Movie Stars, Friends Group"
-                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm font-bold text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+            {currentStep === 1 && (
+              <DeckIdentityStep
+                title={title}
+                description={description}
+                isPublic={isPublic}
+                selectedTags={selectedTags}
+                customTagInput={customTagInput}
+                onTitleChange={setTitle}
+                onDescriptionChange={setDescription}
+                onIsPublicChange={setIsPublic}
+                onCustomTagInputChange={setCustomTagInput}
+                onToggleTag={toggleTag}
+                onAddCustomTag={handleAddCustomTag}
+                onNextStep={() => setCurrentStep(2)}
               />
-            </div>
+            )}
 
-            <div>
-              <label className="block text-xs font-bold text-slate-200 mb-1.5">Description</label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief description of characters in this set..."
-                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
+            {currentStep === 2 && (
+              <CharacterWorkshopStep
+                cards={cards}
+                fileInputRef={fileInputRef}
+                zipInputRef={zipInputRef}
+                uploadStatus={uploadStatus}
+                onSetCardInputRef={(idx, el) => {
+                  if (cardFileInputRefs.current) {
+                    cardFileInputRefs.current[idx] = el;
+                  }
+                }}
+                onCardImageClick={(idx) => {
+                  const input = cardFileInputRefs.current?.[idx];
+                  if (input) input.click();
+                }}
+                onBulkImageSelect={handleBulkImageSelect}
+                onZipFileSelect={handleZipFileSelect}
+                onCardNameChange={handleCardNameChange}
+                onSingleCardFileSelect={handleSingleCardFileSelect}
+                onRemoveCard={handleRemoveCard}
+                onClearAllCards={handleClearAllCards}
+                onPrevStep={() => setCurrentStep(1)}
+                onNextStep={() => setCurrentStep(3)}
               />
-            </div>
+            )}
+
+            {currentStep === 3 && (
+              <DeckBoardPreviewStep
+                title={title}
+                description={description}
+                isPublic={isPublic}
+                selectedTags={selectedTags}
+                cards={cards}
+                saving={saving}
+                successMsg={successMsg}
+                onPrevStep={() => setCurrentStep(2)}
+                onSaveTemplate={handleSaveTemplate}
+              />
+            )}
           </div>
-
-          {/* Tags Selector Component */}
-          <TagSelectorBar
-            selectedTags={selectedTags}
-            customTagInput={customTagInput}
-            onCustomTagInputChange={setCustomTagInput}
-            onToggleTag={toggleTag}
-            onAddCustomTag={handleAddCustomTag}
-          />
-        </div>
-
-        {/* Card Grid Editor Component */}
-        <CardGridEditor
-          cards={cards}
-          onSetCardInputRef={(idx, el) => {
-            if (cardFileInputRefs.current) {
-              cardFileInputRefs.current[idx] = el;
-            }
-          }}
-          onCardImageClick={(idx) => {
-            const input = cardFileInputRefs.current?.[idx];
-            if (input) input.click();
-          }}
-          onUpdateCardName={handleCardNameChange}
-          onSingleCardImageSelect={handleSingleCardFileSelect}
-          onRemoveCard={handleRemoveCard}
-          onAddCard={handleAddCard}
-        />
+        )}
       </main>
+
+      <HomeFooter />
     </div>
   );
 }
