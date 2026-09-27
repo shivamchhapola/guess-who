@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { GameStatus, WinReason, QuestionLogItem, CardSetTemplate, CharacterCard } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
 import { soundFx } from '@/lib/audio';
+import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
+import { ALL_POPULAR_TEMPLATES, THE_OFFICE_TEMPLATE } from '@/data/popularTemplates';
 
 interface UseMultiplayerRoomParams {
   roomCode: string;
@@ -182,6 +184,14 @@ export function useMultiplayerRoom({
             }
             if (typeof s.gameRound === 'number') {
               setGameRound(s.gameRound);
+            }
+            const targetSetId = ((s.selectedSetId || roomData.template_id) as string) || null;
+            if (targetSetId && targetSetId !== initialTemplate.id && onTemplateChangedByHost) {
+              const allTemplates = [THE_OFFICE_TEMPLATE, ...ALL_POPULAR_TEMPLATES, CLASSIC_GUESS_WHO_TEMPLATE];
+              const foundTpl = allTemplates.find((t) => t.id === targetSetId);
+              if (foundTpl) {
+                onTemplateChangedByHost(foundTpl);
+              }
             }
           });
         }
