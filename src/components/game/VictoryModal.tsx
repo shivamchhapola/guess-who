@@ -150,7 +150,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           {secretCard && (
             <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-cyan-500/30">
               <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-2">
-                {opponentName ? `${opponentName}&apos;s Secret` : "Opponent's Secret"}
+                {opponentName ? `${opponentName}'s Secret` : "Opponent's Secret"}
               </span>
               <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border border-cyan-500/40 mb-1.5 bg-slate-950">
                 <Image
