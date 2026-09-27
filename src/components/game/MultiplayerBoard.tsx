@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { SetPreviewModal } from '../SetPreviewModal';
 import { matchesSearch } from '@/lib/setUtils';
 import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
+import { hashPassword } from '@/lib/security';
 
 import { useMultiplayerRoom } from '@/hooks/useMultiplayerRoom';
 import { PreGameLobbyView } from './PreGameLobbyView';
@@ -300,9 +301,10 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         inputPassword={inputPassword}
         setInputPassword={setInputPassword}
         passError={passError}
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          if (inputPassword === requiredPassword) {
+          const hashedInput = await hashPassword(inputPassword);
+          if (hashedInput === requiredPassword || inputPassword.trim() === requiredPassword) {
             setIsUnlocked(true);
             setPassError(null);
           } else {
