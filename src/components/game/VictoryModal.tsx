@@ -13,9 +13,11 @@ interface VictoryModalProps {
   isOpen: boolean;
   winReason?: WinReason | null;
   winnerName?: string | null;
-  guessedCard?: CharacterCard | null;
+  /** The current player's own secret character card */
+  playerSecretCard?: CharacterCard | null;
+  /** The opponent's secret character card (revealed at end of game) */
   secretCard: CharacterCard | null;
-  opponentSecretCard?: CharacterCard | null;
+  opponentName?: string | null;
   onPlayAgain: () => void;
 }
 
@@ -24,8 +26,9 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   isOpen,
   winReason,
   winnerName,
+  playerSecretCard,
   secretCard,
-  opponentSecretCard,
+  opponentName,
   onPlayAgain,
 }) => {
   useEffect(() => {
@@ -63,7 +66,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
     } else {
       switch (winReason) {
         case 'correct_guess':
-          return `${winnerName || 'Opponent'} correctly guessed your secret character.`;
+          return `${opponentName || winnerName || 'Opponent'} correctly guessed your secret character.`;
         case 'wrong_guess':
           return `You guessed incorrectly! The guess was not their secret character.`;
         case 'surrender':
@@ -122,13 +125,34 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
         {/* Side-by-side Card Reveal */}
         <div className="grid grid-cols-2 gap-3 w-full mb-6">
-          {/* Your Secret Card */}
-          {secretCard && (
+          {/* This player's own secret card */}
+          {playerSecretCard && (
             <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-amber-500/30">
               <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-2">
                 Your Secret
               </span>
               <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border border-amber-500/40 mb-1.5 bg-slate-950">
+                <Image
+                  src={playerSecretCard.imageUrl}
+                  alt={playerSecretCard.name}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              <span className="font-extrabold text-slate-200 text-xs sm:text-sm truncate w-full text-center">
+                {playerSecretCard.name}
+              </span>
+            </div>
+          )}
+
+          {/* Opponent's secret card — revealed at game end */}
+          {secretCard && (
+            <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-cyan-500/30">
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-2">
+                {opponentName ? `${opponentName}&apos;s Secret` : "Opponent's Secret"}
+              </span>
+              <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border border-cyan-500/40 mb-1.5 bg-slate-950">
                 <Image
                   src={secretCard.imageUrl}
                   alt={secretCard.name}
@@ -139,27 +163,6 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               </div>
               <span className="font-extrabold text-slate-200 text-xs sm:text-sm truncate w-full text-center">
                 {secretCard.name}
-              </span>
-            </div>
-          )}
-
-          {/* Opponent Secret Card */}
-          {opponentSecretCard && (
-            <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-900/80 border border-cyan-500/30">
-              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-2">
-                Opponent&apos;s Secret
-              </span>
-              <div className="relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border border-cyan-500/40 mb-1.5 bg-slate-950">
-                <Image
-                  src={opponentSecretCard.imageUrl}
-                  alt={opponentSecretCard.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-              <span className="font-extrabold text-slate-200 text-xs sm:text-sm truncate w-full text-center">
-                {opponentSecretCard.name}
               </span>
             </div>
           )}
