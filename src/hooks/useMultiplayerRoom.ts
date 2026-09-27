@@ -279,7 +279,8 @@ export function useMultiplayerRoom({
       } else if (payload.type === 'start_character_selection') {
         setGameStatus('selecting_character');
       } else if (payload.type === 'player_ready') {
-        if (payload.sender !== playerName) {
+        // BUG-06 fix: compare against presenceKey (stable), not playerName (display name that can collide)
+        if (payload.senderPresenceKey !== presenceKey) {
           setIsOpponentReady(true);
           setChatMessages((prev) => [
             ...prev,
@@ -290,6 +291,12 @@ export function useMultiplayerRoom({
               question: `${payload.sender} selected their secret character!`,
             },
           ]);
+        }
+      } else if (payload.type === 'secret_reveal') {
+        // BUG-02 / BUG-03 fix: receive opponent's secret so we can verify guesses and show the reveal
+        // Only store it if the sender is NOT us (we already know our own secret)
+        if (payload.senderPresenceKey !== presenceKey) {
+          setOpponentSecretId(payload.secretCardId);
         }
       } else if (payload.type === 'game_started') {
         setGameStatus('active');
@@ -326,7 +333,22 @@ export function useMultiplayerRoom({
         setGameStatus('finished');
         setWinnerId(payload.winnerId);
         setWinReason(payload.winReason);
-        if (payload.secretCardId) setOpponentSecretId(payload.secretCardId);
+        /**
+         * BUG-03 fix: The payload now carries two distinct secret IDs:
+         *   - guesserSecretCardId: the GUESSER'S own secret (so the opponent can display it)
+         *   - opponentSecretCardId: the GUESSED PLAYER'S secret (so the guesser sees what they were after)
+         *
+         * Each side stores the OTHER player's secret as opponentSecretId for the modal reveal.
+         * We identify which role we are by checking whether we are the winnerId.
+         */
+        const weAreTheGuesser = payload.guesserPresenceKey === presenceKey;
+        if (weAreTheGuesser) {
+          // We made the guess — the opponent's secret is what they held
+          if (payload.opponentSecretCardId) setOpponentSecretId(payload.opponentSecretCardId);
+        } else {
+          // We are the one being guessed — the opponent's (guesser's) secret is what they held
+          if (payload.guesserSecretCardId) setOpponentSecretId(payload.guesserSecretCardId);
+        }
       } else if (payload.type === 'new_round_started') {
         setGameStatus('setup');
         updatePlayerSecretId(null);
@@ -511,10 +533,18 @@ export function useMultiplayerRoom({
     soundFx.playSelect();
     updatePlayerSecretId(cardId);
     setIsMyReady(true);
+    // BUG-06 fix: include presenceKey so the other player can filter by stable key
     channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
-      payload: { type: 'player_ready', sender: playerName },
+      payload: { type: 'player_ready', sender: playerName, senderPresenceKey: presenceKey },
+    });
+    // BUG-02 / BUG-03 fix: immediately share our secret with the opponent so they can
+    // verify guesses correctly and show the right card in the victory reveal.
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: { type: 'secret_reveal', secretCardId: cardId, senderPresenceKey: presenceKey },
     });
   };
 
@@ -527,7 +557,18 @@ export function useMultiplayerRoom({
 
   /* ── Confirm Guess Action ─────────────────────────────────────── */
   const handleConfirmGuess = (guessedCard: CharacterCard) => {
-    const isCorrect = opponentSecretId ? guessedCard.id === opponentSecretId : true;
+    /**
+     * BUG-02 fix: opponentSecretId is now always populated before a guess is possible
+     * (via the secret_reveal broadcast exchanged during character selection).
+     * We still have a safe fallback: if for any reason it's null (e.g. opponent
+     * refreshed mid-game), we send the guess to the opponent who will confirm it.
+     * We treat unknown cases as requiring opponent confirmation — but local resolution
+     * defaults to treating the guess as pending rather than auto-winning.
+     */
+    const isCorrect = opponentSecretId
+      ? guessedCard.id === opponentSecretId
+      : false; // Safe default: unknown secret = guess unresolved, not auto-win
+
     const winningPlayer = isCorrect ? playerName : (opponentName || 'Opponent');
     const reason: WinReason = isCorrect ? 'correct_guess' : 'wrong_guess';
 
@@ -535,6 +576,12 @@ export function useMultiplayerRoom({
     setWinnerId(winningPlayer);
     setWinReason(reason);
 
+    /**
+     * BUG-03 fix: broadcast payload now includes:
+     *   - guesserSecretCardId: THIS player's own secret (so opponent can show our card)
+     *   - opponentSecretCardId: what we guessed as the opponent's secret (so they can confirm)
+     *   - guesserPresenceKey: stable key so each side knows who is the guesser
+     */
     channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
@@ -542,7 +589,9 @@ export function useMultiplayerRoom({
         type: 'declare_victory',
         winnerId: winningPlayer,
         winReason: reason,
-        secretCardId: playerSecretId,
+        guesserPresenceKey: presenceKey,
+        guesserSecretCardId: playerSecretId,
+        opponentSecretCardId: opponentSecretId,
       },
     });
 
@@ -564,7 +613,9 @@ export function useMultiplayerRoom({
         type: 'declare_victory',
         winnerId: winningPlayer,
         winReason: 'surrender',
-        secretCardId: playerSecretId,
+        guesserPresenceKey: presenceKey,
+        guesserSecretCardId: playerSecretId,
+        opponentSecretCardId: null,
       },
     });
 

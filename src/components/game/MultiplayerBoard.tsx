@@ -441,9 +441,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       />
 
       <VictoryModal
-        isOpen={winReason !== null || gameStatus === 'finished'}
-        isWon={winnerId === playerName}
+        isOpen={gameStatus === 'finished' && winReason !== null}
+        isWon={winnerId === playerName || winnerId === presenceKey}
+        playerSecretCard={playerSecretCard}
         secretCard={opponentSecretCard}
+        opponentName={opponentName}
         onPlayAgain={handlePlayAgain}
       />
 
