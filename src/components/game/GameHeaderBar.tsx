@@ -11,7 +11,7 @@ interface GameHeaderBarProps {
   playerSecretCard: CharacterCard | null;
   currentTurnPlayerId: string | null;
   presenceKey: string;
-  secondsRemaining: number;
+  secondsRemaining: number | null;
   isMuted: boolean;
   onToggleMute: () => void;
   onOpenSurrenderModal: () => void;
@@ -70,9 +70,11 @@ export const GameHeaderBar: React.FC<GameHeaderBarProps> = ({
         >
           <Clock className={`w-3.5 h-3.5 ${isMyTurn ? 'animate-pulse text-emerald-400' : 'text-amber-400'}`} />
           <span>{isMyTurn ? 'Your Turn' : "Opponent's Turn"}</span>
-          <span className="font-mono text-white bg-slate-900/80 px-1.5 py-0.5 rounded text-[11px]">
-            {secondsRemaining}s
-          </span>
+          {secondsRemaining !== null && (
+            <span className="font-mono text-white bg-slate-900/80 px-1.5 py-0.5 rounded text-[11px]">
+              {secondsRemaining}s
+            </span>
+          )}
         </div>
       </div>
 
