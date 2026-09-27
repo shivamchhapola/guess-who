@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CardSetTemplate, CharacterCard } from '@/types/game';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
@@ -105,6 +105,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     localTurnStartAnchorRef,
     syncRoomStateToDb,
     handleStartActiveMatch,
+    handleEndTurn,
     handleHostChangeTemplate,
     handleHostStartGame,
     handleSelectSecretCard,
@@ -203,29 +204,15 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     fetchAllTemplates();
   }, [supabase]);
 
-  /* ── Turn Timer Countdown Clock ─────────────────────────────────── */
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
-
-  const handleEndTurn = useCallback((reason?: 'timeout') => {
-    if (currentTurnPlayerId !== playerName && reason !== 'timeout') return;
-
-    soundFx.playSelect();
-    const nextPlayer = opponentName || 'Opponent';
-    const now = Date.now();
-
-    setCurrentTurnPlayerId(nextPlayer);
-    setTurnStartedAt(now);
-    localTurnStartAnchorRef.current = now;
-
-    syncRoomStateToDb({
-      status: 'active',
-      currentTurnPlayerId: nextPlayer,
-      turnStartedAt: now,
-    });
-  }, [currentTurnPlayerId, opponentName, playerName, syncRoomStateToDb, setCurrentTurnPlayerId, setTurnStartedAt, localTurnStartAnchorRef]);
+  /* -- Turn Timer Countdown Clock ----------------------------------- */
+  // null until game active + timer configured; prevents stale 60s display (BUG-14 fix)
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   useEffect(() => {
-    if (gameStatus !== 'active' || !turnTimerSetting || turnTimerSetting === 0) return;
+    if (gameStatus !== 'active' || !turnTimerSetting || turnTimerSetting === 0) {
+      setSecondsRemaining(null);
+      return;
+    }
 
     if (localTurnStartAnchorRef.current === 0) {
       localTurnStartAnchorRef.current = Date.now();
@@ -406,6 +393,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           currentTurnPlayerId={currentTurnPlayerId}
           presenceKey={playerName}
           secondsRemaining={secondsRemaining}
+          turnTimerSetting={turnTimerSetting}
           isMuted={isMuted}
           flippedCardIds={flippedCardIds}
           chatMessages={chatMessages}
@@ -415,6 +403,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           onOpenLeaveModal={() => setShowLeaveModal(true)}
           onResetFlips={() => updateFlippedCardIds([])}
           onToggleFlip={handleToggleFlip}
+          onEndTurn={handleEndTurn}
           onMakeGuess={(c) => {
             setSelectedGuessCard(c);
             setIsGuessModalOpen(true);

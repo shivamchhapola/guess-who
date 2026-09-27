@@ -34,6 +34,11 @@ export function useMultiplayerRoom({
   const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
   const [opponentName, setOpponentName] = useState<string | null>(null);
   const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null);
+  /**
+   * The opponent's stable presence key (used as a consistent turn identifier
+   * alongside playerName so turn comparisons work even with URL-avatar prefixes).
+   */
+  const [opponentPresenceKey, setOpponentPresenceKey] = useState<string | null>(null);
   const [disconnectSeconds, setDisconnectSeconds] = useState<number | null>(null);
 
   /* ── Authoritative Shared Game Room State ─────────────────────── */
@@ -224,6 +229,8 @@ export function useMultiplayerRoom({
 
         setOpponentName(oppName);
         setOpponentAvatar(oppAvatar || null);
+        // Store the opponent's full presence key for stable turn identification
+        setOpponentPresenceKey(otherPresenceKey);
 
         setDisconnectSeconds((prev) => {
           if (prev !== null) {
@@ -242,6 +249,7 @@ export function useMultiplayerRoom({
       } else {
         setOpponentName(null);
         setOpponentAvatar(null);
+        setOpponentPresenceKey(null);
         setIsOpponentReady(false);
         const currentStatus = gameStatusRef.current;
         if (currentStatus === 'active' || currentStatus === 'selecting_character') {
@@ -392,8 +400,8 @@ export function useMultiplayerRoom({
     setTurnStartedAt(now);
     localTurnStartAnchorRef.current = now;
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    // BUG-04 fix: always use the subscribed channel ref, never create a dead fallback
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: {
@@ -429,8 +437,7 @@ export function useMultiplayerRoom({
       },
     ]);
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'template_changed', template: newTemplate },
@@ -491,8 +498,7 @@ export function useMultiplayerRoom({
   const handleHostStartGame = () => {
     soundFx.playSelect();
     setGameStatus('selecting_character');
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'start_character_selection', startedBy: playerName },
@@ -505,8 +511,7 @@ export function useMultiplayerRoom({
     soundFx.playSelect();
     updatePlayerSecretId(cardId);
     setIsMyReady(true);
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'player_ready', sender: playerName },
@@ -530,8 +535,7 @@ export function useMultiplayerRoom({
     setWinnerId(winningPlayer);
     setWinReason(reason);
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: {
@@ -553,8 +557,7 @@ export function useMultiplayerRoom({
     setWinnerId(winningPlayer);
     setWinReason('surrender');
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: {
@@ -582,8 +585,7 @@ export function useMultiplayerRoom({
     setWinReason(null);
     setGameRound(nextRound);
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'new_round_started', gameRound: nextRound },
@@ -612,13 +614,51 @@ export function useMultiplayerRoom({
 
     setChatMessages((prev) => [...prev, item]);
 
-    const channel = channelRef.current || supabase.channel(`room:${roomCode}`);
-    channel.send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'game_event',
       payload: { type: 'chat_message', item },
     });
   };
+
+  /* ── End Turn Action ─────────────────────────────────────────────
+   * BUG-01 fix: turn_changed MUST be broadcast so the opponent's UI
+   * updates. Previously this only called syncRoomStateToDb (DB only)
+   * with no realtime channel broadcast, making turns invisible.
+   * BUG-04 fix: uses channelRef.current directly instead of creating
+   * a new un-subscribed fallback channel.
+   * BUG-05 fix: now exported so UI can wire an End Turn button.
+   * ─────────────────────────────────────────────────────────────── */
+  const handleEndTurn = useCallback((reason?: 'timeout') => {
+    if (gameStatusRef.current !== 'active') return;
+    // Guard: only the active-turn player (or a timeout) can end the turn
+    if (currentTurnPlayerId !== playerName && reason !== 'timeout') return;
+
+    soundFx.playSelect();
+    const nextPlayerId = opponentName || 'Opponent';
+    const now = Date.now();
+
+    setCurrentTurnPlayerId(nextPlayerId);
+    setTurnStartedAt(now);
+    localTurnStartAnchorRef.current = now;
+
+    // ✅ Broadcast so opponent's currentTurnPlayerId updates immediately
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'game_event',
+      payload: {
+        type: 'turn_changed',
+        nextTurnPlayerId: nextPlayerId,
+        turnStartedAt: now,
+      },
+    });
+
+    syncRoomStateToDb({
+      status: 'active',
+      currentTurnPlayerId: nextPlayerId,
+      turnStartedAt: now,
+    });
+  }, [currentTurnPlayerId, playerName, opponentName, syncRoomStateToDb]);
 
   return {
     supabase,
@@ -659,8 +699,10 @@ export function useMultiplayerRoom({
     setChatMessages,
     channelRef,
     localTurnStartAnchorRef,
+    opponentPresenceKey,
     syncRoomStateToDb,
     handleStartActiveMatch,
+    handleEndTurn,
     handleHostChangeTemplate,
     handleHostStartGame,
     handleSelectSecretCard,
