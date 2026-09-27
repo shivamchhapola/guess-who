@@ -126,7 +126,12 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       queueMicrotask(() => {
-        setIsHost(sessionStorage.getItem(`room_${roomCode}_role`) === 'host');
+        const savedRole = sessionStorage.getItem(`room_${roomCode}_role`);
+        const isHostUser = savedRole === 'host';
+        setIsHost(isHostUser);
+        if (isHostUser) {
+          setIsUnlocked(true);
+        }
         const rawName = sessionStorage.getItem(`room_${roomCode}_name`) || '';
         setPresenceKey(rawName);
 
@@ -373,7 +378,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       )}
 
       {/* ── 1. Pre-Game Match Lobby Phase ──────────────────────────── */}
-      {gameStatus === 'setup' && (
+      {(gameStatus === 'setup' || (gameStatus as string) === 'waiting') && (
         <PreGameLobbyView
           roomCode={roomCode}
           isHost={isHost}

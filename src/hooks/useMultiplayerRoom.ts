@@ -167,7 +167,18 @@ export function useMultiplayerRoom({
               }
             }
             if (roomData.status || s.gameStatus) {
-              setGameStatus((roomData.status || s.gameStatus) as GameStatus);
+              const rawStatus = (roomData.status || s.gameStatus) as string;
+              let normalizedStatus: GameStatus = 'setup';
+              if (rawStatus === 'waiting' || rawStatus === 'waiting_for_opponent' || rawStatus === 'setup') {
+                normalizedStatus = 'setup';
+              } else if (rawStatus === 'selecting_character') {
+                normalizedStatus = 'selecting_character';
+              } else if (rawStatus === 'in_progress' || rawStatus === 'active') {
+                normalizedStatus = 'active';
+              } else if (rawStatus === 'finished' || rawStatus === 'closed') {
+                normalizedStatus = 'finished';
+              }
+              setGameStatus(normalizedStatus);
             }
             if (typeof s.turnTimerSetting === 'number') {
               setTurnTimerSetting(s.turnTimerSetting);
