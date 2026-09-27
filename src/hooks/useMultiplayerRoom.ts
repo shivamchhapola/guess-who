@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GameStatus, WinReason, QuestionLogItem, CardSetTemplate, CharacterCard } from '@/types/game';
 import { createClient } from '@/lib/supabase/client';
 import { soundFx } from '@/lib/audio';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
 import { ALL_POPULAR_TEMPLATES, THE_OFFICE_TEMPLATE } from '@/data/popularTemplates';
+import { sanitizeChatMessage, sanitizeString } from '@/lib/security';
 
 interface UseMultiplayerRoomParams {
   roomCode: string;
@@ -30,7 +31,8 @@ export function useMultiplayerRoom({
   initialTemplate,
   onTemplateChangedByHost,
 }: UseMultiplayerRoomParams) {
-  const supabase = createClient();
+  // BUG-16 fix: stable memoized client prevents unneeded callback invalidation & reconnect loops
+  const supabase = useMemo(() => createClient(), []);
 
   /* ── Room Identity & Players ───────────────────────────────────── */
   const [connectedPlayers, setConnectedPlayers] = useState<string[]>([]);
@@ -664,13 +666,17 @@ export function useMultiplayerRoom({
 
   /* ── Send Chat Message Action ──────────────────────────────────── */
   const handleSendChatMessage = (messageText: string) => {
+    // BUG-17 fix: sanitize chat inputs to prevent XSS and limit payload size (max 200 chars)
+    const cleanText = sanitizeChatMessage(messageText);
+    if (!cleanText) return;
+
     const item: QuestionLogItem = {
       id: Math.random().toString(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       sender: 'player',
-      senderName: playerName,
-      senderId: playerName,
-      question: messageText,
+      senderName: sanitizeString(playerName, 30),
+      senderId: presenceKey,
+      question: cleanText,
     };
 
     setChatMessages((prev) => [...prev, item]);

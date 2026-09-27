@@ -14,6 +14,7 @@ import { HostDeckSelector } from '@/components/host/HostDeckSelector';
 import { HomeFooter } from '@/components/home/HomeFooter';
 import { generateRandomName, generateRandomAvatar } from '@/lib/randomIdentity';
 import { CardSetTemplate } from '@/types/game';
+import { hashPassword } from '@/lib/security';
 
 const BUILT_IN_TEMPLATES: CardSetTemplate[] = [
   THE_OFFICE_TEMPLATE,
@@ -203,12 +204,13 @@ function HostRoomContent() {
 
         const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
         const dbTemplateId = isUuid(selectedTemplate.id) ? selectedTemplate.id : null;
+        const passwordHash = hasPassword ? await hashPassword(password) : null;
 
         const roomPayload = {
           code: upperCode,
           host_id: hostPresenceKey,
           template_id: dbTemplateId,
-          password_hash: hasPassword ? password.trim() : null,
+          password_hash: passwordHash,
           is_public: isPublic,
           status: 'waiting',
           state: {
