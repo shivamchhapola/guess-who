@@ -36,6 +36,15 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
   onOpenChangeSetModal,
   onStartActiveMatch,
 }) => {
+  // Derive Host vs Challenger identities based on isHost flag (BUG-09 fix)
+  const hostName = isHost ? playerName : opponentName || 'Host';
+  const hostAvatar = isHost ? playerAvatar : opponentAvatar;
+  const hostBadge = isHost ? 'Host (You)' : 'Host';
+
+  const challengerName = isHost ? opponentName : playerName;
+  const challengerAvatar = isHost ? opponentAvatar : playerAvatar;
+  const challengerBadge = !isHost ? 'Challenger (You)' : 'Challenger';
+
   return (
     <div className="w-full max-w-4xl mx-auto game-panel p-6 sm:p-8 rounded-3xl mb-6 shadow-2xl"
       style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -72,17 +81,17 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
         {/* Host (Player 1) */}
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-amber-500/30 flex items-center gap-4">
           <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-slate-800 shrink-0 border border-amber-500/50 flex items-center justify-center text-2xl">
-            {playerAvatar?.startsWith('https://') ? (
-              <Image src={playerAvatar} alt={playerName} fill className="object-cover" unoptimized />
+            {hostAvatar?.startsWith('https://') ? (
+              <Image src={hostAvatar} alt={hostName} fill className="object-cover" unoptimized />
             ) : (
-              <span>{playerAvatar || '🎮'}</span>
+              <span>{hostAvatar || '🎮'}</span>
             )}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="font-bold text-white text-base truncate">{playerName || 'Host'}</h4>
+              <h4 className="font-bold text-white text-base truncate">{hostName}</h4>
               <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                {isHost ? 'Host (You)' : 'Host'}
+                {hostBadge}
               </span>
             </div>
             <p className="text-slate-400 text-xs mt-0.5">Ready in Lobby</p>
@@ -91,20 +100,20 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
 
         {/* Opponent (Player 2) */}
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center gap-4">
-          {opponentName ? (
+          {challengerName ? (
             <>
               <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-slate-800 shrink-0 border border-cyan-500/50 flex items-center justify-center text-2xl">
-                {opponentAvatar?.startsWith('https://') ? (
-                  <Image src={opponentAvatar} alt={opponentName} fill className="object-cover" unoptimized />
+                {challengerAvatar?.startsWith('https://') ? (
+                  <Image src={challengerAvatar} alt={challengerName} fill className="object-cover" unoptimized />
                 ) : (
-                  <span>{opponentAvatar || '👾'}</span>
+                  <span>{challengerAvatar || '👾'}</span>
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-white text-base truncate">{opponentName}</h4>
+                  <h4 className="font-bold text-white text-base truncate">{challengerName}</h4>
                   <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                    {!isHost ? 'You' : 'Challenger'}
+                    {challengerBadge}
                   </span>
                 </div>
                 <p className="text-emerald-400 text-xs font-semibold mt-0.5">Connected & Ready</p>

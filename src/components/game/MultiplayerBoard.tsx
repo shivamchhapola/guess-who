@@ -134,8 +134,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
 
         const savedSecret = sessionStorage.getItem(`room_${roomCode}_secret`);
         if (savedSecret) {
-          updatePlayerSecretId(savedSecret);
-          setIsMyReady(true);
+          const isValidCard = currentTemplate?.cards?.some((c) => c.id === savedSecret);
+          if (isValidCard) {
+            updatePlayerSecretId(savedSecret);
+            setIsMyReady(true);
+          } else {
+            // BUG-11 fix: purge stale secret restored from sessionStorage if card does not exist in current template
+            sessionStorage.removeItem(`room_${roomCode}_secret`);
+            updatePlayerSecretId(null);
+            setIsMyReady(false);
+          }
         }
 
         const savedFlips = sessionStorage.getItem(`room_${roomCode}_flips`);
@@ -166,7 +174,19 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         setIsMounted(true);
       });
     }
-  }, [roomCode, setTurnTimerSetting, updateFlippedCardIds, updatePlayerSecretId, setIsMyReady]);
+  }, [roomCode, currentTemplate, setTurnTimerSetting, updateFlippedCardIds, updatePlayerSecretId, setIsMyReady]);
+
+  /* ── BUG-11: Validate playerSecretId and flipped cards when currentTemplate changes ── */
+  useEffect(() => {
+    if (playerSecretId && currentTemplate?.cards) {
+      const isValidCard = currentTemplate.cards.some((c) => c.id === playerSecretId);
+      if (!isValidCard) {
+        updatePlayerSecretId(null);
+        setIsMyReady(false);
+        updateFlippedCardIds([]);
+      }
+    }
+  }, [currentTemplate, playerSecretId, updatePlayerSecretId, setIsMyReady, updateFlippedCardIds]);
 
   /* ── Fetch Remote DB Templates for Lobby Selection ───────────────── */
   useEffect(() => {
