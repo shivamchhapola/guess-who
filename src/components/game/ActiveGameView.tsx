@@ -111,7 +111,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({
           </div>
 
           {/* Cards Grid */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 sm:gap-3 w-full">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3 w-full">
             {currentTemplate.cards.map((card) => (
               <CardFlip
                 key={card.id}

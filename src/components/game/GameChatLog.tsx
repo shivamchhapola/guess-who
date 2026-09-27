@@ -34,7 +34,7 @@ export const GameChatLog: React.FC<GameChatLogProps> = ({
   };
 
   return (
-    <div className="w-full glass-panel p-4 rounded-2xl flex flex-col h-[380px] border border-slate-700/50 shadow-xl">
+    <div className="w-full glass-panel p-3.5 sm:p-4 rounded-2xl flex flex-col h-[260px] sm:h-[300px] lg:h-[520px] border border-slate-700/50 shadow-xl">
       {/* Header */}
       <div className="flex items-center gap-2 pb-3 mb-3 border-b border-slate-700/50 shrink-0">
         <MessageSquare className="w-4 h-4 text-cyan-400" />
