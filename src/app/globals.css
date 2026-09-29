@@ -342,6 +342,7 @@ h1, h2, h3, h4, h5, h6 {
 
 button, [role="button"], a {
   touch-action: manipulation;
+  cursor: pointer;
 }
 
 @media (pointer: coarse) {

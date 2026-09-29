@@ -34,7 +34,7 @@ export const GameChatLog: React.FC<GameChatLogProps> = ({
   };
 
   return (
-    <div className="w-full glass-panel p-3.5 sm:p-4 rounded-2xl flex flex-col h-[260px] sm:h-[300px] lg:h-[520px] border border-slate-700/50 shadow-xl">
+    <div className="w-full glass-panel p-3.5 sm:p-4 rounded-2xl flex flex-col h-full min-h-[350px] border border-slate-700/50 shadow-xl">
       {/* Header */}
       <div className="flex items-center gap-2 pb-3 mb-3 border-b border-slate-700/50 shrink-0">
         <MessageSquare className="w-4 h-4 text-cyan-400" />
@@ -57,7 +57,7 @@ export const GameChatLog: React.FC<GameChatLogProps> = ({
               );
             }
 
-            const isMe = msg.senderId === presenceKey || msg.sender === 'player';
+            const isMe = msg.senderId === presenceKey;
             return (
               <div
                 key={msg.id}
@@ -97,7 +97,7 @@ export const GameChatLog: React.FC<GameChatLogProps> = ({
         <button
           type="submit"
           disabled={!chatInput.trim() || disabled}
-          className="px-3.5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition-all disabled:opacity-40 disabled:hover:bg-cyan-500 flex items-center gap-1 shadow-md shadow-cyan-500/20"
+          className="px-3.5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-xs transition-all disabled:opacity-40 disabled:hover:bg-cyan-500 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-500/20"
         >
           <Send className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Send</span>

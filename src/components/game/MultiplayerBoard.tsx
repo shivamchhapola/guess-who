@@ -473,7 +473,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         card={selectedGuessCard}
         isOpen={isGuessModalOpen}
         onClose={() => setIsGuessModalOpen(false)}
-        onConfirmGuess={handleConfirmGuess}
+        onConfirmGuess={(card) => {
+          handleConfirmGuess(card);
+          setIsGuessModalOpen(false);
+          setSelectedGuessCard(null);
+        }}
       />
 
       <VictoryModal
@@ -482,7 +486,11 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
         playerSecretCard={playerSecretCard}
         secretCard={opponentSecretCard}
         opponentName={opponentName}
-        onPlayAgain={handlePlayAgain}
+        onPlayAgain={() => {
+          handlePlayAgain();
+          setIsGuessModalOpen(false);
+          setSelectedGuessCard(null);
+        }}
       />
 
       <SurrenderModal
