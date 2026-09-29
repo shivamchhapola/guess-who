@@ -246,7 +246,7 @@ function HostRoomContent() {
         sessionStorage.setItem(`room_${upperCode}_timer`, String(turnTimerSetting));
       }
 
-      router.push(`/play/${upperCode}?template=${selectedTemplate.id}`);
+      router.push(`/play/${upperCode}`);
     } catch (err) {
       console.error('Error launching room:', err);
       setErrorMessage('Could not launch room. Please try again.');
