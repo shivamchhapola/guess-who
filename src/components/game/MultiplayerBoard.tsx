@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { CardSetTemplate, CharacterCard } from '@/types/game';
 import { ALL_POPULAR_TEMPLATES } from '@/data/popularTemplates';
 import { CLASSIC_GUESS_WHO_TEMPLATE } from '@/data/defaultTemplate';
@@ -20,7 +20,7 @@ import { useMultiplayerRoom } from '@/hooks/useMultiplayerRoom';
 import { PreGameLobbyView } from './PreGameLobbyView';
 import { CharacterSelectionBanner } from './CharacterSelectionBanner';
 import { ActiveGameView } from './ActiveGameView';
-import { DeckChangeModal } from './DeckChangeModal';
+import { DeckPickerModal } from '../ui/DeckPickerModal';
 import { SurrenderModal } from './SurrenderModal';
 import { LeaveRoomModal } from './LeaveRoomModal';
 
@@ -66,9 +66,14 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
   const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
   const [showSurrenderModal, setShowSurrenderModal] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(() => soundFx.getMutedState());
 
   /* ── Room Custom Hook ────────────────────────────────────────────── */
+  const handleTemplateChangedByHost = useCallback((newTpl: CardSetTemplate) => {
+    setCurrentTemplate(newTpl);
+  }, []);
+
   const room = useMultiplayerRoom({
     roomCode,
     isUnlocked,
@@ -78,7 +83,7 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     playerAvatar,
     isHost,
     initialTemplate: currentTemplate,
-    onTemplateChangedByHost: (newTpl) => setCurrentTemplate(newTpl),
+    onTemplateChangedByHost: handleTemplateChangedByHost,
   });
 
   const {
@@ -275,6 +280,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const handleCopyRoomLink = () => {
+    soundFx.playSelect();
+    const link = typeof window !== 'undefined'
+      ? `${window.location.origin}/play/${roomCode}`
+      : `/play/${roomCode}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
   const handleConfirmLeave = () => {
     soundFx.playSelect();
     if (typeof window !== 'undefined') {
@@ -389,7 +404,9 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
           currentTemplate={currentTemplate}
           turnTimerSetting={turnTimerSetting}
           copiedCode={copiedCode}
+          copiedLink={copiedLink}
           onCopyRoomCode={handleCopyRoomCode}
+          onCopyRoomLink={handleCopyRoomLink}
           onChangeTimer={(sec) => {
             setTurnTimerSetting(sec);
             sessionStorage.setItem(`room_${roomCode}_timer`, String(sec));
@@ -440,24 +457,16 @@ export const MultiplayerBoard: React.FC<MultiplayerBoardProps> = ({
       )}
 
       {/* ── Modals & Overlays ──────────────────────────────────────── */}
-      <DeckChangeModal
+      <DeckPickerModal
         isOpen={isChangeSetOpen}
         onClose={() => setIsChangeSetOpen(false)}
-        availableTemplates={filteredTemplates}
-        searchQuery={setSearchQuery}
-        onSearchChange={setSetSearchQuery}
+        availableTemplates={availableTemplates}
+        selectedTemplate={currentTemplate}
         onSelectTemplate={(newTpl) => {
           setCurrentTemplate(newTpl);
           handleHostChangeTemplate(newTpl);
           setIsChangeSetOpen(false);
         }}
-        onPreviewTemplate={(tpl) => setPreviewingTemplate(tpl)}
-      />
-
-      <SetPreviewModal
-        template={previewingTemplate}
-        isOpen={previewingTemplate !== null}
-        onClose={() => setPreviewingTemplate(null)}
       />
 
       <GuessModal

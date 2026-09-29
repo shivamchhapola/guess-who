@@ -112,10 +112,10 @@ export function PlayerProfileSetup({
           Avatar Creator
         </label>
 
-        <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col sm:flex-row items-center gap-5">
+        <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-row items-start gap-5">
           {/* Avatar Preview & Shuffle */}
           <div className="flex flex-col items-center gap-3 shrink-0">
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-2 border-amber-500/40 flex items-center justify-center p-2 shadow-xl">
+            <div className="relative w-28 h-28 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-2 border-amber-500/40 flex items-center justify-center p-2 shadow-xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentAvatarUrl}

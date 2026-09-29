@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CharacterCard } from '@/types/game';
 import { Sparkles, Filter, RotateCcw } from 'lucide-react';
 import { soundFx } from '@/lib/audio';
+import { Select } from '@/components/ui/Select';
 
 interface QuestionAssistantProps {
   cards: CharacterCard[];
@@ -28,7 +29,7 @@ export const QuestionAssistant: React.FC<QuestionAssistantProps> = ({
     const toEliminate: string[] = [];
 
     cards.forEach((card) => {
-      if (flippedCardIds.includes(card.id)) return; // Already eliminated
+      if (flippedCardIds.includes(card.id)) return;
 
       const cardVal = card.attributes[selectedTraitKey];
       let matches = false;
@@ -39,8 +40,6 @@ export const QuestionAssistant: React.FC<QuestionAssistantProps> = ({
         matches = String(cardVal).toLowerCase() === selectedTraitVal.toLowerCase();
       }
 
-      // If user asks "Does character HAVE X?" and answer is YES => eliminate non-matching
-      // If user asks "Does character HAVE X?" and answer is NO => eliminate matching
       if (matchMode === 'has' && !matches) {
         toEliminate.push(card.id);
       } else if (matchMode === 'does_not_have' && matches) {
@@ -53,6 +52,39 @@ export const QuestionAssistant: React.FC<QuestionAssistantProps> = ({
       onAutoFlipCards(toEliminate);
     }
   };
+
+  const traitOptions = [
+    { value: 'hairColor', label: 'Hair Color' },
+    { value: 'gender', label: 'Gender' },
+    { value: 'glasses', label: 'Glasses' },
+    { value: 'hat', label: 'Hat' },
+    { value: 'facialHair', label: 'Facial Hair' },
+    { value: 'eyeColor', label: 'Eye Color' },
+  ];
+
+  const matchModeOptions = [
+    { value: 'has' as const, label: 'Answer: YES (Keep Matching)' },
+    { value: 'does_not_have' as const, label: 'Answer: NO (Eliminate Matching)' },
+  ];
+
+  const hairColorOptions = [
+    { value: 'blonde', label: 'Blonde' },
+    { value: 'brown', label: 'Brown' },
+    { value: 'black', label: 'Black' },
+    { value: 'red', label: 'Red' },
+    { value: 'white', label: 'White' },
+    { value: 'bald', label: 'Bald' },
+  ];
+
+  const genderOptions = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+  ];
+
+  const boolOptions = [
+    { value: 'true', label: 'Yes' },
+    { value: 'false', label: 'No' },
+  ];
 
   return (
     <div className="w-full glass-panel p-4 rounded-2xl mb-6 flex flex-col md:flex-row items-center justify-between gap-4 border border-cyan-500/20">
@@ -74,72 +106,49 @@ export const QuestionAssistant: React.FC<QuestionAssistantProps> = ({
 
       {/* Control Inputs */}
       <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-        <select
+        <Select
           value={selectedTraitKey}
-          onChange={(e) => {
-            setSelectedTraitKey(e.target.value);
-            if (e.target.value === 'glasses' || e.target.value === 'hat' || e.target.value === 'facialHair') {
+          options={traitOptions}
+          onChange={(val) => {
+            setSelectedTraitKey(val);
+            if (val === 'glasses' || val === 'hat' || val === 'facialHair') {
               setSelectedTraitVal('true');
-            } else if (e.target.value === 'gender') {
+            } else if (val === 'gender') {
               setSelectedTraitVal('male');
-            } else if (e.target.value === 'hairColor') {
+            } else if (val === 'hairColor') {
               setSelectedTraitVal('blonde');
             }
           }}
-          className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-semibold text-slate-200 focus:outline-none focus:border-cyan-400"
-        >
-          <option value="hairColor">Hair Color</option>
-          <option value="gender">Gender</option>
-          <option value="glasses">Glasses</option>
-          <option value="hat">Hat</option>
-          <option value="facialHair">Facial Hair</option>
-          <option value="eyeColor">Eye Color</option>
-        </select>
+        />
 
-        <select
+        <Select<'has' | 'does_not_have'>
           value={matchMode}
-          onChange={(e) => setMatchMode(e.target.value as 'has' | 'does_not_have')}
-          className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-semibold text-slate-200 focus:outline-none focus:border-cyan-400"
-        >
-          <option value="has">Answer: YES (Keep Matching)</option>
-          <option value="does_not_have">Answer: NO (Eliminate Matching)</option>
-        </select>
+          options={matchModeOptions}
+          onChange={setMatchMode}
+        />
 
         {selectedTraitKey === 'hairColor' && (
-          <select
+          <Select
             value={selectedTraitVal}
-            onChange={(e) => setSelectedTraitVal(e.target.value)}
-            className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200"
-          >
-            <option value="blonde">Blonde</option>
-            <option value="brown">Brown</option>
-            <option value="black">Black</option>
-            <option value="red">Red</option>
-            <option value="white">White</option>
-            <option value="bald">Bald</option>
-          </select>
+            options={hairColorOptions}
+            onChange={setSelectedTraitVal}
+          />
         )}
 
         {selectedTraitKey === 'gender' && (
-          <select
+          <Select
             value={selectedTraitVal}
-            onChange={(e) => setSelectedTraitVal(e.target.value)}
-            className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200"
-          >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
+            options={genderOptions}
+            onChange={setSelectedTraitVal}
+          />
         )}
 
         {(selectedTraitKey === 'glasses' || selectedTraitKey === 'hat' || selectedTraitKey === 'facialHair') && (
-          <select
+          <Select
             value={selectedTraitVal}
-            onChange={(e) => setSelectedTraitVal(e.target.value)}
-            className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200"
-          >
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
+            options={boolOptions}
+            onChange={setSelectedTraitVal}
+          />
         )}
 
         <button

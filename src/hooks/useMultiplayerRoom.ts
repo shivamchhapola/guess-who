@@ -66,10 +66,20 @@ export function useMultiplayerRoom({
   const gameStatusRef = useRef<GameStatus>(gameStatus);
   const localTurnStartAnchorRef = useRef<number>(0);
   const hasLaunchedRef = useRef<boolean>(false);
+  // Always-current refs — avoids putting unstable callbacks/props in channel effect deps
+  const playerNameRef = useRef<string>(playerName);
+  const playerAvatarRef = useRef<string>(playerAvatar);
+  const isHostRef = useRef<boolean>(isHost);
+  const onTemplateChangedByHostRef = useRef(onTemplateChangedByHost);
+  // Stable ref for the initial template id so rehydration doesn't need it in deps
+  const initialTemplateIdRef = useRef(initialTemplate.id);
 
-  useEffect(() => {
-    gameStatusRef.current = gameStatus;
-  }, [gameStatus]);
+  // Keep all refs current with latest prop/state values
+  useEffect(() => { gameStatusRef.current = gameStatus; }, [gameStatus]);
+  useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
+  useEffect(() => { playerAvatarRef.current = playerAvatar; }, [playerAvatar]);
+  useEffect(() => { isHostRef.current = isHost; }, [isHost]);
+  useEffect(() => { onTemplateChangedByHostRef.current = onTemplateChangedByHost; }, [onTemplateChangedByHost]);
 
   /* ── Secret Card Persistence Helper (AUD-P1-01) ───────────────── */
   const updatePlayerSecretId = useCallback(
@@ -199,11 +209,11 @@ export function useMultiplayerRoom({
               setGameRound(s.gameRound);
             }
             const targetSetId = ((s.selectedSetId || roomData.template_id) as string) || null;
-            if (targetSetId && targetSetId !== initialTemplate.id && onTemplateChangedByHost) {
+            if (targetSetId && targetSetId !== initialTemplateIdRef.current && onTemplateChangedByHostRef.current) {
               const allTemplates = [THE_OFFICE_TEMPLATE, ...ALL_POPULAR_TEMPLATES, CLASSIC_GUESS_WHO_TEMPLATE];
               const foundTpl = allTemplates.find((t) => t.id === targetSetId);
               if (foundTpl) {
-                onTemplateChangedByHost(foundTpl);
+                onTemplateChangedByHostRef.current(foundTpl);
               }
             }
           });
@@ -289,7 +299,7 @@ export function useMultiplayerRoom({
         setIsOpponentReady(false);
         updateFlippedCardIds([]);
         hasLaunchedRef.current = false;
-        if (onTemplateChangedByHost) onTemplateChangedByHost(payload.template);
+        if (onTemplateChangedByHostRef.current) onTemplateChangedByHostRef.current(payload.template);
         setChatMessages((prev) => [
           ...prev,
           {
@@ -398,9 +408,9 @@ export function useMultiplayerRoom({
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await channel.track({
-          playerName,
-          playerAvatar,
-          isHost,
+          playerName: playerNameRef.current,
+          playerAvatar: playerAvatarRef.current,
+          isHost: isHostRef.current,
         });
       }
     });
@@ -408,7 +418,11 @@ export function useMultiplayerRoom({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isUnlocked, hasSetIdentity, presenceKey, roomCode, supabase, playerName, playerAvatar, isHost, updatePlayerSecretId, updateFlippedCardIds, onTemplateChangedByHost]);
+  // Only depend on values that gate the actual connection — NOT on callbacks or player display
+  // values (playerName, playerAvatar, isHost, onTemplateChangedByHost) since we use refs for those.
+  // Adding those caused the channel to rebuild on every parent re-render, producing the
+  // presence-sync flicker where opponentName briefly showed then reset to null.
+  }, [isUnlocked, hasSetIdentity, presenceKey, roomCode, supabase, updatePlayerSecretId, updateFlippedCardIds]);
 
   /* ── 30-Second Disconnect Countdown (AUD-P1-02) ───────────────── */
   useEffect(() => {

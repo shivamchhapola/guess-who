@@ -444,7 +444,7 @@ export default function PublicLobbiesPage() {
 
                     {/* Join Room CTA */}
                     <Link
-                      href={`/play/${room.code}?template=${room.template.id}`}
+                      href={`/play/${room.code}`}
                       onClick={() => soundFx.playSelect()}
                       className="w-full h-11 rounded-2xl text-xs font-extrabold text-slate-950 game-btn-primary flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                     >

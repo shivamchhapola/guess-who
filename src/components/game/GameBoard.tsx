@@ -11,6 +11,7 @@ import { ensureCardAttributes } from '@/lib/setUtils';
 import { Eye, Volume2, VolumeX, RotateCcw, ArrowLeft, Layers, Bot, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Select } from '@/components/ui/Select';
 
 interface GameBoardProps {
   template: CardSetTemplate;
@@ -255,19 +256,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({
             <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <Layers className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <select
+              <Select
                 value={currentTemplate.id}
-                onChange={(e) => {
-                  if (onSelectTemplate) onSelectTemplate(e.target.value);
-                }}
-                className="bg-transparent text-slate-100 font-bold text-xs focus:outline-none cursor-pointer max-w-[120px]"
-              >
-                {availableTemplates.map((tpl) => (
-                  <option key={tpl.id} value={tpl.id} className="bg-slate-900 text-slate-100">
-                    {tpl.title}
-                  </option>
-                ))}
-              </select>
+                options={availableTemplates.map((tpl) => ({ value: tpl.id, label: tpl.title }))}
+                onChange={(val) => { if (onSelectTemplate) onSelectTemplate(val); }}
+                className="max-w-[140px]"
+              />
             </div>
           )}
 

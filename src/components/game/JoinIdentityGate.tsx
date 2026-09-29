@@ -28,7 +28,8 @@ export const JoinIdentityGate: React.FC<JoinIdentityGateProps> = ({
   onSubmit,
 }) => {
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center w-full px-4 py-10">
+      <div className="w-full max-w-lg">
       <div className="game-panel p-6 sm:p-8 rounded-3xl shadow-2xl border border-amber-500/30">
         <div className="mb-6">
           <h1 className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -76,6 +77,7 @@ export const JoinIdentityGate: React.FC<JoinIdentityGateProps> = ({
             <span>Enter Room</span>
           </button>
         </form>
+      </div>
       </div>
     </div>
   );

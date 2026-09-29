@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { CardSetTemplate } from '@/types/game';
-import { Users, Copy, Check, Play, Layers, Clock } from 'lucide-react';
+import { Users, Check, Play, Layers, Clock, Link } from 'lucide-react';
 import Image from 'next/image';
+import { Select } from '@/components/ui/Select';
 
 interface PreGameLobbyViewProps {
   roomCode: string;
@@ -15,7 +16,9 @@ interface PreGameLobbyViewProps {
   currentTemplate: CardSetTemplate;
   turnTimerSetting: number;
   copiedCode: boolean;
+  copiedLink: boolean;
   onCopyRoomCode: () => void;
+  onCopyRoomLink: () => void;
   onChangeTimer: (timerSeconds: number) => void;
   onOpenChangeSetModal: () => void;
   onStartActiveMatch: () => void;
@@ -31,7 +34,9 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
   currentTemplate,
   turnTimerSetting,
   copiedCode,
+  copiedLink,
   onCopyRoomCode,
+  onCopyRoomLink,
   onChangeTimer,
   onOpenChangeSetModal,
   onStartActiveMatch,
@@ -56,9 +61,18 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
               <span>🎮</span>
               <span>Match Lobby</span>
             </h2>
-            <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-              {roomCode}
-            </span>
+            {/* Clickable room code badge — copies code */}
+            <button
+              type="button"
+              onClick={onCopyRoomCode}
+              title="Click to copy room code"
+              className="group relative text-xs font-black px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 hover:border-cyan-400/60 transition-all cursor-pointer"
+            >
+              {copiedCode ? '✓ Copied!' : roomCode}
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-bold bg-slate-800 text-white px-2 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-700 shadow-lg">
+                Copy room code
+              </span>
+            </button>
           </div>
           <p className="text-slate-400 text-xs sm:text-sm">
             {isHost ? 'Invite an opponent and choose game deck settings.' : 'Waiting for host to start the match...'}
@@ -68,11 +82,11 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
         {/* Copy Invite Link */}
         <button
           type="button"
-          onClick={onCopyRoomCode}
+          onClick={onCopyRoomLink}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-100 bg-slate-800/80 hover:bg-slate-700/80 transition-all border border-slate-700/60 shadow-lg"
         >
-          {copiedCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-cyan-400" />}
-          <span>{copiedCode ? 'Link Copied!' : 'Copy Room Link'}</span>
+          {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Link className="w-4 h-4 text-cyan-400" />}
+          <span>{copiedLink ? 'Link Copied!' : 'Copy Invite Link'}</span>
         </button>
       </div>
 
@@ -146,7 +160,7 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
           <button
             type="button"
             onClick={onOpenChangeSetModal}
-            className="px-3.5 py-2 rounded-xl text-xs font-bold text-cyan-300 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/40 transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold text-cyan-300 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/40 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Layers className="w-3.5 h-3.5" />
             <span>Change Game Set</span>
@@ -158,16 +172,16 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
           <Clock className="w-4 h-4 text-amber-400 shrink-0" />
           <span className="text-xs font-bold text-slate-300">Turn Timer:</span>
           {isHost ? (
-            <select
+            <Select<number>
               value={turnTimerSetting}
-              onChange={(e) => onChangeTimer(Number(e.target.value))}
-              className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-200 focus:outline-none focus:border-amber-400 cursor-pointer"
-            >
-              <option value={30}>30s (Fast)</option>
-              <option value={45}>45s (Standard)</option>
-              <option value={60}>60s (Relaxed)</option>
-              <option value={90}>90s (Casual)</option>
-            </select>
+              options={[
+                { value: 30, label: '30s (Fast)' },
+                { value: 45, label: '45s (Standard)' },
+                { value: 60, label: '60s (Relaxed)' },
+                { value: 90, label: '90s (Casual)' },
+              ]}
+              onChange={onChangeTimer}
+            />
           ) : (
             <span className="text-xs font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30">
               {turnTimerSetting}s
@@ -182,7 +196,7 @@ export const PreGameLobbyView: React.FC<PreGameLobbyViewProps> = ({
           type="button"
           onClick={onStartActiveMatch}
           disabled={!opponentName}
-          className="w-full py-4 rounded-2xl text-slate-950 font-black text-base bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-300 hover:to-orange-300 transition-all shadow-xl shadow-amber-500/20 disabled:opacity-40 disabled:hover:from-amber-400 flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-2xl text-slate-950 font-black text-base bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-300 hover:to-orange-300 transition-all shadow-xl shadow-amber-500/20 disabled:opacity-40 disabled:hover:from-amber-400 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
         >
           <Play className="w-5 h-5 fill-current" />
           <span>{opponentName ? 'Start Match Now' : 'Waiting for Challenger to Join...'}</span>
