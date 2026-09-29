@@ -78,14 +78,14 @@ export const GuessModal: React.FC<GuessModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 py-3 px-4 rounded-xl glass-card font-semibold text-slate-300 hover:text-white transition-colors"
+            className="flex-1 py-3 px-4 rounded-xl glass-card font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => handleConfirm(card)}
-            className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 font-bold text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-105"
+            className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 font-bold text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-105 cursor-pointer"
           >
             Confirm Guess
           </button>

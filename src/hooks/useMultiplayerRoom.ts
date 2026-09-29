@@ -393,8 +393,7 @@ export function useMultiplayerRoom({
         setWinnerId(null);
         setWinReason(null);
         setGameRound((r) => r + 1);
-        setChatMessages((prev) => [
-          ...prev,
+        setChatMessages([
           {
             id: Math.random().toString(),
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -672,6 +671,7 @@ export function useMultiplayerRoom({
     setWinnerId(null);
     setWinReason(null);
     setGameRound(nextRound);
+    setChatMessages([]);
 
     channelRef.current?.send({
       type: 'broadcast',

@@ -72,9 +72,9 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({
       />
 
       {/* Cards Grid & Chat Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full flex-1">
+      <div className="flex flex-col lg:flex-row gap-4 w-full flex-1">
         {/* Left: 24-Card Elimination Grid */}
-        <div className="lg:col-span-3 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Standing Counter + Action Row */}
           <div className="px-4 py-2 rounded-xl mb-3 bg-slate-900/60 border border-slate-800 flex items-center justify-between text-xs gap-2 flex-wrap">
             <span className="font-bold text-amber-400">
@@ -127,7 +127,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({
         </div>
 
         {/* Right: Match Chat & Question Log */}
-        <div className="lg:col-span-1">
+        <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0">
           <GameChatLog
             chatMessages={chatMessages}
             presenceKey={presenceKey}

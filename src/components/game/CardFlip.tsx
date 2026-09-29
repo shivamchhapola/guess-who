@@ -122,7 +122,6 @@ export const CardFlip: React.FC<CardFlipProps> = ({
                 className="w-full min-h-[32px] py-1 rounded-lg font-black text-[10px] text-slate-950 transition-transform active:scale-95 shadow-md flex items-center justify-center gap-1 cursor-pointer"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}
               >
-                <Sparkles className="w-3 h-3 stroke-[2.5]" />
                 <span>Choose</span>
               </button>
             )}
