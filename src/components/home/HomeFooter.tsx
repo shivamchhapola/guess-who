@@ -11,9 +11,6 @@ export function HomeFooter() {
           <p className="text-sm font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Guess<span style={{ color: '#f59e0b' }}>Whooo?</span>
           </p>
-          <p className="text-xs text-slate-500 mt-0.5">
-            © {new Date().getFullYear()} · Free custom GuessWhooo? for everyone.
-          </p>
         </div>
 
         {/* Links */}
