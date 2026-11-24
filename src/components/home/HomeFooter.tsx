@@ -12,7 +12,7 @@ export function HomeFooter() {
             Guess<span style={{ color: '#f59e0b' }}>Whooo?</span>
           </p>
           <p className="text-xs text-slate-500 mt-0.5">
-            © {new Date().getFullYear()} · Free custom GuessWhooo? for everyone.
+            Made with ❤️ by Shivam · Free Antigravity subscription
           </p>
         </div>
 
